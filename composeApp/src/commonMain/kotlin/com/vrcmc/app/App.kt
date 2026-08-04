@@ -11,7 +11,9 @@ import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
+import androidx.compose.ui.ExperimentalComposeUiApi
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.backhandler.BackHandler
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -23,7 +25,7 @@ import org.jetbrains.compose.resources.painterResource
 private enum class ThemeMode { SYSTEM, DARK, LIGHT }
 private enum class AppScreen { CHAT, API, PREFERENCES }
 
-@OptIn(ExperimentalMaterial3Api::class)
+@OptIn(ExperimentalMaterial3Api::class, ExperimentalComposeUiApi::class)
 @Composable
 fun VrcmcApp() {
     val state = remember { AppState() }
@@ -39,6 +41,10 @@ fun VrcmcApp() {
         ThemeMode.SYSTEM -> isSystemInDarkTheme()
         ThemeMode.DARK -> true
         ThemeMode.LIGHT -> false
+    }
+
+    BackHandler(enabled = screen != AppScreen.CHAT) {
+        screen = AppScreen.CHAT
     }
 
     MaterialTheme(if (dark) darkColorScheme() else lightColorScheme()) {
@@ -117,7 +123,12 @@ fun VrcmcApp() {
                     )
                 },
             ) { padding ->
-                Box(Modifier.padding(padding).fillMaxSize()) {
+                Box(
+                    Modifier
+                        .padding(padding)
+                        .consumeWindowInsets(padding)
+                        .fillMaxSize(),
+                ) {
                     when (screen) {
                         AppScreen.CHAT -> ChatPage(state, strings)
                         AppScreen.API -> ApiPage(state, strings)

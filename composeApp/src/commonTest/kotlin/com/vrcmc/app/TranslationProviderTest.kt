@@ -66,8 +66,8 @@ class TranslationProviderTest {
     }
 
     @Test
-    fun legacyConfigsUseThreeRetries() {
+    fun legacyConfigsUseFiveRetries() {
         val restored = storedTranslationSettingsFromJson("""{"provider":"deepseek","configs":{"deepseek":{"timeout":20}}}""")
-        assertEquals(3, restored.configs.getValue("deepseek").retryCount)
+        assertEquals(5, restored.configs.getValue("deepseek").retryCount)
     }
 }

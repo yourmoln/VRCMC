@@ -7,6 +7,7 @@ open class LocaleStrings {
     open val chatbox = "Chatbox"; open val addDevice = "Add device"; open val activeDevice = "Active device"; open val send = "Send"; open val typeMessage = "Type a message..."; open val addIp = "Add a computer IP first"; open val sendFailed = "Send failed"
     open val apiConfiguration = "API configuration"; open val openMenu = "Open menu"; open val selectDevice = "Select device"; open val deleteDevice = "Delete device"; open val deviceAddress = "IP address and optional port"
     open val defaultPortHint = "Port 9000 is used when omitted"; open val invalidDeviceAddress = "Enter a valid IP and port"; open val cancel = "Cancel"; open val translationAssistant = "Translation"; open val translating = "Translating..."
+    open val copyMessage = "Copy"; open val resendMessage = "Send again"
     open val appearance = "Appearance"; open val language = "Language"; open val systemTheme = "System"; open val lightTheme = "Light"; open val darkTheme = "Dark"
     open val yesterday = "Yesterday"; open val dayBeforeYesterday = "The day before yesterday"
     open val clearHistory = "Clear chat history"; open val clearHistoryTitle = "Clear chat history?"; open val clearHistoryMessage = "All saved messages will be permanently deleted."; open val delete = "Delete"; open val messageTooLong = "Message exceeds the VRChat Chatbox limit (144 characters or 9 lines)"
@@ -31,6 +32,7 @@ object LocaleStringsZhHans : LocaleStrings() {
     override val chatbox = "Chatbox 消息"; override val addDevice = "添加设备"; override val activeDevice = "当前设备"; override val send = "发送"; override val typeMessage = "输入消息..."; override val addIp = "请先在顶部添加电脑 IP"; override val sendFailed = "发送失败"
     override val apiConfiguration = "API 配置"; override val openMenu = "打开菜单"; override val selectDevice = "选择设备"; override val deleteDevice = "删除设备"; override val deviceAddress = "IP 地址与可选端口"
     override val defaultPortHint = "未填写端口时使用 9000"; override val invalidDeviceAddress = "请输入有效的 IP 和端口"; override val cancel = "取消"; override val translationAssistant = "翻译"; override val translating = "翻译中..."
+    override val copyMessage = "复制"; override val resendMessage = "重新发送"
     override val appearance = "外观"; override val language = "语言"; override val systemTheme = "跟随系统"; override val lightTheme = "浅色"; override val darkTheme = "深色"
     override val clearHistory = "清空聊天记录"; override val clearHistoryTitle = "确认清空聊天记录？"; override val clearHistoryMessage = "所有已保存的聊天消息都将被永久删除。"; override val delete = "删除"; override val messageTooLong = "消息超过 VRChat Chatbox 限制（144 字符或 9 行）"
     override val translationLlm = "翻译接口"; override val provider = "服务商"; override val customCompatible = "自定义兼容接口"; override val apiKey = "API Key"; override val targetLanguage = "目标语言"; override val translateBeforeSending = "发送前翻译"; override val testConnection = "测试连接"; override val testing = "测试中..."; override val connectionFailed = "连接失败，请检查 URL、Key 和模型"; override val connected = "连接成功：%s"; override val originalAndTranslationSent = "已发送原文和译文"
@@ -47,7 +49,7 @@ object LocaleStringsZhHans : LocaleStrings() {
     override val chooseProvider = "选择服务商"; override val providerPickerHint = "紧凑显示服务商，可按名称或协议搜索"; override val searchProvider = "搜索服务商或协议"; override val recommended = "推荐"
     override val chooseLanguage = "选择目标语言"; override val twoLanguageHint = "可选择 1–2 种语言；双语翻译会并行执行"
 }
-object LocaleStringsZhHant : LocaleStrings() { override val yesterday = "\u6628\u5929"; override val dayBeforeYesterday = "\u524d\u5929" }
-object LocaleStringsJa : LocaleStrings() { override val yesterday = "\u6628\u65e5"; override val dayBeforeYesterday = "\u4e00\u6628\u65e5" }
+object LocaleStringsZhHant : LocaleStrings() { override val yesterday = "\u6628\u5929"; override val dayBeforeYesterday = "\u524d\u5929"; override val copyMessage = "複製"; override val resendMessage = "重新傳送" }
+object LocaleStringsJa : LocaleStrings() { override val yesterday = "\u6628\u65e5"; override val dayBeforeYesterday = "\u4e00\u6628\u65e5"; override val copyMessage = "コピー"; override val resendMessage = "再送信" }
 
 fun localeStrings(language: AppLanguage): LocaleStrings = when (language) { AppLanguage.ZH_HANS -> LocaleStringsZhHans; AppLanguage.ZH_HANT -> LocaleStringsZhHant; AppLanguage.JA -> LocaleStringsJa; AppLanguage.EN -> LocaleStringsEn }

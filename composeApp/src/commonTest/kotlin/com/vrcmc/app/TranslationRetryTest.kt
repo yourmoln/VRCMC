@@ -48,4 +48,22 @@ class TranslationRetryTest {
             assertEquals(TranslationResult.Success("你好"), result)
         }
     }
+
+    @Test
+    fun retriesWhenSuccessfulResponseHasNoUsableContent() {
+        runBlocking {
+            var attempts = 0
+            val result = translateWithRetries("Hello", 3) {
+                attempts++
+                if (attempts == 1) {
+                    TranslationResult.Failure("service returned no usable content", status = 200)
+                } else {
+                    TranslationResult.Success("Bonjour")
+                }
+            }
+
+            assertEquals(2, attempts)
+            assertEquals(TranslationResult.Success("Bonjour"), result)
+        }
+    }
 }

@@ -79,7 +79,8 @@ internal suspend fun translateWithRetries(sourceText: String, retryCount: Int, r
             }
             is TranslationResult.Failure -> {
                 lastFailure = result
-                if (!result.retryable) return result
+                val successfulResponseWithoutContent = result.status?.let { it in 200..299 } == true
+                if (!result.retryable && !successfulResponseWithoutContent) return result
             }
         }
     }

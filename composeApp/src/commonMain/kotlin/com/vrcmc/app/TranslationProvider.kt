@@ -32,7 +32,7 @@ data class ProviderConfig(
     val timeoutSeconds: Int = 20,
     val customHeaders: String = "",
     val streaming: Boolean = false,
-    val retryCount: Int = 3,
+    val retryCount: Int = 5,
 )
 
 val translationProviders = listOf(
@@ -101,7 +101,7 @@ fun storedProviderSecretsFromJson(value: String): Map<String, ProviderSecrets> =
 
 fun storedTranslationSettingsFromJson(value: String): StoredTranslationSettings = runCatching {
     val root = Json.parseToJsonElement(value).jsonObject
-    val configs = root["configs"]?.jsonObject?.mapValues { (_, element) -> element.jsonObject.let { obj -> ProviderConfig(obj["apiKey"]?.jsonPrimitive?.content.orEmpty(), obj["baseUrl"]?.jsonPrimitive?.content.orEmpty(), obj["model"]?.jsonPrimitive?.content.orEmpty(), obj["region"]?.jsonPrimitive?.content.orEmpty(), obj["timeout"]?.jsonPrimitive?.intOrNull ?: 20, obj["headers"]?.jsonPrimitive?.content.orEmpty(), obj["streaming"]?.jsonPrimitive?.booleanOrNull ?: false, (obj["retries"]?.jsonPrimitive?.intOrNull ?: 3).coerceIn(0, 10)) } }.orEmpty()
+    val configs = root["configs"]?.jsonObject?.mapValues { (_, element) -> element.jsonObject.let { obj -> ProviderConfig(obj["apiKey"]?.jsonPrimitive?.content.orEmpty(), obj["baseUrl"]?.jsonPrimitive?.content.orEmpty(), obj["model"]?.jsonPrimitive?.content.orEmpty(), obj["region"]?.jsonPrimitive?.content.orEmpty(), obj["timeout"]?.jsonPrimitive?.intOrNull ?: 20, obj["headers"]?.jsonPrimitive?.content.orEmpty(), obj["streaming"]?.jsonPrimitive?.booleanOrNull ?: false, (obj["retries"]?.jsonPrimitive?.intOrNull ?: 5).coerceIn(0, 10)) } }.orEmpty()
     val languages = root["targetLanguages"]?.jsonArray?.mapNotNull { it.jsonPrimitive.contentOrNull }?.filter { it.isNotBlank() }?.distinct()?.take(2)
         ?: listOf(root["targetLanguage"]?.jsonPrimitive?.contentOrNull ?: "English")
     StoredTranslationSettings(root["provider"]?.jsonPrimitive?.content ?: "deepseek", root["translate"]?.jsonPrimitive?.booleanOrNull ?: false, languages.ifEmpty { listOf("English") }, configs)
