@@ -26,6 +26,7 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.flow.distinctUntilChanged
 import org.jetbrains.compose.resources.painterResource
+import kotlin.math.roundToInt
 
 private enum class ThemeMode { SYSTEM, DARK, LIGHT }
 private enum class AppScreen { CHAT, DEVICES, API, TRANSLATION_LANGUAGE, SIMULTANEOUS_INTERPRETATION, PREFERENCES }
@@ -182,7 +183,7 @@ fun VrcmcApp() {
                         AppScreen.API -> ApiPage(state, strings)
                         AppScreen.TRANSLATION_LANGUAGE -> TranslationLanguagePage(state, strings)
                         AppScreen.SIMULTANEOUS_INTERPRETATION -> SimultaneousInterpretationPage(state, strings)
-                        AppScreen.PREFERENCES -> PreferencesPage(theme, language, strings, { theme = it }, { language = it })
+                        AppScreen.PREFERENCES -> PreferencesPage(state, theme, language, strings, { theme = it }, { language = it })
                     }
                 }
             }
@@ -243,6 +244,19 @@ private fun SimultaneousInterpretationPage(state: AppState, strings: LocaleStrin
                         Switch(
                             checked = state.simultaneousInterpretationEnabled,
                             onCheckedChange = state::updateSimultaneousInterpretationEnabled,
+                        )
+                    }
+                    HorizontalDivider()
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Column(Modifier.weight(1f)) {
+                            Text(strings.enableAlwaysInterpretation, style = MaterialTheme.typography.titleMedium)
+                            Spacer(Modifier.height(4.dp))
+                            Text(strings.alwaysInterpretationHint, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                        }
+                        Spacer(Modifier.width(12.dp))
+                        Switch(
+                            checked = state.alwaysInterpretationEnabled,
+                            onCheckedChange = state::updateAlwaysInterpretationEnabled,
                         )
                     }
                     HorizontalDivider()
@@ -448,7 +462,7 @@ private fun EditDeviceDialog(state: AppState, device: Device, strings: LocaleStr
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-private fun PreferencesPage(theme: ThemeMode, language: AppLanguage, strings: LocaleStrings, setTheme: (ThemeMode) -> Unit, setLanguage: (AppLanguage) -> Unit) {
+private fun PreferencesPage(state: AppState, theme: ThemeMode, language: AppLanguage, strings: LocaleStrings, setTheme: (ThemeMode) -> Unit, setLanguage: (AppLanguage) -> Unit) {
     var expanded by remember { mutableStateOf(false) }
     val modes = ThemeMode.values()
     LazyColumn(
@@ -518,5 +532,33 @@ private fun PreferencesPage(theme: ThemeMode, language: AppLanguage, strings: Lo
                 }
             }
         }
+        item {
+            Surface(
+                modifier = Modifier.fillMaxWidth(),
+                shape = RoundedCornerShape(8.dp),
+                color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = .45f),
+                border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant),
+            ) {
+                Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Text(strings.alwaysInterpretation, style = MaterialTheme.typography.titleMedium)
+                    Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+                        Column(Modifier.weight(1f)) {
+                            Text(strings.alwaysInterpretationDelay, style = MaterialTheme.typography.labelLarge)
+                            Text(strings.alwaysInterpretationDelayHint, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                        }
+                        Text(strings.seconds(formatDelaySeconds(state.alwaysInterpretationDelayMillis)))
+                    }
+                    Slider(
+                        value = state.alwaysInterpretationDelayMillis / 1_000f,
+                        onValueChange = { state.updateAlwaysInterpretationDelayMillis((it * 1_000).roundToInt()) },
+                        valueRange = .5f..10f,
+                        steps = 18,
+                    )
+                }
+            }
+        }
     }
 }
+
+private fun formatDelaySeconds(delayMillis: Int): String =
+    if (delayMillis % 1_000 == 0) (delayMillis / 1_000).toString() else (delayMillis / 1_000f).toString()

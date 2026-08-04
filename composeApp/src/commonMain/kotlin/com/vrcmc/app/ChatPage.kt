@@ -18,7 +18,9 @@ import androidx.compose.material.icons.automirrored.filled.Send
 import androidx.compose.material.icons.filled.AutoAwesome
 import androidx.compose.material.icons.filled.ChatBubbleOutline
 import androidx.compose.material.icons.filled.ContentCopy
+import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.Refresh
+import androidx.compose.material.icons.filled.Stop
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -42,6 +44,7 @@ import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.coroutineScope
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.yield
 import kotlin.math.cos
@@ -201,6 +204,21 @@ fun ChatPage(state: AppState, strings: LocaleStrings) {
         }
     }
 
+    LaunchedEffect(
+        state.isAlwaysInterpretationActive,
+        state.chatDraft,
+        state.alwaysInterpretationDelayMillis,
+        sending,
+    ) {
+        val pendingText = state.chatDraft
+        if (state.isAlwaysInterpretationActive && !sending && pendingText.isNotBlank()) {
+            delay(state.alwaysInterpretationDelayMillis.toLong())
+            if (state.isAlwaysInterpretationActive && !sending && state.chatDraft == pendingText) {
+                sendMessage(pendingText, clearDraft = true)
+            }
+        }
+    }
+
     LaunchedEffect(state.messages.size) {
         if (state.messages.isNotEmpty()) listState.animateScrollToItem(state.messages.lastIndex)
     }
@@ -284,7 +302,9 @@ fun ChatPage(state: AppState, strings: LocaleStrings) {
             input = state.chatDraft,
             sending = sending,
             enabled = active != null,
-            interpreting = state.isSimultaneousInterpretationActive,
+            interpreting = state.isSimultaneousInterpretationActive || state.isAlwaysInterpretationActive,
+            alwaysInterpretationEnabled = state.alwaysInterpretationEnabled,
+            alwaysInterpretationActive = state.isAlwaysInterpretationActive,
             strings = strings,
             onInputChange = {
                 state.chatDraft = it
@@ -307,6 +327,7 @@ fun ChatPage(state: AppState, strings: LocaleStrings) {
                     sendMessage(finalText, clearDraft = true)
                 }
             },
+            onToggleAlwaysInterpretation = state::toggleAlwaysInterpretationActive,
         )
     }
 }
@@ -392,9 +413,12 @@ private fun ChatComposer(
     sending: Boolean,
     enabled: Boolean,
     interpreting: Boolean,
+    alwaysInterpretationEnabled: Boolean,
+    alwaysInterpretationActive: Boolean,
     strings: LocaleStrings,
     onInputChange: (String) -> Unit,
     onSend: () -> Unit,
+    onToggleAlwaysInterpretation: () -> Unit,
 ) {
     val focusRequester = remember { FocusRequester() }
     val scope = rememberCoroutineScope()
@@ -467,11 +491,30 @@ private fun ChatComposer(
                     },
                 )
                 Spacer(Modifier.width(10.dp))
-                FilledIconButton(
-                    enabled = input.isNotBlank() && enabled,
-                    onClick = ::sendAndKeepFocus,
-                    modifier = Modifier.size(44.dp),
-                ) { Icon(Icons.AutoMirrored.Filled.Send, strings.send) }
+                if (alwaysInterpretationEnabled) {
+                    FilledIconButton(
+                        enabled = enabled && (!sending || alwaysInterpretationActive),
+                        onClick = {
+                            onToggleAlwaysInterpretation()
+                            scope.launch {
+                                yield()
+                                focusRequester.requestFocus()
+                            }
+                        },
+                        modifier = Modifier.size(44.dp),
+                    ) {
+                        Icon(
+                            if (alwaysInterpretationActive) Icons.Default.Stop else Icons.Default.PlayArrow,
+                            if (alwaysInterpretationActive) strings.stopAlwaysInterpretation else strings.startAlwaysInterpretation,
+                        )
+                    }
+                } else {
+                    FilledIconButton(
+                        enabled = input.isNotBlank() && enabled,
+                        onClick = ::sendAndKeepFocus,
+                        modifier = Modifier.size(44.dp),
+                    ) { Icon(Icons.AutoMirrored.Filled.Send, strings.send) }
+                }
             }
         }
     }

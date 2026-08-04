@@ -11,3 +11,7 @@ expect fun loadStoredChatHistory(): String
 expect fun saveStoredChatHistory(value: String)
 expect fun loadStoredSimultaneousInterpretationEnabled(): Boolean
 expect fun saveStoredSimultaneousInterpretationEnabled(value: Boolean)
+expect fun loadStoredAlwaysInterpretationEnabled(): Boolean
+expect fun saveStoredAlwaysInterpretationEnabled(value: Boolean)
+expect fun loadStoredAlwaysInterpretationDelayMillis(): Int
+expect fun saveStoredAlwaysInterpretationDelayMillis(value: Int)

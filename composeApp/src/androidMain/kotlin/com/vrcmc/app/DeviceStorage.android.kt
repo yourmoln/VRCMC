@@ -40,6 +40,10 @@ actual fun loadStoredChatHistory(): String = prefs()?.getString("chatHistory", "
 actual fun saveStoredChatHistory(value: String) { prefs()?.edit { putString("chatHistory", value) } }
 actual fun loadStoredSimultaneousInterpretationEnabled(): Boolean = prefs()?.getBoolean("simultaneousInterpretation", false) ?: false
 actual fun saveStoredSimultaneousInterpretationEnabled(value: Boolean) { prefs()?.edit { putBoolean("simultaneousInterpretation", value) } }
+actual fun loadStoredAlwaysInterpretationEnabled(): Boolean = prefs()?.getBoolean("alwaysInterpretation", false) ?: false
+actual fun saveStoredAlwaysInterpretationEnabled(value: Boolean) { prefs()?.edit { putBoolean("alwaysInterpretation", value) } }
+actual fun loadStoredAlwaysInterpretationDelayMillis(): Int = prefs()?.getInt("alwaysInterpretationDelayMillis", 2_000) ?: 2_000
+actual fun saveStoredAlwaysInterpretationDelayMillis(value: Int) { prefs()?.edit { putInt("alwaysInterpretationDelayMillis", value) } }
 
 private const val secretKeyAlias = "vrcmc.translation.secrets"
 

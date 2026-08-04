@@ -31,6 +31,16 @@ class AppState {
     var simultaneousFinalPending by mutableStateOf(false)
         private set
     var simultaneousListenerError by mutableStateOf<String?>(null)
+    var alwaysInterpretationEnabled by mutableStateOf(
+        loadStoredAlwaysInterpretationEnabled() && !simultaneousInterpretationEnabled,
+    )
+        private set
+    var isAlwaysInterpretationActive by mutableStateOf(false)
+        private set
+    var alwaysInterpretationDelayMillis by mutableIntStateOf(
+        loadStoredAlwaysInterpretationDelayMillis().takeIf { it in 500..10_000 } ?: 2_000,
+    )
+        private set
     var activeAddress by mutableStateOf(loadStoredActiveAddress().takeIf { saved -> devices.any { it.address == saved } } ?: devices.firstOrNull()?.address.orEmpty())
     var providerId by mutableStateOf(storedTranslation.providerId.takeIf { id -> translationProviders.any { it.id == id } } ?: "deepseek")
     var translate by mutableStateOf(storedTranslation.translate)
@@ -53,6 +63,9 @@ class AppState {
     }
     init {
         if (storedTranslation.configs.values.any { it.apiKey.isNotBlank() || it.customHeaders.isNotBlank() }) persistTranslation()
+        if (simultaneousInterpretationEnabled && loadStoredAlwaysInterpretationEnabled()) {
+            saveStoredAlwaysInterpretationEnabled(false)
+        }
     }
 
     fun persistTranslation() {
@@ -61,6 +74,11 @@ class AppState {
     }
     fun persist() = saveStoredDevices(devices.toList(), activeAddress)
     fun updateSimultaneousInterpretationEnabled(enabled: Boolean) {
+        if (enabled && alwaysInterpretationEnabled) {
+            alwaysInterpretationEnabled = false
+            isAlwaysInterpretationActive = false
+            saveStoredAlwaysInterpretationEnabled(false)
+        }
         simultaneousInterpretationEnabled = enabled
         if (!enabled) {
             isSimultaneousInterpretationActive = false
@@ -68,6 +86,27 @@ class AppState {
         }
         simultaneousListenerError = null
         saveStoredSimultaneousInterpretationEnabled(enabled)
+    }
+    fun updateAlwaysInterpretationEnabled(enabled: Boolean) {
+        if (enabled && simultaneousInterpretationEnabled) {
+            simultaneousInterpretationEnabled = false
+            isSimultaneousInterpretationActive = false
+            simultaneousFinalPending = false
+            simultaneousListenerError = null
+            saveStoredSimultaneousInterpretationEnabled(false)
+        }
+        alwaysInterpretationEnabled = enabled
+        if (!enabled) isAlwaysInterpretationActive = false
+        saveStoredAlwaysInterpretationEnabled(enabled)
+    }
+    fun toggleAlwaysInterpretationActive() {
+        if (alwaysInterpretationEnabled) {
+            isAlwaysInterpretationActive = !isAlwaysInterpretationActive
+        }
+    }
+    fun updateAlwaysInterpretationDelayMillis(value: Int) {
+        alwaysInterpretationDelayMillis = value.coerceIn(500, 10_000)
+        saveStoredAlwaysInterpretationDelayMillis(alwaysInterpretationDelayMillis)
     }
     fun handleVrchatMuteSelf(muted: Boolean) {
         if (!simultaneousInterpretationEnabled) return

@@ -51,6 +51,10 @@ actual fun loadStoredChatHistory(): String = readText(chatHistoryFile).ifBlank {
 actual fun saveStoredChatHistory(value: String) { writeTextAtomically(chatHistoryFile, value); prefs.remove("chatHistory") }
 actual fun loadStoredSimultaneousInterpretationEnabled(): Boolean = prefs.getBoolean("simultaneousInterpretation", false)
 actual fun saveStoredSimultaneousInterpretationEnabled(value: Boolean) { prefs.putBoolean("simultaneousInterpretation", value) }
+actual fun loadStoredAlwaysInterpretationEnabled(): Boolean = prefs.getBoolean("alwaysInterpretation", false)
+actual fun saveStoredAlwaysInterpretationEnabled(value: Boolean) { prefs.putBoolean("alwaysInterpretation", value) }
+actual fun loadStoredAlwaysInterpretationDelayMillis(): Int = prefs.getInt("alwaysInterpretationDelayMillis", 2_000)
+actual fun saveStoredAlwaysInterpretationDelayMillis(value: Int) { prefs.putInt("alwaysInterpretationDelayMillis", value) }
 
 private fun readText(path: Path): String = runCatching { Files.readString(path, StandardCharsets.UTF_8) }.getOrDefault("")
 

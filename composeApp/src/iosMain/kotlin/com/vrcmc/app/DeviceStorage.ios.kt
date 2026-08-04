@@ -115,6 +115,10 @@ actual fun loadStoredChatHistory(): String = defaults.stringForKey("chatHistory"
 actual fun saveStoredChatHistory(value: String) { defaults.setObject(value, forKey = "chatHistory") }
 actual fun loadStoredSimultaneousInterpretationEnabled(): Boolean = defaults.boolForKey("simultaneousInterpretation")
 actual fun saveStoredSimultaneousInterpretationEnabled(value: Boolean) { defaults.setBool(value, forKey = "simultaneousInterpretation") }
+actual fun loadStoredAlwaysInterpretationEnabled(): Boolean = defaults.boolForKey("alwaysInterpretation")
+actual fun saveStoredAlwaysInterpretationEnabled(value: Boolean) { defaults.setBool(value, forKey = "alwaysInterpretation") }
+actual fun loadStoredAlwaysInterpretationDelayMillis(): Int = defaults.integerForKey("alwaysInterpretationDelayMillis").toInt().takeIf { it > 0 } ?: 2_000
+actual fun saveStoredAlwaysInterpretationDelayMillis(value: Int) { defaults.setInteger(value.toLong(), forKey = "alwaysInterpretationDelayMillis") }
 
 @OptIn(ExperimentalForeignApi::class)
 private fun keychainQuery() = mutableDictionary()?.also { query ->
