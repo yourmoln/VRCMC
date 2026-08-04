@@ -18,12 +18,15 @@ private val isWindows = System.getProperty("os.name").startsWith("Windows", igno
 
 actual fun loadStoredDevices(): List<Device> = prefs.get("devices", "").split(';').mapNotNull { value ->
     val parts = value.split('|')
-    if (parts.firstOrNull() == "v2") parts.getOrNull(1)?.takeIf { it.isNotBlank() }?.let { Device(it, parts.getOrNull(2)?.toIntOrNull() ?: 9000) }
-    else parts.firstOrNull()?.takeIf { it.isNotBlank() }?.let { Device(it, 9000) }
+    when (parts.firstOrNull()) {
+        "v3" -> parts.getOrNull(1)?.takeIf { it.isNotBlank() }?.let { Device(it, parts.getOrNull(2)?.toIntOrNull() ?: 9000, parts.getOrNull(3)?.toIntOrNull() ?: 9001) }
+        "v2" -> parts.getOrNull(1)?.takeIf { it.isNotBlank() }?.let { Device(it, parts.getOrNull(2)?.toIntOrNull() ?: 9000) }
+        else -> parts.firstOrNull()?.takeIf { it.isNotBlank() }?.let { Device(it) }
+    }
 }
 
 actual fun saveStoredDevices(devices: List<Device>, activeAddress: String) {
-    prefs.put("devices", devices.joinToString(";") { "v2|${it.address}|${it.port}" }); prefs.put("active", activeAddress)
+    prefs.put("devices", devices.joinToString(";") { "v3|${it.address}|${it.receivePort}|${it.sendPort}" }); prefs.put("active", activeAddress)
 }
 
 actual fun loadStoredActiveAddress(): String = prefs.get("active", "")

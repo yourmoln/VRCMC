@@ -62,7 +62,7 @@ fun ChatPage(state: AppState, strings: LocaleStrings) {
             state.addMessage(ChatMessage("", MessageRole.ASSISTANT, isLoading = true))
         } else null
         scope.launch {
-            if (shouldTranslate && !sendChatboxOsc(target.address, translatingText, target.port)) {
+            if (shouldTranslate && !sendChatboxOsc(target.address, translatingText, target.receivePort)) {
                 error = strings.sendFailed
             }
             val translations = if (shouldTranslate) coroutineScope {
@@ -89,7 +89,7 @@ fun ChatPage(state: AppState, strings: LocaleStrings) {
             }
             val outgoing = buildTranslationOutput(original, successful, outputOrder)
             if (!isValidChatboxText(outgoing)) error = strings.messageTooLong
-            else if (!sendChatboxOsc(target.address, outgoing, target.port)) error = strings.sendFailed
+            else if (!sendChatboxOsc(target.address, outgoing, target.receivePort)) error = strings.sendFailed
             sending = false
         }
     }
@@ -128,7 +128,7 @@ fun ChatPage(state: AppState, strings: LocaleStrings) {
                             }
                             Spacer(Modifier.height(14.dp))
                             Text(
-                                active?.let { "${it.address}:${it.port}" } ?: strings.addIp,
+                                active?.displayEndpoint() ?: strings.addIp,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                                 style = MaterialTheme.typography.bodySmall,
                             )

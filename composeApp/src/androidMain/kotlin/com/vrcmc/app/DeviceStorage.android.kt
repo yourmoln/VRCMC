@@ -17,11 +17,14 @@ private fun prefs() = appContext?.getSharedPreferences("vrcmc", Context.MODE_PRI
 
 actual fun loadStoredDevices(): List<Device> = prefs()?.getString("devices", "")?.split(';')?.mapNotNull { value ->
     val parts = value.split('|')
-    if (parts.firstOrNull() == "v2") parts.getOrNull(1)?.takeIf { it.isNotBlank() }?.let { Device(it, parts.getOrNull(2)?.toIntOrNull() ?: 9000) }
-    else parts.firstOrNull()?.takeIf { it.isNotBlank() }?.let { Device(it, 9000) }
+    when (parts.firstOrNull()) {
+        "v3" -> parts.getOrNull(1)?.takeIf { it.isNotBlank() }?.let { Device(it, parts.getOrNull(2)?.toIntOrNull() ?: 9000, parts.getOrNull(3)?.toIntOrNull() ?: 9001) }
+        "v2" -> parts.getOrNull(1)?.takeIf { it.isNotBlank() }?.let { Device(it, parts.getOrNull(2)?.toIntOrNull() ?: 9000) }
+        else -> parts.firstOrNull()?.takeIf { it.isNotBlank() }?.let { Device(it) }
+    }
 } ?: emptyList()
 
-actual fun saveStoredDevices(devices: List<Device>, activeAddress: String) { prefs()?.edit { putString("devices", devices.joinToString(";") { "v2|${it.address}|${it.port}" }); putString("active", activeAddress) } }
+actual fun saveStoredDevices(devices: List<Device>, activeAddress: String) { prefs()?.edit { putString("devices", devices.joinToString(";") { "v3|${it.address}|${it.receivePort}|${it.sendPort}" }); putString("active", activeAddress) } }
 actual fun loadStoredActiveAddress(): String = prefs()?.getString("active", "") ?: ""
 actual fun loadStoredTranslationSettings(): String = prefs()?.getString("translationSettings", "") ?: ""
 actual fun saveStoredTranslationSettings(value: String) { prefs()?.edit { putString("translationSettings", value) } }

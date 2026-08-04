@@ -5,7 +5,9 @@ import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
@@ -16,6 +18,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.backhandler.BackHandler
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import com.vrcmc.app.generated.resources.Res
 import com.vrcmc.app.generated.resources.logo
@@ -23,7 +26,7 @@ import kotlinx.coroutines.launch
 import org.jetbrains.compose.resources.painterResource
 
 private enum class ThemeMode { SYSTEM, DARK, LIGHT }
-private enum class AppScreen { CHAT, API, TRANSLATION_LANGUAGE, PREFERENCES }
+private enum class AppScreen { CHAT, DEVICES, API, TRANSLATION_LANGUAGE, PREFERENCES }
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalComposeUiApi::class)
 @Composable
@@ -70,6 +73,16 @@ fun VrcmcApp() {
                         icon = { Icon(Icons.Default.ChatBubble, null) },
                         onClick = {
                             screen = AppScreen.CHAT
+                            scope.launch { drawerState.close() }
+                        },
+                        modifier = Modifier.padding(horizontal = 12.dp),
+                    )
+                    NavigationDrawerItem(
+                        label = { Text(strings.deviceManagement) },
+                        selected = screen == AppScreen.DEVICES,
+                        icon = { Icon(Icons.Default.Devices, null) },
+                        onClick = {
+                            screen = AppScreen.DEVICES
                             scope.launch { drawerState.close() }
                         },
                         modifier = Modifier.padding(horizontal = 12.dp),
@@ -141,6 +154,7 @@ fun VrcmcApp() {
                 ) {
                     when (screen) {
                         AppScreen.CHAT -> ChatPage(state, strings)
+                        AppScreen.DEVICES -> DeviceManagementPage(state, strings) { showAddDevice = true }
                         AppScreen.API -> ApiPage(state, strings)
                         AppScreen.TRANSLATION_LANGUAGE -> TranslationLanguagePage(state, strings)
                         AppScreen.PREFERENCES -> PreferencesPage(theme, language, strings, { theme = it }, { language = it })
@@ -178,12 +192,21 @@ private fun DeviceSelector(state: AppState, strings: LocaleStrings, onAddDevice:
         TextButton(onClick = { expanded = true }, contentPadding = PaddingValues(horizontal = 8.dp)) {
             Icon(Icons.Default.Computer, null)
             Spacer(Modifier.width(8.dp))
-            Text(
-                active?.let { "${it.address}:${it.port}" } ?: strings.selectDevice,
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis,
-                modifier = Modifier.weight(1f, fill = false),
-            )
+            if (active == null) {
+                Text(strings.selectDevice, maxLines = 1, overflow = TextOverflow.Ellipsis)
+            } else {
+                Text(
+                    active.address,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                    modifier = Modifier.weight(1f, fill = false),
+                )
+                Spacer(Modifier.width(12.dp))
+                Column(horizontalAlignment = Alignment.End) {
+                    Text(active.receivePort.toString(), style = MaterialTheme.typography.bodySmall)
+                    Text(active.sendPort.toString(), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                }
+            }
             Icon(Icons.Default.ArrowDropDown, null)
         }
         DropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }) {
@@ -191,9 +214,18 @@ private fun DeviceSelector(state: AppState, strings: LocaleStrings, onAddDevice:
                 val selected = device.address == state.activeAddress
                 DropdownMenuItem(
                     text = {
-                        Column {
-                            Text(device.address, maxLines = 1, overflow = TextOverflow.Ellipsis)
-                            Text("UDP ${device.port}", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Text(
+                                device.address,
+                                modifier = Modifier.weight(1f),
+                                maxLines = 1,
+                                overflow = TextOverflow.Ellipsis,
+                            )
+                            Spacer(Modifier.width(12.dp))
+                            Column(horizontalAlignment = Alignment.End) {
+                                Text(device.receivePort.toString(), style = MaterialTheme.typography.bodySmall)
+                                Text(device.sendPort.toString(), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                            }
                         }
                     },
                     leadingIcon = {
@@ -238,7 +270,7 @@ private fun AddDeviceDialog(state: AppState, strings: LocaleStrings, close: () -
                 onValueChange = { endpoint = it; invalid = false },
                 singleLine = true,
                 label = { Text(strings.deviceAddress) },
-                placeholder = { Text("192.168.1.10:9000") },
+                placeholder = { Text("9000:192.168.1.10:9001") },
                 supportingText = { Text(if (invalid) strings.invalidDeviceAddress else strings.defaultPortHint) },
                 isError = invalid,
             )
@@ -247,6 +279,83 @@ private fun AddDeviceDialog(state: AppState, strings: LocaleStrings, close: () -
             TextButton(onClick = {
                 if (state.addDevice(endpoint)) close() else invalid = true
             }, enabled = endpoint.isNotBlank()) { Text(strings.addDevice) }
+        },
+        dismissButton = { TextButton(close) { Text(strings.cancel) } },
+    )
+}
+
+@Composable
+private fun DeviceManagementPage(state: AppState, strings: LocaleStrings, onAddDevice: () -> Unit) {
+    var editing by remember { mutableStateOf<Device?>(null) }
+    LazyColumn(
+        modifier = Modifier.fillMaxSize(),
+        contentPadding = PaddingValues(16.dp),
+        verticalArrangement = Arrangement.spacedBy(12.dp),
+    ) {
+        item {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Icon(Icons.Default.Devices, null, tint = MaterialTheme.colorScheme.primary)
+                Spacer(Modifier.width(10.dp))
+                Text(strings.deviceManagement, style = MaterialTheme.typography.titleLarge, modifier = Modifier.weight(1f))
+                FilledTonalIconButton(onAddDevice) { Icon(Icons.Default.Add, strings.addDevice) }
+            }
+        }
+        if (state.devices.isEmpty()) {
+            item {
+                Box(Modifier.fillParentMaxSize(), contentAlignment = Alignment.Center) {
+                    Text(strings.noDevices, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                }
+            }
+        } else {
+            items(state.devices.size, key = { state.devices[it].address }) { index ->
+                val device = state.devices[index]
+                Surface(
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = RoundedCornerShape(8.dp),
+                    color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = .45f),
+                    border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant),
+                ) {
+                    Row(Modifier.padding(16.dp), verticalAlignment = Alignment.CenterVertically) {
+                        Icon(Icons.Default.Computer, null, tint = MaterialTheme.colorScheme.primary)
+                        Spacer(Modifier.width(12.dp))
+                        Column(Modifier.weight(1f)) {
+                            Text(device.address, style = MaterialTheme.typography.titleMedium, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                            Text("${strings.receivePort}: ${device.receivePort}  /  ${strings.sendPort}: ${device.sendPort}", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                        }
+                        IconButton({ editing = device }) { Icon(Icons.Default.Edit, strings.editDevice) }
+                        IconButton({ state.removeDevice(device) }) { Icon(Icons.Default.Delete, strings.deleteDevice, tint = MaterialTheme.colorScheme.error) }
+                    }
+                }
+            }
+        }
+    }
+    editing?.let { device ->
+        EditDeviceDialog(state, device, strings) { editing = null }
+    }
+}
+
+@Composable
+private fun EditDeviceDialog(state: AppState, device: Device, strings: LocaleStrings, close: () -> Unit) {
+    var address by remember(device) { mutableStateOf(device.address) }
+    var receivePort by remember(device) { mutableStateOf(device.receivePort.toString()) }
+    var sendPort by remember(device) { mutableStateOf(device.sendPort.toString()) }
+    var invalid by remember(device) { mutableStateOf(false) }
+    AlertDialog(
+        onDismissRequest = close,
+        icon = { Icon(Icons.Default.Edit, null) },
+        title = { Text(strings.editDevice) },
+        text = {
+            Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                OutlinedTextField(address, { address = it; invalid = false }, label = { Text(strings.ipAddress) }, singleLine = true, isError = invalid)
+                Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                    OutlinedTextField(receivePort, { receivePort = it.filter(Char::isDigit); invalid = false }, Modifier.weight(1f), label = { Text(strings.receivePort) }, singleLine = true, keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number), isError = invalid)
+                    OutlinedTextField(sendPort, { sendPort = it.filter(Char::isDigit); invalid = false }, Modifier.weight(1f), label = { Text(strings.sendPort) }, singleLine = true, keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number), isError = invalid)
+                }
+                if (invalid) Text(strings.invalidDeviceAddress, color = MaterialTheme.colorScheme.error, style = MaterialTheme.typography.bodySmall)
+            }
+        },
+        confirmButton = {
+            TextButton({ if (state.updateDevice(device, address, receivePort, sendPort)) close() else invalid = true }) { Text(strings.save) }
         },
         dismissButton = { TextButton(close) { Text(strings.cancel) } },
     )

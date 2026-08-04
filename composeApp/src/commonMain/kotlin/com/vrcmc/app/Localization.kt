@@ -5,8 +5,9 @@ enum class AppLanguage(val label: String) { ZH_HANS("\u7b80\u4f53\u4e2d\u6587"),
 open class LocaleStrings {
     open val chat = "Chat"; open val devices = "Devices"; open val api = "API"; open val settings = "Settings"; open val done = "Done"; open val theme = "Theme"; open val preferences = "Preferences"
     open val chatbox = "Chatbox"; open val addDevice = "Add device"; open val activeDevice = "Active device"; open val send = "Send"; open val typeMessage = "Type a message..."; open val addIp = "Add a computer IP first"; open val sendFailed = "Send failed"
-    open val apiConfiguration = "API configuration"; open val openMenu = "Open menu"; open val selectDevice = "Select device"; open val deleteDevice = "Delete device"; open val deviceAddress = "IP address and optional port"
-    open val defaultPortHint = "Port 9000 is used when omitted"; open val invalidDeviceAddress = "Enter a valid IP and port"; open val cancel = "Cancel"; open val translationAssistant = "Translation"; open val translating = "Translating..."
+    open val apiConfiguration = "API configuration"; open val openMenu = "Open menu"; open val selectDevice = "Select device"; open val deleteDevice = "Delete device"; open val deviceAddress = "Receive port:IP:send port"
+    open val defaultPortHint = "IP only defaults to 9000:IP:9001"; open val invalidDeviceAddress = "Enter a valid IP and ports"; open val cancel = "Cancel"; open val translationAssistant = "Translation"; open val translating = "Translating..."
+    open val deviceManagement = "Device management"; open val editDevice = "Edit device"; open val ipAddress = "IP address"; open val receivePort = "Receive port"; open val sendPort = "Send port"; open val save = "Save"; open val noDevices = "No devices added"
     open val copyMessage = "Copy"; open val resendMessage = "Send again"
     open val appearance = "Appearance"; open val language = "Language"; open val systemTheme = "System"; open val lightTheme = "Light"; open val darkTheme = "Dark"
     open val yesterday = "Yesterday"; open val dayBeforeYesterday = "The day before yesterday"
@@ -28,11 +29,13 @@ open class LocaleStrings {
 }
 object LocaleStringsEn : LocaleStrings()
 object LocaleStringsZhHans : LocaleStrings() {
+    override val deviceManagement = "\u8bbe\u5907\u7ba1\u7406"; override val editDevice = "\u7f16\u8f91\u8bbe\u5907"; override val ipAddress = "IP \u5730\u5740"; override val receivePort = "\u63a5\u6536\u7aef\u53e3"; override val sendPort = "\u53d1\u9001\u7aef\u53e3"; override val save = "\u4fdd\u5b58"; override val noDevices = "\u5c1a\u672a\u6dfb\u52a0\u8bbe\u5907"
+    override val deviceAddress = "\u63a5\u6536\u7aef\u53e3:IP:\u53d1\u9001\u7aef\u53e3"; override val defaultPortHint = "\u4ec5\u8f93\u5165 IP \u65f6\u9ed8\u8ba4\u4e3a 9000:IP:9001"; override val invalidDeviceAddress = "\u8bf7\u8f93\u5165\u6709\u6548\u7684 IP \u548c\u7aef\u53e3"
     override val yesterday = "\u6628\u5929"; override val dayBeforeYesterday = "\u524d\u5929"
     override val chat = "聊天"; override val devices = "设备"; override val api = "接口"; override val settings = "设置"; override val done = "完成"; override val theme = "主题"; override val preferences = "偏好设置"
     override val chatbox = "Chatbox 消息"; override val addDevice = "添加设备"; override val activeDevice = "当前设备"; override val send = "发送"; override val typeMessage = "输入消息..."; override val addIp = "请先在顶部添加电脑 IP"; override val sendFailed = "发送失败"
-    override val apiConfiguration = "API 配置"; override val openMenu = "打开菜单"; override val selectDevice = "选择设备"; override val deleteDevice = "删除设备"; override val deviceAddress = "IP 地址与可选端口"
-    override val defaultPortHint = "未填写端口时使用 9000"; override val invalidDeviceAddress = "请输入有效的 IP 和端口"; override val cancel = "取消"; override val translationAssistant = "翻译"; override val translating = "翻译中..."
+    override val apiConfiguration = "API 配置"; override val openMenu = "打开菜单"; override val selectDevice = "选择设备"; override val deleteDevice = "删除设备"
+    override val cancel = "取消"; override val translationAssistant = "翻译"; override val translating = "翻译中..."
     override val copyMessage = "复制"; override val resendMessage = "重新发送"
     override val appearance = "外观"; override val language = "语言"; override val systemTheme = "跟随系统"; override val lightTheme = "浅色"; override val darkTheme = "深色"
     override val clearHistory = "清空聊天记录"; override val clearHistoryTitle = "确认清空聊天记录？"; override val clearHistoryMessage = "所有已保存的聊天消息都将被永久删除。"; override val delete = "删除"; override val messageTooLong = "消息超过 VRChat Chatbox 限制（144 字符或 9 行）"

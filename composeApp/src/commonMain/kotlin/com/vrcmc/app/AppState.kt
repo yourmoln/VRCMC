@@ -2,7 +2,13 @@ package com.vrcmc.app
 
 import androidx.compose.runtime.*
 
-data class Device(val address: String, val port: Int = 9000)
+data class Device(
+    val address: String,
+    val receivePort: Int = 9000,
+    val sendPort: Int = 9001,
+)
+
+fun Device.displayEndpoint(): String = "$receivePort:${if (':' in address) "[$address]" else address}:$sendPort"
 enum class MessageRole { USER, ASSISTANT }
 data class ChatMessage(
     val text: String,
@@ -60,6 +66,22 @@ class AppState {
         if (activeAddress == device.address) activeAddress = devices.firstOrNull()?.address.orEmpty()
         persist()
     }
+    fun updateDevice(device: Device, address: String, receivePort: String, sendPort: String): Boolean {
+        val updatedAddress = address.trim()
+        val updatedReceivePort = receivePort.toIntOrNull()
+        val updatedSendPort = sendPort.toIntOrNull()
+        if (
+            updatedAddress.isBlank() || updatedAddress.any(Char::isWhitespace) ||
+            updatedReceivePort == null || updatedReceivePort !in 1..65535 ||
+            updatedSendPort == null || updatedSendPort !in 1..65535
+        ) return false
+        val index = devices.indexOf(device)
+        if (index < 0 || devices.any { it != device && it.address == updatedAddress }) return false
+        devices[index] = Device(updatedAddress, updatedReceivePort, updatedSendPort)
+        if (activeAddress == device.address) activeAddress = updatedAddress
+        persist()
+        return true
+    }
     fun addMessage(message: ChatMessage): Int {
         messages += message
         while (messages.size > maxSavedChatMessages) messages.removeAt(0)
@@ -87,23 +109,44 @@ internal fun parseDeviceEndpoint(value: String): Device? {
     val endpoint = value.trim()
     if (endpoint.isBlank() || endpoint.any(Char::isWhitespace)) return null
 
+    val bracketedTriple = Regex("^(\\d+):\\[([^]]+)]:(\\d+)$").matchEntire(endpoint)
+    if (bracketedTriple != null) {
+        val (receivePort, address, sendPort) = bracketedTriple.destructured
+        return deviceOrNull(address, receivePort, sendPort)
+    }
+
     if (endpoint.startsWith("[")) {
         val closingBracket = endpoint.indexOf(']')
         if (closingBracket <= 1) return null
         val address = endpoint.substring(1, closingBracket)
         val portPart = endpoint.substring(closingBracket + 1)
-        val port = when {
-            portPart.isEmpty() -> 9000
+        val receivePort = when {
+            portPart.isEmpty() -> return Device(address)
             portPart.startsWith(":") -> portPart.drop(1).toIntOrNull()
             else -> null
         } ?: return null
-        return Device(address, port).takeIf { port in 1..65535 }
+        return Device(address, receivePort).takeIf { receivePort in 1..65535 }
     }
 
-    if (endpoint.count { it == ':' } == 1) {
-        val address = endpoint.substringBeforeLast(':')
-        val port = endpoint.substringAfterLast(':').toIntOrNull() ?: return null
-        return Device(address, port).takeIf { address.isNotBlank() && port in 1..65535 }
+    return when (endpoint.count { it == ':' }) {
+        0 -> Device(endpoint)
+        1 -> {
+            val address = endpoint.substringBeforeLast(':')
+            val receivePort = endpoint.substringAfterLast(':')
+            deviceOrNull(address, receivePort, "9001")
+        }
+        2 -> {
+            val parts = endpoint.split(':')
+            deviceOrNull(parts[1], parts[0], parts[2])
+        }
+        else -> Device(endpoint)
     }
-    return Device(endpoint, 9000)
+}
+
+private fun deviceOrNull(address: String, receivePort: String, sendPort: String): Device? {
+    val parsedReceivePort = receivePort.toIntOrNull()
+    val parsedSendPort = sendPort.toIntOrNull()
+    return Device(address, parsedReceivePort ?: return null, parsedSendPort ?: return null).takeIf {
+        address.isNotBlank() && parsedReceivePort in 1..65535 && parsedSendPort in 1..65535
+    }
 }

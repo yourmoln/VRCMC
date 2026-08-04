@@ -46,10 +46,13 @@ import platform.Security.kSecValueData
 private val defaults get() = NSUserDefaults.standardUserDefaults
 actual fun loadStoredDevices(): List<Device> = (defaults.stringForKey("devices") ?: "").split(';').mapNotNull { value ->
     val parts = value.split('|')
-    if (parts.firstOrNull() == "v2") parts.getOrNull(1)?.takeIf { it.isNotBlank() }?.let { Device(it, parts.getOrNull(2)?.toIntOrNull() ?: 9000) }
-    else parts.firstOrNull()?.takeIf { it.isNotBlank() }?.let { Device(it, 9000) }
+    when (parts.firstOrNull()) {
+        "v3" -> parts.getOrNull(1)?.takeIf { it.isNotBlank() }?.let { Device(it, parts.getOrNull(2)?.toIntOrNull() ?: 9000, parts.getOrNull(3)?.toIntOrNull() ?: 9001) }
+        "v2" -> parts.getOrNull(1)?.takeIf { it.isNotBlank() }?.let { Device(it, parts.getOrNull(2)?.toIntOrNull() ?: 9000) }
+        else -> parts.firstOrNull()?.takeIf { it.isNotBlank() }?.let { Device(it) }
+    }
 }
-actual fun saveStoredDevices(devices: List<Device>, activeAddress: String) { defaults.setObject(devices.joinToString(";") { "v2|${it.address}|${it.port}" }, forKey = "devices"); defaults.setObject(activeAddress, forKey = "active") }
+actual fun saveStoredDevices(devices: List<Device>, activeAddress: String) { defaults.setObject(devices.joinToString(";") { "v3|${it.address}|${it.receivePort}|${it.sendPort}" }, forKey = "devices"); defaults.setObject(activeAddress, forKey = "active") }
 actual fun loadStoredActiveAddress(): String = defaults.stringForKey("active") ?: ""
 actual fun loadStoredTranslationSettings(): String = defaults.stringForKey("translationSettings") ?: ""
 actual fun saveStoredTranslationSettings(value: String) { defaults.setObject(value, forKey = "translationSettings") }

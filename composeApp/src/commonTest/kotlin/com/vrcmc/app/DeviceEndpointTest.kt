@@ -6,19 +6,21 @@ import kotlin.test.assertNull
 
 class DeviceEndpointTest {
     @Test
-    fun usesPort9000WhenPortIsOmitted() {
-        assertEquals(Device("192.168.1.10", 9000), parseDeviceEndpoint("192.168.1.10"))
+    fun usesDefaultPortsWhenPortsAreOmitted() {
+        assertEquals(Device("192.168.1.10", 9000, 9001), parseDeviceEndpoint("192.168.1.10"))
     }
 
     @Test
-    fun keepsAnExplicitPort() {
-        assertEquals(Device("192.168.1.10", 9010), parseDeviceEndpoint("192.168.1.10:9010"))
-        assertEquals(Device("::1", 9001), parseDeviceEndpoint("[::1]:9001"))
+    fun parsesReceiveIpSendFormatAndLegacyReceivePort() {
+        assertEquals(Device("192.168.1.10", 9010, 9011), parseDeviceEndpoint("9010:192.168.1.10:9011"))
+        assertEquals(Device("192.168.1.10", 9010, 9001), parseDeviceEndpoint("192.168.1.10:9010"))
+        assertEquals(Device("::1", 9010, 9011), parseDeviceEndpoint("9010:[::1]:9011"))
     }
 
     @Test
     fun rejectsInvalidPorts() {
         assertNull(parseDeviceEndpoint("192.168.1.10:not-a-port"))
-        assertNull(parseDeviceEndpoint("192.168.1.10:70000"))
+        assertNull(parseDeviceEndpoint("70000:192.168.1.10:9001"))
+        assertNull(parseDeviceEndpoint("9000:192.168.1.10:70000"))
     }
 }
