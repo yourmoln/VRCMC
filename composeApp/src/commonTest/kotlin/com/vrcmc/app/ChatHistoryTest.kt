@@ -23,4 +23,12 @@ class ChatHistoryTest {
 
         assertEquals(listOf(messages.first()), chatHistoryFromJson(messages.toChatHistoryJson()))
     }
+
+    @Test
+    fun capsPersistedHistory() {
+        val messages = (0..maxSavedChatMessages).map { ChatMessage("message-$it", MessageRole.USER, timestamp = it.toLong()) }
+        val restored = chatHistoryFromJson(messages.toChatHistoryJson())
+        assertEquals(maxSavedChatMessages, restored.size)
+        assertEquals("message-1", restored.first().text)
+    }
 }

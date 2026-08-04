@@ -13,6 +13,7 @@ data class ChatMessage(
 
 class AppState {
     private val storedTranslation = storedTranslationSettingsFromJson(loadStoredTranslationSettings())
+    private val storedSecrets = storedProviderSecretsFromJson(loadStoredTranslationSecrets())
     val devices = mutableStateListOf<Device>().apply { addAll(loadStoredDevices()) }
     val messages = mutableStateListOf<ChatMessage>().apply { addAll(chatHistoryFromJson(loadStoredChatHistory())) }
     var chatDraft by mutableStateOf("")
@@ -20,13 +21,20 @@ class AppState {
     var providerId by mutableStateOf(storedTranslation.providerId.takeIf { id -> translationProviders.any { it.id == id } } ?: "deepseek")
     var translate by mutableStateOf(storedTranslation.translate)
     val languages = mutableStateListOf<String>().apply { addAll(storedTranslation.targetLanguages.take(2).ifEmpty { listOf("English") }) }
-    val providerConfigs = initialProviderConfigs(storedTranslation.configs)
+    val providerConfigs = initialProviderConfigs(storedTranslation.configs, storedSecrets)
     val provider get() = providerById(providerId)
     val providerConfig get() = providerConfigs[providerId] ?: defaultProviderConfig(provider)
     fun updateProviderConfig(transform: (ProviderConfig) -> ProviderConfig) { providerConfigs[providerId] = transform(providerConfig); persistTranslation() }
     fun selectProvider(id: String) { providerId = id; persistTranslation() }
     fun setLanguages(values: List<String>) { languages.clear(); languages.addAll(values.filter { it.isNotBlank() }.distinct().take(2).ifEmpty { listOf("English") }); persistTranslation() }
-    fun persistTranslation() = saveStoredTranslationSettings(StoredTranslationSettings(providerId = providerId, translate = translate, targetLanguages = languages.toList(), configs = providerConfigs.toMap()).toJson())
+    init {
+        if (storedTranslation.configs.values.any { it.apiKey.isNotBlank() || it.customHeaders.isNotBlank() }) persistTranslation()
+    }
+
+    fun persistTranslation() {
+        saveStoredTranslationSecrets(providerConfigs.mapValues { (_, value) -> ProviderSecrets(value.apiKey, value.customHeaders) }.toSecretsJson())
+        saveStoredTranslationSettings(StoredTranslationSettings(providerId = providerId, translate = translate, targetLanguages = languages.toList(), configs = providerConfigs.toMap()).toJson())
+    }
     fun persist() = saveStoredDevices(devices.toList(), activeAddress)
     fun activeDevice() = devices.firstOrNull { it.address == activeAddress } ?: devices.firstOrNull()
     fun addDevice(value: String): Boolean {
@@ -44,6 +52,7 @@ class AppState {
     }
     fun addMessage(message: ChatMessage): Int {
         messages += message
+        while (messages.size > maxSavedChatMessages) messages.removeAt(0)
         persistChatHistory()
         return messages.lastIndex
     }

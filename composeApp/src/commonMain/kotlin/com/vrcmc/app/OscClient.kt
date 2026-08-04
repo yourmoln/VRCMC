@@ -1,5 +1,11 @@
 package com.vrcmc.app
 
+internal const val maxChatboxCharacters = 144
+internal const val maxChatboxLines = 9
+
+internal fun isValidChatboxText(text: String): Boolean =
+    text.isNotBlank() && text.length <= maxChatboxCharacters && text.lineSequence().count() <= maxChatboxLines
+
 internal fun chatboxPacket(text: String): ByteArray {
     fun padded(value: String): ByteArray {
         val raw = value.encodeToByteArray() + byteArrayOf(0)

@@ -69,10 +69,35 @@ data class StoredTranslationSettings(
     val configs: Map<String, ProviderConfig> = emptyMap(),
 )
 
+data class ProviderSecrets(
+    val apiKey: String = "",
+    val customHeaders: String = "",
+)
+
 fun StoredTranslationSettings.toJson(): String = buildJsonObject {
     put("provider", providerId); put("translate", translate); putJsonArray("targetLanguages") { targetLanguages.take(2).forEach(::add) }
-    putJsonObject("configs") { configs.forEach { (id, value) -> putJsonObject(id) { put("apiKey", value.apiKey); put("baseUrl", value.baseUrl); put("model", value.model); put("region", value.region); put("timeout", value.timeoutSeconds); put("headers", value.customHeaders); put("streaming", value.streaming); put("retries", value.retryCount) } } }
+    putJsonObject("configs") { configs.forEach { (id, value) -> putJsonObject(id) { put("baseUrl", value.baseUrl); put("model", value.model); put("region", value.region); put("timeout", value.timeoutSeconds); put("streaming", value.streaming); put("retries", value.retryCount) } } }
 }.toString()
+
+fun Map<String, ProviderSecrets>.toSecretsJson(): String = buildJsonObject {
+    forEach { (id, value) ->
+        if (value.apiKey.isNotBlank() || value.customHeaders.isNotBlank()) {
+            putJsonObject(id) { put("apiKey", value.apiKey); put("headers", value.customHeaders) }
+        }
+    }
+}.toString()
+
+fun storedProviderSecretsFromJson(value: String): Map<String, ProviderSecrets> = runCatching {
+    if (value.isBlank()) return emptyMap()
+    Json.parseToJsonElement(value).jsonObject.mapValues { (_, element) ->
+        element.jsonObject.let { obj ->
+            ProviderSecrets(
+                apiKey = obj["apiKey"]?.jsonPrimitive?.content.orEmpty(),
+                customHeaders = obj["headers"]?.jsonPrimitive?.content.orEmpty(),
+            )
+        }
+    }
+}.getOrDefault(emptyMap())
 
 fun storedTranslationSettingsFromJson(value: String): StoredTranslationSettings = runCatching {
     val root = Json.parseToJsonElement(value).jsonObject
@@ -82,6 +107,19 @@ fun storedTranslationSettingsFromJson(value: String): StoredTranslationSettings 
     StoredTranslationSettings(root["provider"]?.jsonPrimitive?.content ?: "deepseek", root["translate"]?.jsonPrimitive?.booleanOrNull ?: false, languages.ifEmpty { listOf("English") }, configs)
 }.getOrDefault(StoredTranslationSettings())
 
-fun initialProviderConfigs(stored: Map<String, ProviderConfig>) = mutableStateMapOf<String, ProviderConfig>().apply {
-    translationProviders.forEach { provider -> put(provider.id, stored[provider.id] ?: defaultProviderConfig(provider)) }
+fun initialProviderConfigs(
+    stored: Map<String, ProviderConfig>,
+    secrets: Map<String, ProviderSecrets> = emptyMap(),
+) = mutableStateMapOf<String, ProviderConfig>().apply {
+    translationProviders.forEach { provider ->
+        val value = stored[provider.id] ?: defaultProviderConfig(provider)
+        val protected = secrets[provider.id]
+        put(
+            provider.id,
+            value.copy(
+                apiKey = protected?.apiKey ?: value.apiKey,
+                customHeaders = protected?.customHeaders ?: value.customHeaders,
+            ),
+        )
+    }
 }

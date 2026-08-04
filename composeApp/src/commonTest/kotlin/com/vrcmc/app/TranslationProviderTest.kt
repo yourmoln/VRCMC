@@ -16,15 +16,34 @@ class TranslationProviderTest {
     }
 
     @Test
-    fun settingsRoundTripPreservesProviderSpecificValues() {
+    fun publicSettingsNeverPersistProviderSecrets() {
         val original = StoredTranslationSettings(
             providerId = "openai_compatible",
             translate = true,
             targetLanguages = listOf("日本語", "English"),
             configs = mapOf("openai_compatible" to ProviderConfig("secret", "https://relay.example/v1", "custom/model", "custom", 47, "X-Test: yes", true, 6)),
         )
-        val restored = storedTranslationSettingsFromJson(original.toJson())
-        assertEquals(original, restored)
+        val json = original.toJson()
+        val restored = storedTranslationSettingsFromJson(json)
+        assertFalse(json.contains("secret"))
+        assertFalse(json.contains("X-Test"))
+        assertEquals(
+            original.copy(configs = original.configs.mapValues { (_, value) -> value.copy(apiKey = "", customHeaders = "") }),
+            restored,
+        )
+    }
+
+    @Test
+    fun protectedSecretsRoundTripSeparately() {
+        val original = mapOf("openai" to ProviderSecrets("secret", "X-Test: yes"))
+        assertEquals(original, storedProviderSecretsFromJson(original.toSecretsJson()))
+    }
+
+    @Test
+    fun legacyPlaintextSettingsCanStillBeMigrated() {
+        val restored = storedTranslationSettingsFromJson("""{"provider":"openai","configs":{"openai":{"apiKey":"legacy","headers":"Authorization: old"}}}""")
+        assertEquals("legacy", restored.configs.getValue("openai").apiKey)
+        assertEquals("Authorization: old", restored.configs.getValue("openai").customHeaders)
     }
 
     @Test

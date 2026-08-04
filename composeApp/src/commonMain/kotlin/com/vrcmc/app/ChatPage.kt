@@ -87,6 +87,10 @@ fun ChatPage(state: AppState, strings: LocaleStrings) {
             onSend = {
                 val original = state.chatDraft.trim()
                 val target = state.activeDevice() ?: return@ChatComposer
+                if (!isValidChatboxText(original)) {
+                    error = strings.messageTooLong
+                    return@ChatComposer
+                }
                 val shouldTranslate = state.translate && !isArabicDigitsOnly(original)
                 sending = true
                 error = null
@@ -123,7 +127,8 @@ fun ChatPage(state: AppState, strings: LocaleStrings) {
                         }
                     }
                     val outgoing = listOfNotNull(original, translatedText.takeIf(String::isNotBlank)).joinToString("\n")
-                    if (!sendChatboxOsc(target.address, outgoing, target.port)) error = strings.sendFailed
+                    if (!isValidChatboxText(outgoing)) error = strings.messageTooLong
+                    else if (!sendChatboxOsc(target.address, outgoing, target.port)) error = strings.sendFailed
                     sending = false
                 }
             },

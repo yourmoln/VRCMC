@@ -9,7 +9,7 @@ kotlin { jvm("desktop"); androidTarget(); iosX64(); iosArm64(); iosSimulatorArm6
         implementation(libs.ktor.client.core)
     }
     commonTest.dependencies { implementation(kotlin("test")) }
-    named("desktopMain").dependencies { implementation(compose.desktop.currentOs); implementation(libs.ktor.client.cio) }
+    named("desktopMain").dependencies { implementation(compose.desktop.currentOs); implementation(libs.ktor.client.cio); implementation(libs.jna.platform) }
     androidMain.dependencies { implementation(libs.activity.compose); implementation(libs.ktor.client.cio) }
     iosMain.dependencies { implementation(libs.ktor.client.darwin) }
 } }
@@ -22,12 +22,12 @@ android {
     }
 
     namespace = libs.versions.app.packageName.get()
-    compileSdk = 35
+    compileSdk = 36
 
     defaultConfig {
         applicationId = libs.versions.app.packageName.get()
         minSdk = 26
-        targetSdk = 35
+        targetSdk = 36
         versionCode = libs.versions.app.code.get().toInt()
         versionName = libs.versions.app.version.get()
     }
@@ -62,5 +62,12 @@ android {
         }
     }
 }
-compose.desktop { application { mainClass = "com.vrcmc.app.DesktopMainKt" } }
+compose.desktop {
+    application {
+        mainClass = "com.vrcmc.app.DesktopMainKt"
+        buildTypes.release.proguard {
+            configurationFiles.from(project.file("proguard-rules.pro"))
+        }
+    }
+}
 compose.resources { packageOfResClass = "com.vrcmc.app.generated.resources" }

@@ -6,6 +6,7 @@ import io.ktor.client.plugins.*
 import io.ktor.client.request.*
 import io.ktor.client.request.forms.*
 import io.ktor.http.*
+import kotlinx.coroutines.CancellationException
 import kotlinx.serialization.json.*
 
 sealed interface TranslationResult {
@@ -24,7 +25,7 @@ suspend fun translateText(provider: TranslationProvider, config: ProviderConfig,
     if (config.baseUrl.isBlank()) return TranslationResult.Failure("Base URL 不能为空")
     if (config.model.isBlank()) return TranslationResult.Failure("模型 ID 不能为空")
     if (provider.keyRequired && config.apiKey.isBlank()) return TranslationResult.Failure("${provider.label} 需要 API Key")
-    if (!config.baseUrl.startsWith("https://") && !config.baseUrl.startsWith("http://")) return TranslationResult.Failure("Base URL 必须以 http:// 或 https:// 开头")
+    endpointSecurityError(config)?.let { return TranslationResult.Failure(it) }
     return translateWithRetries(text, config.retryCount) {
         try {
             when (provider.protocol) {
@@ -35,11 +36,37 @@ suspend fun translateText(provider: TranslationProvider, config: ProviderConfig,
                 ProviderProtocol.DEEPL -> requestDeepL(config, targetLanguage, text)
                 ProviderProtocol.LIBRE -> requestLibre(config, targetLanguage, text)
             }
+        } catch (error: CancellationException) {
+            throw error
         } catch (error: Throwable) {
             TranslationResult.Failure(error.message?.takeIf { it.isNotBlank() } ?: error::class.simpleName ?: "网络请求失败")
         }
     }
 }
+
+internal fun endpointSecurityError(config: ProviderConfig): String? {
+    val endpoint = config.baseUrl.trim().lowercase()
+    if (!endpoint.startsWith("https://") && !endpoint.startsWith("http://")) return "Base URL 必须以 http:// 或 https:// 开头"
+    if (endpoint.startsWith("http://") && (config.apiKey.isNotBlank() || config.customHeaders.isNotBlank())) {
+        return "HTTP 端点不能携带 API Key 或自定义请求头，请改用 HTTPS"
+    }
+    if (endpoint.startsWith("http://") && !isLocalNetworkEndpoint(config.baseUrl)) {
+        return "HTTP 仅允许用于本机或局域网端点，公网端点必须使用 HTTPS"
+    }
+    return null
+}
+
+private fun isLocalNetworkEndpoint(value: String): Boolean = runCatching {
+    val host = Url(value.trim()).host.lowercase().trim('[', ']')
+    if (host == "localhost" || host.endsWith(".local") || host == "::1" || host.startsWith("127.")) return@runCatching true
+    val ipv4 = host.split('.').map { it.toIntOrNull() }
+    if (ipv4.size == 4 && ipv4.all { it != null && it in 0..255 }) {
+        val first = ipv4[0]!!
+        val second = ipv4[1]!!
+        return@runCatching first == 10 || (first == 172 && second in 16..31) || (first == 192 && second == 168) || (first == 169 && second == 254)
+    }
+    host.startsWith("fc") || host.startsWith("fd") || host.startsWith("fe8") || host.startsWith("fe9") || host.startsWith("fea") || host.startsWith("feb")
+}.getOrDefault(false)
 
 internal suspend fun translateWithRetries(sourceText: String, retryCount: Int, request: suspend () -> TranslationResult): TranslationResult {
     var lastFailure = TranslationResult.Failure("翻译接口未返回可用翻译", retryable = true)
