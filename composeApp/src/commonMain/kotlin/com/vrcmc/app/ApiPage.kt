@@ -25,7 +25,6 @@ import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.launch
 
-private val targetLanguages = listOf("English", "简体中文", "繁體中文", "日本語", "한국어", "Español", "Français", "Deutsch", "Русский")
 private val recommendedProviderIds = setOf("deepseek", "qianwen", "gemini", "openai", "local_ai")
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -34,7 +33,6 @@ fun ApiPage(state: AppState, strings: LocaleStrings) {
     val provider = state.provider
     val config = state.providerConfig
     var showProviderPicker by remember { mutableStateOf(false) }
-    var showLanguagePicker by remember { mutableStateOf(false) }
     var modelMenu by remember(provider.id) { mutableStateOf(false) }
     var regionMenu by remember(provider.id) { mutableStateOf(false) }
     var showKey by remember(provider.id) { mutableStateOf(false) }
@@ -112,7 +110,7 @@ fun ApiPage(state: AppState, strings: LocaleStrings) {
         }
 
         item {
-            SettingsCard(strings.modelAndLanguage, Icons.Default.AutoAwesome) {
+            SettingsCard(strings.model, Icons.Default.AutoAwesome) {
                 Box {
                     OutlinedTextField(
                         value = config.model, onValueChange = { if (provider.editableModel) update { old -> old.copy(model = it) } }, modifier = Modifier.fillMaxWidth(), singleLine = true,
@@ -126,22 +124,6 @@ fun ApiPage(state: AppState, strings: LocaleStrings) {
                         }
                     }
                 }
-                Text(strings.targetLanguage, style = MaterialTheme.typography.labelLarge)
-                Row(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
-                    state.languages.forEach { language ->
-                        InputChip(
-                            selected = true,
-                            onClick = { if (state.languages.size > 1) state.setLanguages(state.languages - language) },
-                            label = { Text(language) },
-                            leadingIcon = { Icon(Icons.Default.Language, null, Modifier.size(18.dp)) },
-                            trailingIcon = if (state.languages.size > 1) ({ Icon(Icons.Default.Close, null, Modifier.size(17.dp)) }) else null,
-                        )
-                    }
-                }
-                OutlinedButton({ showLanguagePicker = true }, Modifier.fillMaxWidth(), shape = MaterialTheme.shapes.large) {
-                    Icon(Icons.Default.Add, null); Spacer(Modifier.width(8.dp)); Text("${strings.chooseLanguage} · ${state.languages.size}/2")
-                }
-                Text(strings.twoLanguageHint, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
             }
         }
 
@@ -208,7 +190,6 @@ fun ApiPage(state: AppState, strings: LocaleStrings) {
     }
 
     if (showProviderPicker) ProviderPickerDialog(provider.id, strings, onDismiss = { showProviderPicker = false }) { id -> state.selectProvider(id); result = null; showProviderPicker = false }
-    if (showLanguagePicker) LanguagePickerDialog(state.languages.toList(), strings, onDismiss = { showLanguagePicker = false }) { state.setLanguages(it); result = null }
 }
 
 @Composable
@@ -243,39 +224,6 @@ private fun ProviderPickerDialog(selectedId: String, strings: LocaleStrings, onD
                         }
                     }
                 }
-            }
-        }
-    }
-}
-
-@Composable
-private fun LanguagePickerDialog(selected: List<String>, strings: LocaleStrings, onDismiss: () -> Unit, onChange: (List<String>) -> Unit) {
-    Dialog(onDismissRequest = onDismiss, properties = DialogProperties(usePlatformDefaultWidth = false)) {
-        Surface(Modifier.fillMaxWidth(.88f).widthIn(max = 440.dp), shape = MaterialTheme.shapes.extraLarge, tonalElevation = 8.dp) {
-            Column(Modifier.padding(18.dp)) {
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    Column(Modifier.weight(1f)) { Text(strings.chooseLanguage, style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.SemiBold); Text(strings.twoLanguageHint, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant) }
-                    Text("${selected.size}/2", color = MaterialTheme.colorScheme.primary, fontWeight = FontWeight.Bold)
-                }
-                Spacer(Modifier.height(12.dp))
-                LazyColumn(Modifier.heightIn(max = 330.dp), verticalArrangement = Arrangement.spacedBy(3.dp)) {
-                    items(targetLanguages) { language ->
-                        val checked = language in selected
-                        val enabled = checked || selected.size < 2
-                        Surface(
-                            Modifier.fillMaxWidth().clickable(enabled = enabled) { if (checked && selected.size > 1) onChange(selected - language) else if (!checked && selected.size < 2) onChange(selected + language) },
-                            color = if (checked) MaterialTheme.colorScheme.secondaryContainer else MaterialTheme.colorScheme.surface,
-                            shape = MaterialTheme.shapes.medium,
-                        ) {
-                            Row(Modifier.padding(horizontal = 10.dp, vertical = 7.dp), verticalAlignment = Alignment.CenterVertically) {
-                                Checkbox(checked, { value -> if (!value && selected.size > 1) onChange(selected - language) else if (value && selected.size < 2) onChange(selected + language) }, enabled = enabled)
-                                Text(language, Modifier.weight(1f), color = if (enabled) MaterialTheme.colorScheme.onSurface else MaterialTheme.colorScheme.onSurface.copy(alpha = .38f))
-                            }
-                        }
-                    }
-                }
-                Spacer(Modifier.height(12.dp))
-                Button(onDismiss, Modifier.align(Alignment.End)) { Text(strings.done) }
             }
         }
     }

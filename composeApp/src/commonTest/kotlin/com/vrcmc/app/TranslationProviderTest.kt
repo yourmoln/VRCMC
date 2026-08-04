@@ -57,12 +57,22 @@ class TranslationProviderTest {
     fun legacySingleLanguageMigratesToLanguageList() {
         val restored = storedTranslationSettingsFromJson("""{"provider":"deepseek","targetLanguage":"简体中文","configs":{}}""")
         assertEquals(listOf("简体中文"), restored.targetLanguages)
+        assertEquals(listOf("简体中文", originalOutputKey), restored.outputOrder)
     }
 
     @Test
     fun persistedLanguagesAreLimitedToTwo() {
         val value = StoredTranslationSettings(targetLanguages = listOf("English", "日本語", "Deutsch"))
         assertEquals(listOf("English", "日本語"), storedTranslationSettingsFromJson(value.toJson()).targetLanguages)
+    }
+
+    @Test
+    fun outputOrderRoundTripsAndDropsUnknownEntries() {
+        val value = StoredTranslationSettings(
+            targetLanguages = listOf("English", "日本語"),
+            outputOrder = listOf(originalOutputKey, "日本語", "unknown", "English"),
+        )
+        assertEquals(listOf(originalOutputKey, "日本語", "English"), storedTranslationSettingsFromJson(value.toJson()).outputOrder)
     }
 
     @Test

@@ -66,6 +66,7 @@ data class StoredTranslationSettings(
     val providerId: String = "deepseek",
     val translate: Boolean = false,
     val targetLanguages: List<String> = listOf("English"),
+    val outputOrder: List<String> = targetLanguages + originalOutputKey,
     val configs: Map<String, ProviderConfig> = emptyMap(),
 )
 
@@ -76,6 +77,7 @@ data class ProviderSecrets(
 
 fun StoredTranslationSettings.toJson(): String = buildJsonObject {
     put("provider", providerId); put("translate", translate); putJsonArray("targetLanguages") { targetLanguages.take(2).forEach(::add) }
+    putJsonArray("outputOrder") { normalizeOutputOrder(targetLanguages, outputOrder).forEach(::add) }
     putJsonObject("configs") { configs.forEach { (id, value) -> putJsonObject(id) { put("baseUrl", value.baseUrl); put("model", value.model); put("region", value.region); put("timeout", value.timeoutSeconds); put("streaming", value.streaming); put("retries", value.retryCount) } } }
 }.toString()
 
@@ -104,7 +106,15 @@ fun storedTranslationSettingsFromJson(value: String): StoredTranslationSettings 
     val configs = root["configs"]?.jsonObject?.mapValues { (_, element) -> element.jsonObject.let { obj -> ProviderConfig(obj["apiKey"]?.jsonPrimitive?.content.orEmpty(), obj["baseUrl"]?.jsonPrimitive?.content.orEmpty(), obj["model"]?.jsonPrimitive?.content.orEmpty(), obj["region"]?.jsonPrimitive?.content.orEmpty(), obj["timeout"]?.jsonPrimitive?.intOrNull ?: 20, obj["headers"]?.jsonPrimitive?.content.orEmpty(), obj["streaming"]?.jsonPrimitive?.booleanOrNull ?: false, (obj["retries"]?.jsonPrimitive?.intOrNull ?: 5).coerceIn(0, 10)) } }.orEmpty()
     val languages = root["targetLanguages"]?.jsonArray?.mapNotNull { it.jsonPrimitive.contentOrNull }?.filter { it.isNotBlank() }?.distinct()?.take(2)
         ?: listOf(root["targetLanguage"]?.jsonPrimitive?.contentOrNull ?: "English")
-    StoredTranslationSettings(root["provider"]?.jsonPrimitive?.content ?: "deepseek", root["translate"]?.jsonPrimitive?.booleanOrNull ?: false, languages.ifEmpty { listOf("English") }, configs)
+    val selectedLanguages = languages.ifEmpty { listOf("English") }
+    val storedOrder = root["outputOrder"]?.jsonArray?.mapNotNull { it.jsonPrimitive.contentOrNull }.orEmpty()
+    StoredTranslationSettings(
+        providerId = root["provider"]?.jsonPrimitive?.content ?: "deepseek",
+        translate = root["translate"]?.jsonPrimitive?.booleanOrNull ?: false,
+        targetLanguages = selectedLanguages,
+        outputOrder = normalizeOutputOrder(selectedLanguages, storedOrder),
+        configs = configs,
+    )
 }.getOrDefault(StoredTranslationSettings())
 
 fun initialProviderConfigs(

@@ -21,19 +21,29 @@ class AppState {
     var providerId by mutableStateOf(storedTranslation.providerId.takeIf { id -> translationProviders.any { it.id == id } } ?: "deepseek")
     var translate by mutableStateOf(storedTranslation.translate)
     val languages = mutableStateListOf<String>().apply { addAll(storedTranslation.targetLanguages.take(2).ifEmpty { listOf("English") }) }
+    val outputOrder = mutableStateListOf<String>().apply { addAll(normalizeOutputOrder(languages, storedTranslation.outputOrder)) }
     val providerConfigs = initialProviderConfigs(storedTranslation.configs, storedSecrets)
     val provider get() = providerById(providerId)
     val providerConfig get() = providerConfigs[providerId] ?: defaultProviderConfig(provider)
     fun updateProviderConfig(transform: (ProviderConfig) -> ProviderConfig) { providerConfigs[providerId] = transform(providerConfig); persistTranslation() }
     fun selectProvider(id: String) { providerId = id; persistTranslation() }
-    fun setLanguages(values: List<String>) { languages.clear(); languages.addAll(values.filter { it.isNotBlank() }.distinct().take(2).ifEmpty { listOf("English") }); persistTranslation() }
+    fun setLanguages(values: List<String>) {
+        languages.clear()
+        languages.addAll(values.filter { it.isNotBlank() }.distinct().take(2).ifEmpty { listOf("English") })
+        setOutputOrder(outputOrder.toList())
+    }
+    fun setOutputOrder(values: List<String>) {
+        outputOrder.clear()
+        outputOrder.addAll(normalizeOutputOrder(languages, values))
+        persistTranslation()
+    }
     init {
         if (storedTranslation.configs.values.any { it.apiKey.isNotBlank() || it.customHeaders.isNotBlank() }) persistTranslation()
     }
 
     fun persistTranslation() {
         saveStoredTranslationSecrets(providerConfigs.mapValues { (_, value) -> ProviderSecrets(value.apiKey, value.customHeaders) }.toSecretsJson())
-        saveStoredTranslationSettings(StoredTranslationSettings(providerId = providerId, translate = translate, targetLanguages = languages.toList(), configs = providerConfigs.toMap()).toJson())
+        saveStoredTranslationSettings(StoredTranslationSettings(providerId = providerId, translate = translate, targetLanguages = languages.toList(), outputOrder = outputOrder.toList(), configs = providerConfigs.toMap()).toJson())
     }
     fun persist() = saveStoredDevices(devices.toList(), activeAddress)
     fun activeDevice() = devices.firstOrNull { it.address == activeAddress } ?: devices.firstOrNull()

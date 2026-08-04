@@ -23,7 +23,7 @@ import kotlinx.coroutines.launch
 import org.jetbrains.compose.resources.painterResource
 
 private enum class ThemeMode { SYSTEM, DARK, LIGHT }
-private enum class AppScreen { CHAT, API, PREFERENCES }
+private enum class AppScreen { CHAT, API, TRANSLATION_LANGUAGE, PREFERENCES }
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalComposeUiApi::class)
 @Composable
@@ -84,6 +84,16 @@ fun VrcmcApp() {
                         },
                         modifier = Modifier.padding(horizontal = 12.dp),
                     )
+                    NavigationDrawerItem(
+                        label = { Text(strings.languageSettings) },
+                        selected = screen == AppScreen.TRANSLATION_LANGUAGE,
+                        icon = { Icon(Icons.Default.Translate, null) },
+                        onClick = {
+                            screen = AppScreen.TRANSLATION_LANGUAGE
+                            scope.launch { drawerState.close() }
+                        },
+                        modifier = Modifier.padding(horizontal = 12.dp),
+                    )
                     HorizontalDivider(Modifier.padding(vertical = 10.dp))
                     NavigationDrawerItem(
                         label = { Text(strings.preferences) },
@@ -132,6 +142,7 @@ fun VrcmcApp() {
                     when (screen) {
                         AppScreen.CHAT -> ChatPage(state, strings)
                         AppScreen.API -> ApiPage(state, strings)
+                        AppScreen.TRANSLATION_LANGUAGE -> TranslationLanguagePage(state, strings)
                         AppScreen.PREFERENCES -> PreferencesPage(theme, language, strings, { theme = it }, { language = it })
                     }
                 }

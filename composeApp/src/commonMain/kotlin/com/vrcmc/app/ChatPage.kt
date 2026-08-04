@@ -47,6 +47,8 @@ fun ChatPage(state: AppState, strings: LocaleStrings) {
             return
         }
         val shouldTranslate = state.translate && !isArabicDigitsOnly(original)
+        val targetLanguages = state.languages.toList()
+        val outputOrder = state.outputOrder.toList()
         val translatingText = "$original\n(Translating...)"
         if (shouldTranslate && !isValidChatboxText(translatingText)) {
             error = strings.messageTooLong
@@ -64,7 +66,7 @@ fun ChatPage(state: AppState, strings: LocaleStrings) {
                 error = strings.sendFailed
             }
             val translations = if (shouldTranslate) coroutineScope {
-                state.languages.map { language ->
+                targetLanguages.map { language ->
                     async { language to translateText(state.provider, state.providerConfig, language, original) }
                 }.awaitAll()
             } else emptyList()
@@ -75,17 +77,17 @@ fun ChatPage(state: AppState, strings: LocaleStrings) {
                 sending = false
                 return@launch
             }
-            val successful = translations.mapNotNull { (_, result) ->
-                (result as? TranslationResult.Success)?.text?.takeIf { it != original }
-            }
-            val translatedText = successful.joinToString("\n")
+            val successful = translations.mapNotNull { (language, result) ->
+                (result as? TranslationResult.Success)?.text?.takeIf { it != original }?.let { language to it }
+            }.toMap()
+            val translatedText = buildTranslationOutput("", successful, outputOrder)
             loadingIndex?.let { index ->
                 if (index in state.messages.indices) {
                     if (translatedText.isBlank()) state.removeMessageAt(index)
                     else state.replaceMessage(index, ChatMessage(translatedText, MessageRole.ASSISTANT))
                 }
             }
-            val outgoing = listOfNotNull(original, translatedText.takeIf(String::isNotBlank)).joinToString("\n")
+            val outgoing = buildTranslationOutput(original, successful, outputOrder)
             if (!isValidChatboxText(outgoing)) error = strings.messageTooLong
             else if (!sendChatboxOsc(target.address, outgoing, target.port)) error = strings.sendFailed
             sending = false

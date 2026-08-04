@@ -24,6 +24,7 @@ open class LocaleStrings {
     open val connectionSuccessful = "Connection successful"; open val connectionFailedTitle = "Connection failed"
     open val chooseProvider = "Choose provider"; open val providerPickerHint = "Search a compact list without covering the page"; open val searchProvider = "Search provider or protocol"; open val recommended = "Recommended"
     open val chooseLanguage = "Choose target language"; open val twoLanguageHint = "Choose one or two languages. Two translations run in parallel."
+    open val languageSettings = "Translation languages"; open val selectedLanguages = "Target languages"; open val displayOrder = "Display order"; open val effectPreview = "Preview"; open val originalText = "Original"; open val moveUp = "Move up"; open val moveDown = "Move down"
 }
 object LocaleStringsEn : LocaleStrings()
 object LocaleStringsZhHans : LocaleStrings() {
@@ -48,8 +49,9 @@ object LocaleStringsZhHans : LocaleStrings() {
     override val connectionSuccessful = "连接成功"; override val connectionFailedTitle = "连接失败"
     override val chooseProvider = "选择服务商"; override val providerPickerHint = "紧凑显示服务商，可按名称或协议搜索"; override val searchProvider = "搜索服务商或协议"; override val recommended = "推荐"
     override val chooseLanguage = "选择目标语言"; override val twoLanguageHint = "可选择 1–2 种语言；双语翻译会并行执行"
+    override val languageSettings = "翻译语言"; override val selectedLanguages = "目标语言"; override val displayOrder = "显示顺序"; override val effectPreview = "效果预览"; override val originalText = "原文"; override val moveUp = "上移"; override val moveDown = "下移"
 }
-object LocaleStringsZhHant : LocaleStrings() { override val yesterday = "\u6628\u5929"; override val dayBeforeYesterday = "\u524d\u5929"; override val copyMessage = "複製"; override val resendMessage = "重新傳送" }
-object LocaleStringsJa : LocaleStrings() { override val yesterday = "\u6628\u65e5"; override val dayBeforeYesterday = "\u4e00\u6628\u65e5"; override val copyMessage = "コピー"; override val resendMessage = "再送信" }
+object LocaleStringsZhHant : LocaleStrings() { override val yesterday = "\u6628\u5929"; override val dayBeforeYesterday = "\u524d\u5929"; override val copyMessage = "複製"; override val resendMessage = "重新傳送"; override val languageSettings = "翻譯語言"; override val selectedLanguages = "目標語言"; override val displayOrder = "顯示順序"; override val effectPreview = "效果預覽"; override val originalText = "原文"; override val moveUp = "上移"; override val moveDown = "下移" }
+object LocaleStringsJa : LocaleStrings() { override val yesterday = "\u6628\u65e5"; override val dayBeforeYesterday = "\u4e00\u6628\u65e5"; override val copyMessage = "コピー"; override val resendMessage = "再送信"; override val languageSettings = "翻訳言語"; override val selectedLanguages = "翻訳先言語"; override val displayOrder = "表示順序"; override val effectPreview = "プレビュー"; override val originalText = "原文"; override val moveUp = "上へ"; override val moveDown = "下へ" }
 
 fun localeStrings(language: AppLanguage): LocaleStrings = when (language) { AppLanguage.ZH_HANS -> LocaleStringsZhHans; AppLanguage.ZH_HANT -> LocaleStringsZhHant; AppLanguage.JA -> LocaleStringsJa; AppLanguage.EN -> LocaleStringsEn }
