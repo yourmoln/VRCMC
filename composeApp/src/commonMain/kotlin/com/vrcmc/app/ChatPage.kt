@@ -18,6 +18,8 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.platform.LocalClipboardManager
 import androidx.compose.ui.platform.LocalDensity
@@ -29,6 +31,7 @@ import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.yield
 
 @Composable
 fun ChatPage(state: AppState, strings: LocaleStrings) {
@@ -317,6 +320,17 @@ private fun ChatComposer(
     onInputChange: (String) -> Unit,
     onSend: () -> Unit,
 ) {
+    val focusRequester = remember { FocusRequester() }
+    val scope = rememberCoroutineScope()
+
+    fun sendAndKeepFocus() {
+        onSend()
+        scope.launch {
+            yield()
+            focusRequester.requestFocus()
+        }
+    }
+
     Surface(
         modifier = Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 10.dp),
         shape = RoundedCornerShape(20.dp),
@@ -332,7 +346,7 @@ private fun ChatComposer(
                 BasicTextField(
                     value = input,
                     onValueChange = onInputChange,
-                    modifier = Modifier.weight(1f).padding(vertical = 14.dp),
+                    modifier = Modifier.weight(1f).focusRequester(focusRequester).padding(vertical = 14.dp),
                     textStyle = MaterialTheme.typography.bodyLarge.copy(
                         color = MaterialTheme.colorScheme.onSurface,
                     ),
@@ -354,7 +368,7 @@ private fun ChatComposer(
                 Spacer(Modifier.width(10.dp))
                 FilledIconButton(
                     enabled = input.isNotBlank() && enabled,
-                    onClick = onSend,
+                    onClick = ::sendAndKeepFocus,
                     modifier = Modifier.size(44.dp),
                 ) { Icon(Icons.AutoMirrored.Filled.Send, strings.send) }
             }
