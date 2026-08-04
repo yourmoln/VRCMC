@@ -66,6 +66,7 @@ fun ChatPage(state: AppState, strings: LocaleStrings) {
     fun sendMessage(rawText: String, clearDraft: Boolean) {
         val original = rawText.trim()
         val target = state.activeDevice() ?: return
+        cancelActiveTranslation()
         if (!isValidChatboxText(original)) {
             error = strings.messageTooLong
             return
@@ -224,7 +225,6 @@ fun ChatPage(state: AppState, strings: LocaleStrings) {
             enabled = active != null,
             strings = strings,
             onInputChange = {
-                cancelActiveTranslation()
                 state.chatDraft = it
                 error = null
             },
