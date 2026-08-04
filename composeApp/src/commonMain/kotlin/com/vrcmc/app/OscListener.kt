@@ -1,11 +1,24 @@
 package com.vrcmc.app
 
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.retryWhen
+import kotlinx.coroutines.delay
 
 internal const val defaultVrchatSendPort = 9001
 private const val muteSelfAddress = "/avatar/parameters/MuteSelf"
 
 expect fun vrchatMuteSelfEvents(sourceAddress: String, port: Int = defaultVrchatSendPort): Flow<Boolean>
+
+internal fun Flow<Boolean>.retryListenerFailures(
+    retryDelayMillis: Long = 500,
+    onFailure: (Throwable) -> Unit,
+    onRetry: () -> Unit,
+): Flow<Boolean> = retryWhen { cause, _ ->
+    onFailure(cause)
+    delay(retryDelayMillis)
+    onRetry()
+    true
+}
 
 internal fun parseMuteSelfOsc(packet: ByteArray): Boolean? {
     val (address, typeTagOffset) = readOscString(packet, 0) ?: return null

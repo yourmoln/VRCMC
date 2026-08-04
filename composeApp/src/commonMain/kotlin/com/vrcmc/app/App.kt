@@ -23,7 +23,6 @@ import androidx.compose.ui.unit.dp
 import com.vrcmc.app.generated.resources.Res
 import com.vrcmc.app.generated.resources.logo
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.flow.distinctUntilChanged
 import org.jetbrains.compose.resources.painterResource
 import kotlin.math.roundToInt
@@ -57,7 +56,10 @@ fun VrcmcApp() {
         if (listenAddress.isBlank()) return@LaunchedEffect
         vrchatMuteSelfEvents(listenAddress, listenPort)
             .distinctUntilChanged()
-            .catch { state.simultaneousListenerError = it.message ?: it::class.simpleName }
+            .retryListenerFailures(
+                onFailure = { state.simultaneousListenerError = it.message ?: it::class.simpleName },
+                onRetry = { state.simultaneousListenerError = null },
+            )
             .collect(state::handleVrchatMuteSelf)
     }
 
