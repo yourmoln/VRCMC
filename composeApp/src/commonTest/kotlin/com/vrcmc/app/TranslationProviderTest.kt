@@ -1,0 +1,54 @@
+package com.vrcmc.app
+
+import kotlin.test.Test
+import kotlin.test.assertEquals
+import kotlin.test.assertFalse
+import kotlin.test.assertTrue
+
+class TranslationProviderTest {
+    @Test
+    fun providerIdsAreUniqueAndDefaultsAreComplete() {
+        assertEquals(translationProviders.size, translationProviders.map { it.id }.distinct().size)
+        translationProviders.forEach { provider ->
+            assertTrue(provider.defaultBaseUrl.startsWith("http"), provider.id)
+            assertTrue(provider.defaultModel.isNotBlank(), provider.id)
+        }
+    }
+
+    @Test
+    fun settingsRoundTripPreservesProviderSpecificValues() {
+        val original = StoredTranslationSettings(
+            providerId = "openai_compatible",
+            translate = true,
+            targetLanguages = listOf("日本語", "English"),
+            configs = mapOf("openai_compatible" to ProviderConfig("secret", "https://relay.example/v1", "custom/model", "custom", 47, "X-Test: yes", true, 6)),
+        )
+        val restored = storedTranslationSettingsFromJson(original.toJson())
+        assertEquals(original, restored)
+    }
+
+    @Test
+    fun invalidStoredDataFallsBackSafely() {
+        val restored = storedTranslationSettingsFromJson("not-json")
+        assertEquals("deepseek", restored.providerId)
+        assertFalse(restored.translate)
+    }
+
+    @Test
+    fun legacySingleLanguageMigratesToLanguageList() {
+        val restored = storedTranslationSettingsFromJson("""{"provider":"deepseek","targetLanguage":"简体中文","configs":{}}""")
+        assertEquals(listOf("简体中文"), restored.targetLanguages)
+    }
+
+    @Test
+    fun persistedLanguagesAreLimitedToTwo() {
+        val value = StoredTranslationSettings(targetLanguages = listOf("English", "日本語", "Deutsch"))
+        assertEquals(listOf("English", "日本語"), storedTranslationSettingsFromJson(value.toJson()).targetLanguages)
+    }
+
+    @Test
+    fun legacyConfigsUseThreeRetries() {
+        val restored = storedTranslationSettingsFromJson("""{"provider":"deepseek","configs":{"deepseek":{"timeout":20}}}""")
+        assertEquals(3, restored.configs.getValue("deepseek").retryCount)
+    }
+}
