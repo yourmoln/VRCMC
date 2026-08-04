@@ -5,6 +5,13 @@ import kotlin.test.assertEquals
 
 class ChatHistoryTest {
     @Test
+    fun restoresTranslationLanguage() {
+        val message = ChatMessage("Good evening", MessageRole.ASSISTANT, timestamp = 100, language = "English")
+
+        assertEquals(listOf(message), chatHistoryFromJson(listOf(message).toChatHistoryJson()))
+    }
+
+    @Test
     fun restoresMessagesWithRolesAndTimestamps() {
         val messages = listOf(
             ChatMessage("Hello \"VRChat\"", MessageRole.USER, timestamp = 1_700_000_000_000),

@@ -15,6 +15,7 @@ data class ChatMessage(
     val role: MessageRole,
     val timestamp: Long = currentTimeMillis(),
     val isLoading: Boolean = false,
+    val language: String? = null,
 )
 
 class AppState {

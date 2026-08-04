@@ -40,7 +40,7 @@ fun ChatPage(state: AppState, strings: LocaleStrings) {
     var retryAttempt by remember { mutableIntStateOf(0) }
     var retryLimit by remember { mutableIntStateOf(0) }
     var activeTranslationJob by remember { mutableStateOf<Job?>(null) }
-    var activeLoadingMessage by remember { mutableStateOf<ChatMessage?>(null) }
+    var activeLoadingMessages by remember { mutableStateOf<List<ChatMessage>>(emptyList()) }
     var translationGeneration by remember { mutableIntStateOf(0) }
     val scope = rememberCoroutineScope()
     val listState = rememberLazyListState()
@@ -49,9 +49,11 @@ fun ChatPage(state: AppState, strings: LocaleStrings) {
     val imeBottom = WindowInsets.ime.getBottom(LocalDensity.current)
     val clipboard = LocalClipboardManager.current
 
-    fun removeLoadingMessage(message: ChatMessage?) {
-        val index = state.messages.indexOfFirst { it === message }
-        if (index >= 0) state.removeMessageAt(index)
+    fun removeLoadingMessages(messages: List<ChatMessage>) {
+        messages.forEach { message ->
+            val index = state.messages.indexOfFirst { it === message }
+            if (index >= 0) state.removeMessageAt(index)
+        }
     }
 
     fun cancelActiveTranslation() {
@@ -59,8 +61,8 @@ fun ChatPage(state: AppState, strings: LocaleStrings) {
         translationGeneration++
         activeTranslationJob?.cancel()
         activeTranslationJob = null
-        removeLoadingMessage(activeLoadingMessage)
-        activeLoadingMessage = null
+        removeLoadingMessages(activeLoadingMessages)
+        activeLoadingMessages = emptyList()
         retryAttempt = 0
         retryLimit = 0
         sending = false
@@ -77,6 +79,7 @@ fun ChatPage(state: AppState, strings: LocaleStrings) {
         val shouldTranslate = state.translate && !isArabicDigitsOnly(original)
         val targetLanguages = state.languages.toList()
         val outputOrder = state.outputOrder.toList()
+        val displayLanguages = outputOrder.filter { it in targetLanguages }
         val translatingText = "$original\n(Translating...)"
         if (shouldTranslate && !isValidChatboxText(translatingText)) {
             error = strings.messageTooLong
@@ -88,12 +91,11 @@ fun ChatPage(state: AppState, strings: LocaleStrings) {
         error = null
         if (clearDraft) state.chatDraft = ""
         state.addMessage(ChatMessage(original, MessageRole.USER))
-        val loadingMessage = if (shouldTranslate) {
-            ChatMessage("", MessageRole.ASSISTANT, isLoading = true).also {
-                state.addMessage(it)
-                activeLoadingMessage = it
-            }
-        } else null
+        val loadingMessages = if (shouldTranslate) {
+            displayLanguages.map { language ->
+                ChatMessage("", MessageRole.ASSISTANT, isLoading = true, language = language).also(state::addMessage)
+            }.also { activeLoadingMessages = it }
+        } else emptyList()
         val provider = state.provider
         val providerConfig = state.providerConfig
         val requestGeneration = ++translationGeneration
@@ -113,18 +115,29 @@ fun ChatPage(state: AppState, strings: LocaleStrings) {
                 } else emptyList()
                 val failure = translations.firstNotNullOfOrNull { (_, result) -> result as? TranslationResult.Failure }
                 if (failure != null) {
-                    removeLoadingMessage(loadingMessage)
+                    removeLoadingMessages(loadingMessages)
                     error = failure.message
                     return@launch
                 }
                 val successful = translations.mapNotNull { (language, result) ->
                     (result as? TranslationResult.Success)?.text?.takeIf { it != original }?.let { language to it }
                 }.toMap()
-                val translatedText = buildTranslationOutput("", successful, outputOrder)
-                val loadingIndex = state.messages.indexOfFirst { it === loadingMessage }
-                if (loadingIndex >= 0) {
-                    if (translatedText.isBlank()) state.removeMessageAt(loadingIndex)
-                    else state.replaceMessage(loadingIndex, ChatMessage(translatedText, MessageRole.ASSISTANT))
+                loadingMessages.forEach { loadingMessage ->
+                    val loadingIndex = state.messages.indexOfFirst { it === loadingMessage }
+                    if (loadingIndex >= 0) {
+                        val language = loadingMessage.language ?: return@forEach
+                        val translatedText = successful[language]
+                        if (translatedText.isNullOrBlank()) state.removeMessageAt(loadingIndex)
+                        else state.replaceMessage(
+                            loadingIndex,
+                            ChatMessage(
+                                translatedText,
+                                MessageRole.ASSISTANT,
+                                timestamp = loadingMessage.timestamp,
+                                language = language,
+                            ),
+                        )
+                    }
                 }
                 val outgoing = buildTranslationOutput(original, successful, outputOrder)
                 if (!isValidChatboxText(outgoing)) error = strings.messageTooLong
@@ -132,7 +145,7 @@ fun ChatPage(state: AppState, strings: LocaleStrings) {
             } finally {
                 if (translationGeneration == requestGeneration) {
                     activeTranslationJob = null
-                    activeLoadingMessage = null
+                    activeLoadingMessages = emptyList()
                     retryAttempt = 0
                     retryLimit = 0
                     sending = false
@@ -264,11 +277,11 @@ private fun MessageBubble(
                     contentColor = if (user) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurfaceVariant,
                 ) {
                     Column(Modifier.padding(horizontal = 14.dp, vertical = 11.dp)) {
-                        if (!user) {
+                        if (!user && message.language != null) {
                             Row(verticalAlignment = Alignment.CenterVertically) {
                                 Icon(Icons.Default.AutoAwesome, null, Modifier.size(15.dp), tint = MaterialTheme.colorScheme.primary)
                                 Spacer(Modifier.width(6.dp))
-                                Text(strings.translationAssistant, style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.primary)
+                                Text(message.language, style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.primary)
                             }
                             Spacer(Modifier.height(5.dp))
                         }

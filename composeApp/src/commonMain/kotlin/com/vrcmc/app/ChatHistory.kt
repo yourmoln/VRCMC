@@ -10,6 +10,7 @@ internal fun List<ChatMessage>.toChatHistoryJson(): String = buildJsonArray {
             put("text", message.text)
             put("role", message.role.name)
             put("timestamp", message.timestamp)
+            message.language?.let { put("language", it) }
         }
     }
 }.toString()
@@ -21,6 +22,7 @@ internal fun chatHistoryFromJson(value: String): List<ChatMessage> = runCatching
         val text = item["text"]?.jsonPrimitive?.content ?: return@mapNotNull null
         val role = item["role"]?.jsonPrimitive?.content?.let { runCatching { MessageRole.valueOf(it) }.getOrNull() } ?: return@mapNotNull null
         val timestamp = item["timestamp"]?.jsonPrimitive?.longOrNull ?: return@mapNotNull null
-        ChatMessage(text = text, role = role, timestamp = timestamp)
+        val language = item["language"]?.jsonPrimitive?.contentOrNull
+        ChatMessage(text = text, role = role, timestamp = timestamp, language = language)
     }.takeLast(maxSavedChatMessages)
 }.getOrDefault(emptyList())
