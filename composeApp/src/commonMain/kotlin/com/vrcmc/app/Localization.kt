@@ -8,6 +8,7 @@ open class LocaleStrings {
     open val apiConfiguration = "API configuration"; open val openMenu = "Open menu"; open val selectDevice = "Select device"; open val deleteDevice = "Delete device"; open val deviceAddress = "IP address and optional port"
     open val defaultPortHint = "Port 9000 is used when omitted"; open val invalidDeviceAddress = "Enter a valid IP and port"; open val cancel = "Cancel"; open val translationAssistant = "Translation"; open val translating = "Translating..."
     open val appearance = "Appearance"; open val language = "Language"; open val systemTheme = "System"; open val lightTheme = "Light"; open val darkTheme = "Dark"
+    open val yesterday = "Yesterday"; open val dayBeforeYesterday = "The day before yesterday"
     open val clearHistory = "Clear chat history"; open val clearHistoryTitle = "Clear chat history?"; open val clearHistoryMessage = "All saved messages will be permanently deleted."; open val delete = "Delete"; open val messageTooLong = "Message exceeds the VRChat Chatbox limit (144 characters or 9 lines)"
     open val translationLlm = "Translation & LLM"; open val provider = "Provider"; open val customCompatible = "Custom compatible"; open val apiKey = "API Key (optional for Ollama)"; open val targetLanguage = "Target language"; open val translateBeforeSending = "Translate before sending"; open val testConnection = "Test connection"; open val testing = "Testing..."; open val connectionFailed = "Connection failed; check URL, key and model"; open val connected = "Connected: %s"; open val originalAndTranslationSent = "Original and translation sent"
     open val apiSettingsSubtitle = "Independent provider profiles, protocol-aware requests, and connection diagnostics"
@@ -25,6 +26,7 @@ open class LocaleStrings {
 }
 object LocaleStringsEn : LocaleStrings()
 object LocaleStringsZhHans : LocaleStrings() {
+    override val yesterday = "\u6628\u5929"; override val dayBeforeYesterday = "\u524d\u5929"
     override val chat = "聊天"; override val devices = "设备"; override val api = "接口"; override val settings = "设置"; override val done = "完成"; override val theme = "主题"; override val preferences = "偏好设置"
     override val chatbox = "Chatbox 消息"; override val addDevice = "添加设备"; override val activeDevice = "当前设备"; override val send = "发送"; override val typeMessage = "输入消息..."; override val addIp = "请先在顶部添加电脑 IP"; override val sendFailed = "发送失败"
     override val apiConfiguration = "API 配置"; override val openMenu = "打开菜单"; override val selectDevice = "选择设备"; override val deleteDevice = "删除设备"; override val deviceAddress = "IP 地址与可选端口"
@@ -45,7 +47,7 @@ object LocaleStringsZhHans : LocaleStrings() {
     override val chooseProvider = "选择服务商"; override val providerPickerHint = "紧凑显示服务商，可按名称或协议搜索"; override val searchProvider = "搜索服务商或协议"; override val recommended = "推荐"
     override val chooseLanguage = "选择目标语言"; override val twoLanguageHint = "可选择 1–2 种语言；双语翻译会并行执行"
 }
-object LocaleStringsZhHant : LocaleStrings()
-object LocaleStringsJa : LocaleStrings()
+object LocaleStringsZhHant : LocaleStrings() { override val yesterday = "\u6628\u5929"; override val dayBeforeYesterday = "\u524d\u5929" }
+object LocaleStringsJa : LocaleStrings() { override val yesterday = "\u6628\u65e5"; override val dayBeforeYesterday = "\u4e00\u6628\u65e5" }
 
 fun localeStrings(language: AppLanguage): LocaleStrings = when (language) { AppLanguage.ZH_HANS -> LocaleStringsZhHans; AppLanguage.ZH_HANT -> LocaleStringsZhHant; AppLanguage.JA -> LocaleStringsJa; AppLanguage.EN -> LocaleStringsEn }

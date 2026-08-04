@@ -3,7 +3,7 @@ package com.vrcmc.app
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.BasicTextField
@@ -29,6 +29,7 @@ fun ChatPage(state: AppState, strings: LocaleStrings) {
     val scope = rememberCoroutineScope()
     val listState = rememberLazyListState()
     val active = state.activeDevice()
+    val now = currentTimeMillis()
 
     LaunchedEffect(state.messages.size) {
         if (state.messages.isNotEmpty()) listState.animateScrollToItem(state.messages.lastIndex)
@@ -66,7 +67,24 @@ fun ChatPage(state: AppState, strings: LocaleStrings) {
                     }
                 }
             } else {
-                items(state.messages) { message -> MessageBubble(message, strings) }
+                itemsIndexed(state.messages) { index, message ->
+                    Column(Modifier.fillMaxWidth()) {
+                        if (shouldShowChatTimestamp(message.timestamp, state.messages.getOrNull(index - 1)?.timestamp)) {
+                            Text(
+                                formatChatTime(
+                                    timestamp = message.timestamp,
+                                    now = now,
+                                    yesterdayLabel = strings.yesterday,
+                                    dayBeforeYesterdayLabel = strings.dayBeforeYesterday,
+                                ),
+                                style = MaterialTheme.typography.labelSmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = .7f),
+                                modifier = Modifier.align(Alignment.CenterHorizontally).padding(bottom = 8.dp),
+                            )
+                        }
+                        MessageBubble(message, strings)
+                    }
+                }
             }
         }
 
@@ -171,15 +189,13 @@ private fun MessageBubble(message: ChatMessage, strings: LocaleStrings) {
             }
             if (!user) Spacer(Modifier.weight(1f))
         }
-        if (!message.isLoading) {
-            Text(
-                formatChatTime(message.timestamp),
-                style = MaterialTheme.typography.labelSmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = .7f),
-                modifier = Modifier.align(if (user) Alignment.End else Alignment.Start).padding(horizontal = 10.dp, vertical = 2.dp),
-            )
-        }
     }
+}
+
+internal fun shouldShowChatTimestamp(timestamp: Long, previousTimestamp: Long?): Boolean {
+    if (previousTimestamp == null) return true
+    val elapsed = timestamp - previousTimestamp
+    return elapsed < 0 || elapsed >= 10 * 60 * 1_000L
 }
 
 @Composable
