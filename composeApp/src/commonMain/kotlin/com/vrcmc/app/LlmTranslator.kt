@@ -20,13 +20,19 @@ private val translationJson = Json { ignoreUnknownKeys = true }
 internal fun isArabicDigitsOnly(text: String): Boolean =
     text.any { it in '0'..'9' } && text.all { it in '0'..'9' || it.isWhitespace() }
 
-suspend fun translateText(provider: TranslationProvider, config: ProviderConfig, targetLanguage: String, text: String): TranslationResult {
+suspend fun translateText(
+    provider: TranslationProvider,
+    config: ProviderConfig,
+    targetLanguage: String,
+    text: String,
+    onRetry: (Int) -> Unit = {},
+): TranslationResult {
     if (text.isBlank()) return TranslationResult.Failure("翻译内容为空")
     if (config.baseUrl.isBlank()) return TranslationResult.Failure("Base URL 不能为空")
     if (config.model.isBlank()) return TranslationResult.Failure("模型 ID 不能为空")
     if (provider.keyRequired && config.apiKey.isBlank()) return TranslationResult.Failure("${provider.label} 需要 API Key")
     endpointSecurityError(config)?.let { return TranslationResult.Failure(it) }
-    return translateWithRetries(text, config.retryCount) {
+    return translateWithRetries(text, config.retryCount, onRetry) {
         try {
             when (provider.protocol) {
                 ProviderProtocol.OPENAI -> requestOpenAi(provider, config, targetLanguage, text)
@@ -68,9 +74,15 @@ private fun isLocalNetworkEndpoint(value: String): Boolean = runCatching {
     host.startsWith("fc") || host.startsWith("fd") || host.startsWith("fe8") || host.startsWith("fe9") || host.startsWith("fea") || host.startsWith("feb")
 }.getOrDefault(false)
 
-internal suspend fun translateWithRetries(sourceText: String, retryCount: Int, request: suspend () -> TranslationResult): TranslationResult {
+internal suspend fun translateWithRetries(
+    sourceText: String,
+    retryCount: Int,
+    onRetry: (Int) -> Unit = {},
+    request: suspend () -> TranslationResult,
+): TranslationResult {
     var lastFailure = TranslationResult.Failure("翻译接口未返回可用翻译", retryable = true)
-    repeat(retryCount.coerceIn(0, 10) + 1) {
+    repeat(retryCount.coerceIn(0, 10) + 1) { attempt ->
+        if (attempt > 0) onRetry(attempt)
         when (val result = request()) {
             is TranslationResult.Success -> {
                 val translated = result.text.trim()

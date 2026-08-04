@@ -23,6 +23,8 @@ import androidx.compose.ui.platform.LocalClipboardManager
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.unit.dp
+import kotlinx.coroutines.CoroutineStart
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.coroutineScope
@@ -32,12 +34,34 @@ import kotlinx.coroutines.launch
 fun ChatPage(state: AppState, strings: LocaleStrings) {
     var error by remember { mutableStateOf<String?>(null) }
     var sending by remember { mutableStateOf(false) }
+    var retryAttempt by remember { mutableIntStateOf(0) }
+    var retryLimit by remember { mutableIntStateOf(0) }
+    var activeTranslationJob by remember { mutableStateOf<Job?>(null) }
+    var activeLoadingMessage by remember { mutableStateOf<ChatMessage?>(null) }
+    var translationGeneration by remember { mutableIntStateOf(0) }
     val scope = rememberCoroutineScope()
     val listState = rememberLazyListState()
     val active = state.activeDevice()
     val now = currentTimeMillis()
     val imeBottom = WindowInsets.ime.getBottom(LocalDensity.current)
     val clipboard = LocalClipboardManager.current
+
+    fun removeLoadingMessage(message: ChatMessage?) {
+        val index = state.messages.indexOfFirst { it === message }
+        if (index >= 0) state.removeMessageAt(index)
+    }
+
+    fun cancelActiveTranslation() {
+        if (activeTranslationJob == null) return
+        translationGeneration++
+        activeTranslationJob?.cancel()
+        activeTranslationJob = null
+        removeLoadingMessage(activeLoadingMessage)
+        activeLoadingMessage = null
+        retryAttempt = 0
+        retryLimit = 0
+        sending = false
+    }
 
     fun sendMessage(rawText: String, clearDraft: Boolean) {
         val original = rawText.trim()
@@ -55,43 +79,64 @@ fun ChatPage(state: AppState, strings: LocaleStrings) {
             return
         }
         sending = true
+        retryAttempt = 0
+        retryLimit = state.providerConfig.retryCount.coerceIn(0, 10)
         error = null
         if (clearDraft) state.chatDraft = ""
         state.addMessage(ChatMessage(original, MessageRole.USER))
-        val loadingIndex = if (shouldTranslate) {
-            state.addMessage(ChatMessage("", MessageRole.ASSISTANT, isLoading = true))
+        val loadingMessage = if (shouldTranslate) {
+            ChatMessage("", MessageRole.ASSISTANT, isLoading = true).also {
+                state.addMessage(it)
+                activeLoadingMessage = it
+            }
         } else null
-        scope.launch {
-            if (shouldTranslate && !sendChatboxOsc(target.address, translatingText, target.receivePort)) {
-                error = strings.sendFailed
-            }
-            val translations = if (shouldTranslate) coroutineScope {
-                targetLanguages.map { language ->
-                    async { language to translateText(state.provider, state.providerConfig, language, original) }
-                }.awaitAll()
-            } else emptyList()
-            val failure = translations.firstNotNullOfOrNull { (_, result) -> result as? TranslationResult.Failure }
-            if (failure != null) {
-                loadingIndex?.let(state::removeMessageAt)
-                error = failure.message
-                sending = false
-                return@launch
-            }
-            val successful = translations.mapNotNull { (language, result) ->
-                (result as? TranslationResult.Success)?.text?.takeIf { it != original }?.let { language to it }
-            }.toMap()
-            val translatedText = buildTranslationOutput("", successful, outputOrder)
-            loadingIndex?.let { index ->
-                if (index in state.messages.indices) {
-                    if (translatedText.isBlank()) state.removeMessageAt(index)
-                    else state.replaceMessage(index, ChatMessage(translatedText, MessageRole.ASSISTANT))
+        val provider = state.provider
+        val providerConfig = state.providerConfig
+        val requestGeneration = ++translationGeneration
+        val job = scope.launch(start = CoroutineStart.LAZY) {
+            try {
+                if (shouldTranslate && !sendChatboxOsc(target.address, translatingText, target.receivePort)) {
+                    error = strings.sendFailed
+                }
+                val translations = if (shouldTranslate) coroutineScope {
+                    targetLanguages.map { language ->
+                        async {
+                            language to translateText(provider, providerConfig, language, original) { attempt ->
+                                retryAttempt = maxOf(retryAttempt, attempt)
+                            }
+                        }
+                    }.awaitAll()
+                } else emptyList()
+                val failure = translations.firstNotNullOfOrNull { (_, result) -> result as? TranslationResult.Failure }
+                if (failure != null) {
+                    removeLoadingMessage(loadingMessage)
+                    error = failure.message
+                    return@launch
+                }
+                val successful = translations.mapNotNull { (language, result) ->
+                    (result as? TranslationResult.Success)?.text?.takeIf { it != original }?.let { language to it }
+                }.toMap()
+                val translatedText = buildTranslationOutput("", successful, outputOrder)
+                val loadingIndex = state.messages.indexOfFirst { it === loadingMessage }
+                if (loadingIndex >= 0) {
+                    if (translatedText.isBlank()) state.removeMessageAt(loadingIndex)
+                    else state.replaceMessage(loadingIndex, ChatMessage(translatedText, MessageRole.ASSISTANT))
+                }
+                val outgoing = buildTranslationOutput(original, successful, outputOrder)
+                if (!isValidChatboxText(outgoing)) error = strings.messageTooLong
+                else if (!sendChatboxOsc(target.address, outgoing, target.receivePort)) error = strings.sendFailed
+            } finally {
+                if (translationGeneration == requestGeneration) {
+                    activeTranslationJob = null
+                    activeLoadingMessage = null
+                    retryAttempt = 0
+                    retryLimit = 0
+                    sending = false
                 }
             }
-            val outgoing = buildTranslationOutput(original, successful, outputOrder)
-            if (!isValidChatboxText(outgoing)) error = strings.messageTooLong
-            else if (!sendChatboxOsc(target.address, outgoing, target.receivePort)) error = strings.sendFailed
-            sending = false
         }
+        if (shouldTranslate) activeTranslationJob = job
+        job.start()
     }
 
     LaunchedEffect(state.messages.size) {
@@ -154,6 +199,8 @@ fun ChatPage(state: AppState, strings: LocaleStrings) {
                         MessageBubble(
                             message = message,
                             strings = strings,
+                            retryAttempt = retryAttempt,
+                            retryLimit = retryLimit,
                             resendEnabled = active != null && !sending,
                             onCopy = { clipboard.setText(AnnotatedString(message.text)) },
                             onResend = { sendMessage(message.text, clearDraft = false) },
@@ -176,7 +223,11 @@ fun ChatPage(state: AppState, strings: LocaleStrings) {
             sending = sending,
             enabled = active != null,
             strings = strings,
-            onInputChange = { state.chatDraft = it; error = null },
+            onInputChange = {
+                cancelActiveTranslation()
+                state.chatDraft = it
+                error = null
+            },
             onSend = { sendMessage(state.chatDraft, clearDraft = true) },
         )
     }
@@ -186,6 +237,8 @@ fun ChatPage(state: AppState, strings: LocaleStrings) {
 private fun MessageBubble(
     message: ChatMessage,
     strings: LocaleStrings,
+    retryAttempt: Int,
+    retryLimit: Int,
     resendEnabled: Boolean,
     onCopy: () -> Unit,
     onResend: () -> Unit,
@@ -220,7 +273,10 @@ private fun MessageBubble(
                             Row(verticalAlignment = Alignment.CenterVertically) {
                                 CircularProgressIndicator(Modifier.size(16.dp), strokeWidth = 2.dp)
                                 Spacer(Modifier.width(9.dp))
-                                Text(strings.translating, style = MaterialTheme.typography.bodyMedium)
+                                Text(
+                                    if (retryAttempt > 0) strings.translatingRetry(retryAttempt, retryLimit) else strings.translating,
+                                    style = MaterialTheme.typography.bodyMedium,
+                                )
                             }
                         } else {
                             Text(message.text, style = MaterialTheme.typography.bodyLarge)
@@ -277,13 +333,8 @@ private fun ChatComposer(
                     value = input,
                     onValueChange = onInputChange,
                     modifier = Modifier.weight(1f).padding(vertical = 14.dp),
-                    enabled = !sending,
                     textStyle = MaterialTheme.typography.bodyLarge.copy(
-                        color = if (sending) {
-                            MaterialTheme.colorScheme.onSurface.copy(alpha = .38f)
-                        } else {
-                            MaterialTheme.colorScheme.onSurface
-                        },
+                        color = MaterialTheme.colorScheme.onSurface,
                     ),
                     cursorBrush = SolidColor(MaterialTheme.colorScheme.primary),
                     maxLines = 5,
@@ -302,7 +353,7 @@ private fun ChatComposer(
                 )
                 Spacer(Modifier.width(10.dp))
                 FilledIconButton(
-                    enabled = input.isNotBlank() && !sending && enabled,
+                    enabled = input.isNotBlank() && enabled,
                     onClick = onSend,
                     modifier = Modifier.size(44.dp),
                 ) { Icon(Icons.AutoMirrored.Filled.Send, strings.send) }
