@@ -1,5 +1,10 @@
 package com.vrcmc.app
 
+import androidx.compose.animation.core.LinearEasing
+import androidx.compose.animation.core.animateFloat
+import androidx.compose.animation.core.infiniteRepeatable
+import androidx.compose.animation.core.rememberInfiniteTransition
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.*
@@ -20,18 +25,31 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
+import androidx.compose.ui.geometry.CornerRadius
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.SolidColor
+import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.platform.LocalClipboardManager
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.unit.dp
 import kotlinx.coroutines.CoroutineStart
 import kotlinx.coroutines.Job
+import kotlinx.coroutines.channels.Channel
+import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.yield
+import kotlin.math.cos
+import kotlin.math.sin
+
+private sealed interface LiveOscAction
+private data class LiveOriginalUpdate(val device: Device, val text: String) : LiveOscAction
+private data class LiveOscBarrier(val completed: CompletableDeferred<Unit>) : LiveOscAction
 
 @Composable
 fun ChatPage(state: AppState, strings: LocaleStrings) {
@@ -48,6 +66,7 @@ fun ChatPage(state: AppState, strings: LocaleStrings) {
     val now = currentTimeMillis()
     val imeBottom = WindowInsets.ime.getBottom(LocalDensity.current)
     val clipboard = LocalClipboardManager.current
+    val liveOriginalUpdates = remember { Channel<LiveOscAction>(Channel.UNLIMITED) }
 
     fun removeLoadingMessages(messages: List<ChatMessage>) {
         messages.forEach { message ->
@@ -156,6 +175,32 @@ fun ChatPage(state: AppState, strings: LocaleStrings) {
         job.start()
     }
 
+    LaunchedEffect(liveOriginalUpdates) {
+        for (action in liveOriginalUpdates) {
+            when (action) {
+                is LiveOriginalUpdate -> if (!sendChatboxOsc(action.device.address, action.text, action.device.receivePort)) {
+                    error = strings.sendFailed
+                }
+                is LiveOscBarrier -> action.completed.complete(Unit)
+            }
+        }
+    }
+
+    DisposableEffect(liveOriginalUpdates) {
+        onDispose { liveOriginalUpdates.close() }
+    }
+
+    LaunchedEffect(state.simultaneousFinalPending) {
+        if (state.simultaneousFinalPending) {
+            val finalText = state.chatDraft
+            state.consumeSimultaneousFinalRequest()
+            val barrier = CompletableDeferred<Unit>()
+            liveOriginalUpdates.send(LiveOscBarrier(barrier))
+            barrier.await()
+            if (finalText.isNotBlank()) sendMessage(finalText, clearDraft = true)
+        }
+    }
+
     LaunchedEffect(state.messages.size) {
         if (state.messages.isNotEmpty()) listState.animateScrollToItem(state.messages.lastIndex)
     }
@@ -239,12 +284,29 @@ fun ChatPage(state: AppState, strings: LocaleStrings) {
             input = state.chatDraft,
             sending = sending,
             enabled = active != null,
+            interpreting = state.isSimultaneousInterpretationActive,
             strings = strings,
             onInputChange = {
                 state.chatDraft = it
                 error = null
+                val original = it.trim()
+                if (state.isSimultaneousInterpretationActive && active != null && isValidChatboxText(original)) {
+                    liveOriginalUpdates.trySend(LiveOriginalUpdate(active, original))
+                }
             },
-            onSend = { sendMessage(state.chatDraft, clearDraft = true) },
+            onSend = {
+                val wasInterpreting = state.isSimultaneousInterpretationActive
+                state.finishSimultaneousInterpretation()
+                val finalText = state.chatDraft
+                if (wasInterpreting) scope.launch {
+                    val barrier = CompletableDeferred<Unit>()
+                    liveOriginalUpdates.send(LiveOscBarrier(barrier))
+                    barrier.await()
+                    sendMessage(finalText, clearDraft = true)
+                } else {
+                    sendMessage(finalText, clearDraft = true)
+                }
+            },
         )
     }
 }
@@ -329,12 +391,38 @@ private fun ChatComposer(
     input: String,
     sending: Boolean,
     enabled: Boolean,
+    interpreting: Boolean,
     strings: LocaleStrings,
     onInputChange: (String) -> Unit,
     onSend: () -> Unit,
 ) {
     val focusRequester = remember { FocusRequester() }
     val scope = rememberCoroutineScope()
+    val transition = rememberInfiniteTransition()
+    val borderAngle by transition.animateFloat(
+        initialValue = 0f,
+        targetValue = 360f,
+        animationSpec = infiniteRepeatable(tween(1400, easing = LinearEasing)),
+    )
+    val primary = MaterialTheme.colorScheme.primary
+    val outline = MaterialTheme.colorScheme.outlineVariant
+    val animatedBorder = if (interpreting) {
+        Modifier.drawBehind {
+            val radians = borderAngle * (kotlin.math.PI.toFloat() / 180f)
+            val radius = size.maxDimension
+            val directionX = cos(radians) * radius
+            val directionY = sin(radians) * radius
+            drawRoundRect(
+                brush = Brush.linearGradient(
+                    colors = listOf(primary.copy(alpha = .18f), primary, primary.copy(alpha = .18f)),
+                    start = Offset(center.x - directionX, center.y - directionY),
+                    end = Offset(center.x + directionX, center.y + directionY),
+                ),
+                cornerRadius = CornerRadius(20.dp.toPx()),
+                style = Stroke(width = 2.dp.toPx()),
+            )
+        }
+    } else Modifier
 
     fun sendAndKeepFocus() {
         onSend()
@@ -345,10 +433,10 @@ private fun ChatComposer(
     }
 
     Surface(
-        modifier = Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 10.dp),
+        modifier = Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 10.dp).then(animatedBorder),
         shape = RoundedCornerShape(20.dp),
         color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = .45f),
-        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant),
+        border = if (interpreting) null else BorderStroke(1.dp, outline),
     ) {
         Column {
             if (sending) LinearProgressIndicator(Modifier.fillMaxWidth())

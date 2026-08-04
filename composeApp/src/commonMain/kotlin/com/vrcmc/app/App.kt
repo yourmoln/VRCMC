@@ -23,10 +23,12 @@ import androidx.compose.ui.unit.dp
 import com.vrcmc.app.generated.resources.Res
 import com.vrcmc.app.generated.resources.logo
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.flow.catch
+import kotlinx.coroutines.flow.distinctUntilChanged
 import org.jetbrains.compose.resources.painterResource
 
 private enum class ThemeMode { SYSTEM, DARK, LIGHT }
-private enum class AppScreen { CHAT, DEVICES, API, TRANSLATION_LANGUAGE, PREFERENCES }
+private enum class AppScreen { CHAT, DEVICES, API, TRANSLATION_LANGUAGE, SIMULTANEOUS_INTERPRETATION, PREFERENCES }
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalComposeUiApi::class)
 @Composable
@@ -44,6 +46,18 @@ fun VrcmcApp() {
         ThemeMode.SYSTEM -> isSystemInDarkTheme()
         ThemeMode.DARK -> true
         ThemeMode.LIGHT -> false
+    }
+
+    val listenPort = state.activeDevice()?.sendPort ?: defaultVrchatSendPort
+    val listenAddress = state.activeDevice()?.address.orEmpty()
+    LaunchedEffect(state.simultaneousInterpretationEnabled, listenAddress, listenPort) {
+        if (!state.simultaneousInterpretationEnabled) return@LaunchedEffect
+        state.simultaneousListenerError = null
+        if (listenAddress.isBlank()) return@LaunchedEffect
+        vrchatMuteSelfEvents(listenAddress, listenPort)
+            .distinctUntilChanged()
+            .catch { state.simultaneousListenerError = it.message ?: it::class.simpleName }
+            .collect(state::handleVrchatMuteSelf)
     }
 
     BackHandler(enabled = screen != AppScreen.CHAT) {
@@ -107,6 +121,16 @@ fun VrcmcApp() {
                         },
                         modifier = Modifier.padding(horizontal = 12.dp),
                     )
+                    NavigationDrawerItem(
+                        label = { Text(strings.simultaneousInterpretation) },
+                        selected = screen == AppScreen.SIMULTANEOUS_INTERPRETATION,
+                        icon = { Icon(Icons.Default.RecordVoiceOver, null) },
+                        onClick = {
+                            screen = AppScreen.SIMULTANEOUS_INTERPRETATION
+                            scope.launch { drawerState.close() }
+                        },
+                        modifier = Modifier.padding(horizontal = 12.dp),
+                    )
                     HorizontalDivider(Modifier.padding(vertical = 10.dp))
                     NavigationDrawerItem(
                         label = { Text(strings.preferences) },
@@ -157,6 +181,7 @@ fun VrcmcApp() {
                         AppScreen.DEVICES -> DeviceManagementPage(state, strings) { showAddDevice = true }
                         AppScreen.API -> ApiPage(state, strings)
                         AppScreen.TRANSLATION_LANGUAGE -> TranslationLanguagePage(state, strings)
+                        AppScreen.SIMULTANEOUS_INTERPRETATION -> SimultaneousInterpretationPage(state, strings)
                         AppScreen.PREFERENCES -> PreferencesPage(theme, language, strings, { theme = it }, { language = it })
                     }
                 }
@@ -180,6 +205,66 @@ fun VrcmcApp() {
                 },
                 dismissButton = { TextButton({ showClearHistory = false }) { Text(strings.cancel) } },
             )
+        }
+    }
+}
+
+@Composable
+private fun SimultaneousInterpretationPage(state: AppState, strings: LocaleStrings) {
+    val device = state.activeDevice()
+    val endpoint = device?.let { "${it.address}:${it.sendPort}" } ?: "-:$defaultVrchatSendPort"
+    LazyColumn(
+        modifier = Modifier.fillMaxSize(),
+        contentPadding = PaddingValues(16.dp),
+        verticalArrangement = Arrangement.spacedBy(12.dp),
+    ) {
+        item {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Icon(Icons.Default.RecordVoiceOver, null, tint = MaterialTheme.colorScheme.primary)
+                Spacer(Modifier.width(10.dp))
+                Text(strings.simultaneousInterpretation, style = MaterialTheme.typography.titleLarge)
+            }
+        }
+        item {
+            Surface(
+                modifier = Modifier.fillMaxWidth(),
+                shape = RoundedCornerShape(8.dp),
+                color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = .45f),
+                border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant),
+            ) {
+                Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Column(Modifier.weight(1f)) {
+                            Text(strings.enableSimultaneousInterpretation, style = MaterialTheme.typography.titleMedium)
+                            Spacer(Modifier.height(4.dp))
+                            Text(strings.simultaneousInterpretationHint, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                        }
+                        Spacer(Modifier.width(12.dp))
+                        Switch(
+                            checked = state.simultaneousInterpretationEnabled,
+                            onCheckedChange = state::updateSimultaneousInterpretationEnabled,
+                        )
+                    }
+                    HorizontalDivider()
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Icon(Icons.Default.Sensors, null, Modifier.size(20.dp), tint = MaterialTheme.colorScheme.onSurfaceVariant)
+                        Spacer(Modifier.width(8.dp))
+                        Text("${strings.listeningPort}: $endpoint", Modifier.weight(1f))
+                        if (state.isSimultaneousInterpretationActive) {
+                            Text(strings.interpreting, color = MaterialTheme.colorScheme.primary, style = MaterialTheme.typography.labelMedium)
+                        }
+                    }
+                    Text(
+                        when {
+                            !state.simultaneousInterpretationEnabled -> strings.listenerStopped
+                            state.simultaneousListenerError != null -> strings.listenerFailed.replace("%s", state.simultaneousListenerError.orEmpty())
+                            else -> strings.listenerReady
+                        },
+                        style = MaterialTheme.typography.bodySmall,
+                        color = if (state.simultaneousListenerError == null) MaterialTheme.colorScheme.onSurfaceVariant else MaterialTheme.colorScheme.error,
+                    )
+                }
+            }
         }
     }
 }

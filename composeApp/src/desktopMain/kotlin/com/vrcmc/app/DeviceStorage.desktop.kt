@@ -49,6 +49,8 @@ actual fun saveStoredTranslationSecrets(value: String) {
 }
 actual fun loadStoredChatHistory(): String = readText(chatHistoryFile).ifBlank { prefs.get("chatHistory", "") }
 actual fun saveStoredChatHistory(value: String) { writeTextAtomically(chatHistoryFile, value); prefs.remove("chatHistory") }
+actual fun loadStoredSimultaneousInterpretationEnabled(): Boolean = prefs.getBoolean("simultaneousInterpretation", false)
+actual fun saveStoredSimultaneousInterpretationEnabled(value: Boolean) { prefs.putBoolean("simultaneousInterpretation", value) }
 
 private fun readText(path: Path): String = runCatching { Files.readString(path, StandardCharsets.UTF_8) }.getOrDefault("")
 

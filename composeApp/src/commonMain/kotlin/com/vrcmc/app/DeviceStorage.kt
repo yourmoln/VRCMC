@@ -9,3 +9,5 @@ expect fun loadStoredTranslationSecrets(): String
 expect fun saveStoredTranslationSecrets(value: String)
 expect fun loadStoredChatHistory(): String
 expect fun saveStoredChatHistory(value: String)
+expect fun loadStoredSimultaneousInterpretationEnabled(): Boolean
+expect fun saveStoredSimultaneousInterpretationEnabled(value: Boolean)

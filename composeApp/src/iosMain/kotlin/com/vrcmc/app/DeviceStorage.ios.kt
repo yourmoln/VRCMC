@@ -113,6 +113,8 @@ actual fun saveStoredTranslationSecrets(value: String) {
 }
 actual fun loadStoredChatHistory(): String = defaults.stringForKey("chatHistory") ?: ""
 actual fun saveStoredChatHistory(value: String) { defaults.setObject(value, forKey = "chatHistory") }
+actual fun loadStoredSimultaneousInterpretationEnabled(): Boolean = defaults.boolForKey("simultaneousInterpretation")
+actual fun saveStoredSimultaneousInterpretationEnabled(value: Boolean) { defaults.setBool(value, forKey = "simultaneousInterpretation") }
 
 @OptIn(ExperimentalForeignApi::class)
 private fun keychainQuery() = mutableDictionary()?.also { query ->

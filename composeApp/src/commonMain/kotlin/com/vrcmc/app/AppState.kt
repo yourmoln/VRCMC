@@ -24,6 +24,13 @@ class AppState {
     val devices = mutableStateListOf<Device>().apply { addAll(loadStoredDevices()) }
     val messages = mutableStateListOf<ChatMessage>().apply { addAll(chatHistoryFromJson(loadStoredChatHistory())) }
     var chatDraft by mutableStateOf("")
+    var simultaneousInterpretationEnabled by mutableStateOf(loadStoredSimultaneousInterpretationEnabled())
+        private set
+    var isSimultaneousInterpretationActive by mutableStateOf(false)
+        private set
+    var simultaneousFinalPending by mutableStateOf(false)
+        private set
+    var simultaneousListenerError by mutableStateOf<String?>(null)
     var activeAddress by mutableStateOf(loadStoredActiveAddress().takeIf { saved -> devices.any { it.address == saved } } ?: devices.firstOrNull()?.address.orEmpty())
     var providerId by mutableStateOf(storedTranslation.providerId.takeIf { id -> translationProviders.any { it.id == id } } ?: "deepseek")
     var translate by mutableStateOf(storedTranslation.translate)
@@ -53,6 +60,31 @@ class AppState {
         saveStoredTranslationSettings(StoredTranslationSettings(providerId = providerId, translate = translate, targetLanguages = languages.toList(), outputOrder = outputOrder.toList(), configs = providerConfigs.toMap()).toJson())
     }
     fun persist() = saveStoredDevices(devices.toList(), activeAddress)
+    fun updateSimultaneousInterpretationEnabled(enabled: Boolean) {
+        simultaneousInterpretationEnabled = enabled
+        if (!enabled) {
+            isSimultaneousInterpretationActive = false
+            simultaneousFinalPending = false
+        }
+        simultaneousListenerError = null
+        saveStoredSimultaneousInterpretationEnabled(enabled)
+    }
+    fun handleVrchatMuteSelf(muted: Boolean) {
+        if (!simultaneousInterpretationEnabled) return
+        if (!muted && !isSimultaneousInterpretationActive) {
+            chatDraft = ""
+            isSimultaneousInterpretationActive = true
+        } else if (muted && isSimultaneousInterpretationActive) {
+            isSimultaneousInterpretationActive = false
+            simultaneousFinalPending = true
+        }
+    }
+    fun finishSimultaneousInterpretation() {
+        isSimultaneousInterpretationActive = false
+    }
+    fun consumeSimultaneousFinalRequest() {
+        simultaneousFinalPending = false
+    }
     fun activeDevice() = devices.firstOrNull { it.address == activeAddress } ?: devices.firstOrNull()
     fun addDevice(value: String): Boolean {
         val device = parseDeviceEndpoint(value) ?: return false
