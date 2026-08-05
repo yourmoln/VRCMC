@@ -200,16 +200,24 @@ fun VrcmcApp() {
                         .consumeWindowInsets(padding)
                         .fillMaxSize(),
                 ) {
-                    when (screen) {
-                        AppScreen.CHAT -> ChatPage(state, strings)
-                        AppScreen.DEVICES -> DeviceManagementPage(state, strings) { showAddDevice = true }
-                        AppScreen.API -> ApiPage(state, strings)
-                        AppScreen.TRANSLATION_LANGUAGE -> TranslationLanguagePage(state, strings)
-                        AppScreen.SIMULTANEOUS_INTERPRETATION -> SimultaneousInterpretationPage(state, strings)
-                        AppScreen.CONFIGURE_VRC -> ConfigureVrcPage(strings)
-                        AppScreen.PREFERENCES -> PreferencesPage(theme, language, strings, { theme = it }, { language = it })
-                        AppScreen.ABOUT -> AboutPage(state, strings) { screen = AppScreen.ERROR_LOGS }
-                        AppScreen.ERROR_LOGS -> ErrorLogsPage(state, strings)
+                    ChatPage(state, strings)
+                    if (screen != AppScreen.CHAT) {
+                        Surface(
+                            modifier = Modifier.fillMaxSize(),
+                            color = MaterialTheme.colorScheme.background,
+                        ) {
+                            when (screen) {
+                                AppScreen.CHAT -> Unit
+                                AppScreen.DEVICES -> DeviceManagementPage(state, strings) { showAddDevice = true }
+                                AppScreen.API -> ApiPage(state, strings)
+                                AppScreen.TRANSLATION_LANGUAGE -> TranslationLanguagePage(state, strings)
+                                AppScreen.SIMULTANEOUS_INTERPRETATION -> SimultaneousInterpretationPage(state, strings)
+                                AppScreen.CONFIGURE_VRC -> ConfigureVrcPage(strings)
+                                AppScreen.PREFERENCES -> PreferencesPage(theme, language, strings, { theme = it }, { language = it })
+                                AppScreen.ABOUT -> AboutPage(state, strings) { screen = AppScreen.ERROR_LOGS }
+                                AppScreen.ERROR_LOGS -> ErrorLogsPage(state, strings)
+                            }
+                        }
                     }
                 }
             }
