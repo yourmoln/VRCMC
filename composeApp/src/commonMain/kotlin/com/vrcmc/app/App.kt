@@ -30,7 +30,7 @@ import org.jetbrains.compose.resources.painterResource
 import kotlin.math.roundToInt
 
 private enum class ThemeMode { SYSTEM, DARK, LIGHT }
-private enum class AppScreen { CHAT, DEVICES, API, TRANSLATION_LANGUAGE, SIMULTANEOUS_INTERPRETATION, PREFERENCES }
+private enum class AppScreen { CHAT, DEVICES, API, TRANSLATION_LANGUAGE, SIMULTANEOUS_INTERPRETATION, CONFIGURE_VRC, PREFERENCES }
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalComposeUiApi::class)
 @Composable
@@ -138,6 +138,16 @@ fun VrcmcApp() {
                     )
                     HorizontalDivider(Modifier.padding(vertical = 10.dp))
                     NavigationDrawerItem(
+                        label = { Text(strings.configureVrc) },
+                        selected = screen == AppScreen.CONFIGURE_VRC,
+                        icon = { Icon(Icons.Default.SettingsInputAntenna, null) },
+                        onClick = {
+                            screen = AppScreen.CONFIGURE_VRC
+                            scope.launch { drawerState.close() }
+                        },
+                        modifier = Modifier.padding(horizontal = 12.dp),
+                    )
+                    NavigationDrawerItem(
                         label = { Text(strings.preferences) },
                         selected = screen == AppScreen.PREFERENCES,
                         icon = { Icon(Icons.Default.Settings, null) },
@@ -187,6 +197,7 @@ fun VrcmcApp() {
                         AppScreen.API -> ApiPage(state, strings)
                         AppScreen.TRANSLATION_LANGUAGE -> TranslationLanguagePage(state, strings)
                         AppScreen.SIMULTANEOUS_INTERPRETATION -> SimultaneousInterpretationPage(state, strings)
+                        AppScreen.CONFIGURE_VRC -> ConfigureVrcPage(strings)
                         AppScreen.PREFERENCES -> PreferencesPage(theme, language, strings, { theme = it }, { language = it })
                     }
                 }
