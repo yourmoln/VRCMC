@@ -40,6 +40,35 @@ open class LocaleStrings {
     open val simultaneousInterpretation = "Simultaneous interpretation"; open val enableSimultaneousInterpretation = "Enable simultaneous interpretation"; open val simultaneousInterpretationInputHint = "This feature must be used with your keyboard's voice input function."; open val simultaneousInterpretationHint = "Listen for VRChat MuteSelf at the active device address and send port. Opening the microphone starts live original-text messages; muting or Send performs the normal send flow."; open val listeningPort = "Listening endpoint"; open val listenerReady = "Waiting for VRChat microphone events"; open val listenerStopped = "Listener is off"; open val listenerFailed = "Could not listen on this endpoint: %s"; open val interpreting = "Microphone open"
     open val alwaysInterpretation = "Always interpret"; open val enableAlwaysInterpretation = "Enable always interpret"; open val alwaysInterpretationHint = "Replaces Send with Start. Once started, non-empty text is sent automatically after input has been idle for the configured time."; open val startAlwaysInterpretation = "Start always interpret"; open val stopAlwaysInterpretation = "Stop always interpret"; open val alwaysInterpretationDelay = "Automatic send delay"; open val alwaysInterpretationDelayHint = "Send after this much time without another input event"; open fun seconds(value: String) = "$value seconds"
     open val aboutApp = "About app"; open val version = "Version"; open val errorLogs = "Error logs"; open val noErrorLogs = "No error logs"; open val clearErrorLogs = "Clear error logs"; open val clearErrorLogsMessage = "Delete all saved error logs?"
+    open fun providerHint(provider: TranslationProvider): String = when (provider.id) {
+        "openai" -> "Official OpenAI API. Base URL is fixed; select a model ID from the presets."
+        "openai_compatible" -> "For OpenAI-compatible proxies, relays, and self-hosted APIs. Custom model IDs are preserved exactly."
+        "anthropic" -> "Official Anthropic Messages API."
+        "anthropic_compatible" -> "For proxies and relays compatible with the Anthropic Messages API."
+        "xai" -> "Official xAI OpenAI-compatible API."
+        "grok_compatible" -> "For Grok-compatible relays. Custom request headers are supported."
+        "local_ai" -> "OpenAI-compatible service on this computer or LAN. API Key may be left blank."
+        "google_web" -> "Public web translation API with no API Key required; it may be unavailable on some networks."
+        "mymemory" -> "Translation memory with no API Key required, suitable as a zero-configuration fallback."
+        "deepl" -> "Uses DeepL API Free by default. Paid accounts should use https://api.deepl.com/v2."
+        "libretranslate" -> "Self-hosted LibreTranslate usually requires no API Key; public instances may require one."
+        "qianwen" -> "Select the endpoint for the API Key region. Japan requires a workspace-specific URL."
+        "hunyuan" -> "Tencent Hunyuan OpenAI-compatible API."
+        "xiaomi" -> "Select the global pay-as-you-go or Token Plan cluster for the API Key type."
+        "deepseek" -> "Official DeepSeek API. Enter the corresponding Base URL when using a relay API Key."
+        "zhipu" -> "Zhipu GLM OpenAI-compatible API."
+        "gemini" -> "Official Gemini OpenAI-compatible API."
+        "kimi" -> "Official Moonshot OpenAI-compatible API."
+        "mistral" -> "Official Mistral API."
+        "doubao" -> "Enter the current model or inference endpoint ID from the Volcengine Ark console."
+        "nvidia" -> "Supports NVIDIA API Catalog, self-hosted NIM, and compatible proxies."
+        else -> provider.hint
+    }
+    open fun providerRegionLabel(providerId: String, region: ProviderRegion): String = when (providerId to region.id) {
+        "qianwen" to "china" -> "Mainland China"; "qianwen" to "singapore" -> "Singapore / International"; "qianwen" to "japan" -> "Japan (custom)"
+        "xiaomi" to "global" -> "Global pay-as-you-go"; "xiaomi" to "china" -> "China Token Plan"; "xiaomi" to "singapore" -> "Singapore Token Plan"; "xiaomi" to "europe" -> "Europe Token Plan"
+        else -> region.label
+    }
 }
 object LocaleStringsEn : LocaleStrings()
 object LocaleStringsZhHans : LocaleStrings() {
@@ -81,8 +110,124 @@ object LocaleStringsZhHans : LocaleStrings() {
     override val languageSettings = "翻译语言"; override val selectedLanguages = "目标语言"; override val displayOrder = "显示顺序"; override val effectPreview = "效果预览"; override val originalText = "原文"; override val moveUp = "上移"; override val moveDown = "下移"
     override val simultaneousInterpretation = "同声传译"; override val enableSimultaneousInterpretation = "开启同声传译"; override val simultaneousInterpretationInputHint = "此功能需要配合输入法的语音输入功能使用。"; override val simultaneousInterpretationHint = "监听当前设备 IP 和发送端口。游戏内开麦后每次输入都发送一条原文消息，闭麦或点击发送时执行一次正常发送。"; override val listeningPort = "监听端点"; override val listenerReady = "正在等待 VRChat 麦克风事件"; override val listenerStopped = "监听已关闭"; override val listenerFailed = "无法监听此端点：%s"; override val interpreting = "游戏麦克风已打开"
     override val alwaysInterpretation = "始终传译"; override val enableAlwaysInterpretation = "开启始终传译"; override val alwaysInterpretationHint = "发送按钮将替换为开始按钮。开始后，输入框有内容且一段时间没有新的输入事件时自动发送。"; override val startAlwaysInterpretation = "开始始终传译"; override val stopAlwaysInterpretation = "停止始终传译"; override val alwaysInterpretationDelay = "自动发送等待时间"; override val alwaysInterpretationDelayHint = "最后一次输入事件后等待多久自动发送"; override fun seconds(value: String) = "$value 秒"
+    override fun providerHint(provider: TranslationProvider) = provider.hint
+    override fun providerRegionLabel(providerId: String, region: ProviderRegion) = region.label
 }
-object LocaleStringsZhHant : LocaleStrings() { override val yesterday = "\u6628\u5929"; override val dayBeforeYesterday = "\u524d\u5929"; override val copyMessage = "複製"; override val resendMessage = "重新傳送"; override val languageSettings = "翻譯語言"; override val selectedLanguages = "目標語言"; override val displayOrder = "顯示順序"; override val effectPreview = "效果預覽"; override val originalText = "原文"; override val moveUp = "上移"; override val moveDown = "下移"; override val sendOriginalBeforeTranslation = "譯文產生前傳送原文"; override val sendOriginalBeforeTranslationHint = "翻譯期間先在 VRChat 中顯示原文" }
-object LocaleStringsJa : LocaleStrings() { override val yesterday = "\u6628\u65e5"; override val dayBeforeYesterday = "\u4e00\u6628\u65e5"; override val copyMessage = "コピー"; override val resendMessage = "再送信"; override val languageSettings = "翻訳言語"; override val selectedLanguages = "翻訳先言語"; override val displayOrder = "表示順序"; override val effectPreview = "プレビュー"; override val originalText = "原文"; override val moveUp = "上へ"; override val moveDown = "下へ"; override val sendOriginalBeforeTranslation = "翻訳完了前に原文を送信"; override val sendOriginalBeforeTranslationHint = "翻訳中は VRChat に原文を先に表示します" }
+object LocaleStringsZhHant : LocaleStrings() {
+    override val chat = "聊天"; override val devices = "裝置"; override val api = "API"; override val settings = "設定"; override val done = "完成"; override val theme = "主題"; override val preferences = "偏好設定"
+    override val chatbox = "Chatbox 訊息"; override val addDevice = "新增裝置"; override val activeDevice = "目前裝置"; override val send = "傳送"; override val typeMessage = "輸入訊息..."; override val addIp = "請先新增電腦 IP"; override val sendFailed = "傳送失敗"
+    override val apiConfiguration = "API 設定"; override val openMenu = "開啟選單"; override val selectDevice = "選擇裝置"; override val deleteDevice = "刪除裝置"; override val deviceAddress = "接收連接埠:IP:傳送連接埠"
+    override val defaultPortHint = "僅輸入 IP 時預設為 9000:IP:9001"; override val invalidDeviceAddress = "請輸入有效的 IP 和連接埠"; override val cancel = "取消"; override val translationAssistant = "翻譯"; override val translating = "翻譯中..."; override fun translatingRetry(attempt: Int, limit: Int) = "翻譯中...（重試 $attempt/$limit）"
+    override val deviceManagement = "裝置管理"; override val editDevice = "編輯裝置"; override val ipAddress = "IP 位址"; override val receivePort = "接收連接埠"; override val sendPort = "傳送連接埠"; override val save = "儲存"; override val noDevices = "尚未新增裝置"
+    override val deviceIpHint = "請輸入執行 VRChat 的裝置在目前區域網路中的 IP 位址。"; override val scanNetwork = "掃描區域網路"; override val scanningNetwork = "正在掃描區域網路..."; override val scanResults = "找到的裝置"; override val noScanResults = "沒有裝置回應。請確認兩台裝置位於同一區域網路後再試一次。"; override val unknownDeviceName = "未知裝置"; override val alreadyAdded = "已新增"
+    override val copyMessage = "複製"; override val resendMessage = "重新傳送"
+    override val appearance = "外觀"; override val language = "語言"; override val systemTheme = "跟隨系統"; override val lightTheme = "淺色"; override val darkTheme = "深色"
+    override val configureVrc = "設定 VRC"; override val configureVrcIntro = "將產生的 OSC 參數加入 VRChat 的 Steam 啟動選項，讓 VRChat 與此裝置交換資料。"
+    override val steamStep1 = "開啟 Steam 遊戲庫，在 VRChat 上按一下滑鼠右鍵，然後選擇「內容」。"
+    override val steamStep2 = "在「一般」頁面中找到「啟動選項」。"
+    override val steamStep3 = "將下方指令貼到欄位中，然後重新啟動 VRChat。"
+    override val oscLaunchCommand = "OSC 啟動指令"; override val copyCommand = "複製指令"; override val commandCopied = "已複製"; override val refreshIp = "重新整理 IP"; override val selectLanIp = "選擇此裝置的區域網路 IP"
+    override val currentLanIp = "此裝置的區域網路 IP：%s"; override val lanIpUnavailable = "找不到可用的區域網路 IPv4 位址。請先將此裝置與執行 VRChat 的電腦連線至同一區域網路，然後重新整理。"
+    override val localhostOscNote = "如果此應用程式與 VRChat 在同一台電腦上執行，可以使用 localhost 或 127.0.0.1 取代偵測到的位址。"
+    override val remoteOscNote = "若要讓 VRChat 將資料傳送至網路上的另一台裝置，中間的值必須是該裝置的 IP，例如：--osc=9000:192.168.1.42:9001"
+    override val yesterday = "昨天"; override val dayBeforeYesterday = "前天"
+    override val clearHistory = "清除聊天記錄"; override val clearHistoryTitle = "要清除聊天記錄嗎？"; override val clearHistoryMessage = "所有已儲存的訊息都會永久刪除。"; override val delete = "刪除"; override val messageTooLong = "訊息超過 VRChat Chatbox 限制（144 個字元或 9 行）"
+    override val translationLlm = "翻譯與 LLM"; override val provider = "服務供應商"; override val customCompatible = "自訂相容服務"; override val apiKey = "API 金鑰（Ollama 可不填）"; override val targetLanguage = "目標語言"; override val translateBeforeSending = "傳送前翻譯"; override val testConnection = "測試連線"; override val testing = "測試中..."; override val connectionFailed = "連線失敗；請檢查 URL、金鑰和模型"; override val connected = "已連線：%s"; override val originalAndTranslationSent = "已傳送原文與譯文"
+    override val apiSettingsSubtitle = "各服務供應商的設定會獨立儲存，並依通訊協定傳送要求及診斷連線"
+    override val translationService = "翻譯服務"; override val credentialsAndEndpoint = "憑證與端點"; override val modelAndLanguage = "模型與目標語言"; override val translationBehavior = "翻譯行為"
+    override val apiKeyOptional = "API 金鑰（選填）"; override val showApiKey = "顯示 API 金鑰"; override val apiKeyRequired = "此服務供應商需要 API 金鑰"
+    override val customEndpoint = "自訂端點"; override val baseUrlHint = "輸入服務供應商或轉送服務提供的端點"; override val officialEndpointLocked = "官方端點已鎖定，以免意外變更"
+    override val model = "模型"; override val chooseModel = "選擇模型"; override val customModelPreserved = "自訂模型 ID 會依輸入內容原樣儲存"
+    override val fallbackModel = "備用模型"; override val enableFallbackModel = "使用備用模型"; override val fallbackModelHint = "僅在主要模型用盡所有可重試次數後使用"; override val fallbackRetryCount = "備用模型重試次數"; override val fallbackRetryCountHint = "可重試 0–10 次；預設為 3 次"
+    override val translateBehaviorHint = "將原文與譯文一起傳送至 VRChat"; override val advancedSettings = "進階要求設定"; override val requestTimeout = "要求逾時"; override val timeoutHint = "範圍為 3–300 秒；即時聊天適合使用較短的逾時時間"
+    override val sendOriginalBeforeTranslation = "產生譯文前傳送原文"; override val sendOriginalBeforeTranslationHint = "翻譯期間先在 VRChat 中顯示原文"
+    override val retryCount = "重試次數"; override val retryCountHint = "未傳回可用譯文時重試 0–10 次"
+    override val customHeaders = "自訂要求標頭"; override val customHeadersHint = "每行輸入一個 Name: value 標頭；內容會和目前的服務供應商設定一起安全儲存"
+    override val streamingResponse = "串流回應"; override val streamingHint = "組合伺服器傳送的資料區塊；適用於相容的轉送服務"
+    override val connectionSuccessful = "連線成功"; override val connectionFailedTitle = "連線失敗"
+    override val chooseProvider = "選擇服務供應商"; override val providerPickerHint = "搜尋精簡清單，不會遮住目前頁面"; override val searchProvider = "搜尋服務供應商或通訊協定"; override val recommended = "推薦"
+    override val chooseLanguage = "選擇目標語言"; override val twoLanguageHint = "選擇一或兩種語言；兩個翻譯工作會平行執行。"
+    override val languageSettings = "翻譯語言"; override val selectedLanguages = "目標語言"; override val displayOrder = "顯示順序"; override val effectPreview = "效果預覽"; override val originalText = "原文"; override val moveUp = "上移"; override val moveDown = "下移"
+    override val simultaneousInterpretation = "同步口譯"; override val enableSimultaneousInterpretation = "啟用同步口譯"; override val simultaneousInterpretationInputHint = "此功能必須配合鍵盤的語音輸入功能使用。"; override val simultaneousInterpretationHint = "監聽目前裝置位址與傳送連接埠上的 VRChat MuteSelf。開啟麥克風時會即時傳送原文；靜音或按下傳送時則執行一般傳送流程。"; override val listeningPort = "監聽端點"; override val listenerReady = "正在等待 VRChat 麥克風事件"; override val listenerStopped = "監聽器已關閉"; override val listenerFailed = "無法監聽此端點：%s"; override val interpreting = "麥克風已開啟"
+    override val alwaysInterpretation = "持續口譯"; override val enableAlwaysInterpretation = "啟用持續口譯"; override val alwaysInterpretationHint = "以「開始」取代「傳送」。開始後，非空白文字會在輸入停止達到設定時間後自動傳送。"; override val startAlwaysInterpretation = "開始持續口譯"; override val stopAlwaysInterpretation = "停止持續口譯"; override val alwaysInterpretationDelay = "自動傳送延遲"; override val alwaysInterpretationDelayHint = "最後一次輸入後等待多久再傳送"; override fun seconds(value: String) = "$value 秒"
+    override val aboutApp = "關於應用程式"; override val version = "版本"; override val errorLogs = "錯誤記錄"; override val noErrorLogs = "沒有錯誤記錄"; override val clearErrorLogs = "清除錯誤記錄"; override val clearErrorLogsMessage = "要刪除所有已儲存的錯誤記錄嗎？"
+    override fun providerHint(provider: TranslationProvider): String = when (provider.id) {
+        "openai" -> "OpenAI 官方 API。Base URL 固定，可從預設項目選擇模型 ID。"
+        "openai_compatible" -> "適用於 OpenAI 相容代理、轉送服務及自架 API。自訂模型 ID 會原樣保留。"
+        "anthropic" -> "Anthropic 官方 Messages API。"; "anthropic_compatible" -> "適用於 Anthropic Messages API 相容代理或轉送服務。"
+        "xai" -> "xAI 官方 OpenAI-compatible API。"; "grok_compatible" -> "適用於 Grok 相容轉送服務，並支援自訂要求標頭。"
+        "local_ai" -> "本機或區域網路上的 OpenAI-compatible 服務，API Key 可留空。"; "google_web" -> "不需 API Key 的公共網頁翻譯 API；部分網路環境可能無法存取。"
+        "mymemory" -> "不需 API Key 的翻譯記憶庫，適合作為零設定備用服務。"; "deepl" -> "預設使用 DeepL API Free；付費帳戶請改用 https://api.deepl.com/v2。"
+        "libretranslate" -> "自架 LibreTranslate 通常不需 API Key；公共執行個體可能需要。"; "qianwen" -> "依 API Key 所屬區域選擇端點。日本區域需填寫工作區專用 URL。"
+        "hunyuan" -> "騰訊混元 OpenAI-compatible API。"; "xiaomi" -> "依 API Key 類型選擇全球按量計費或 Token Plan 叢集。"
+        "deepseek" -> "DeepSeek 官方 API；使用轉送服務 API Key 時請填寫對應的 Base URL。"; "zhipu" -> "智譜 GLM OpenAI-compatible API。"
+        "gemini" -> "Gemini 官方 OpenAI-compatible API。"; "kimi" -> "Moonshot 官方 OpenAI-compatible API。"; "mistral" -> "Mistral 官方 API。"
+        "doubao" -> "請填寫火山方舟主控台提供的目前模型或推論端點 ID。"; "nvidia" -> "支援 NVIDIA API Catalog、自架 NIM 或相容代理。"
+        else -> provider.hint
+    }
+    override fun providerRegionLabel(providerId: String, region: ProviderRegion): String = when (providerId to region.id) {
+        "qianwen" to "china" -> "中國大陸"; "qianwen" to "singapore" -> "新加坡／國際"; "qianwen" to "japan" -> "日本（自訂）"
+        "xiaomi" to "global" -> "全球按量計費"; "xiaomi" to "china" -> "中國 Token Plan"; "xiaomi" to "singapore" -> "新加坡 Token Plan"; "xiaomi" to "europe" -> "歐洲 Token Plan"
+        else -> region.label
+    }
+}
+object LocaleStringsJa : LocaleStrings() {
+    override val chat = "チャット"; override val devices = "デバイス"; override val api = "API"; override val settings = "設定"; override val done = "完了"; override val theme = "テーマ"; override val preferences = "環境設定"
+    override val chatbox = "Chatbox メッセージ"; override val addDevice = "デバイスを追加"; override val activeDevice = "使用中のデバイス"; override val send = "送信"; override val typeMessage = "メッセージを入力..."; override val addIp = "先にパソコンの IP を追加してください"; override val sendFailed = "送信に失敗しました"
+    override val apiConfiguration = "API 設定"; override val openMenu = "メニューを開く"; override val selectDevice = "デバイスを選択"; override val deleteDevice = "デバイスを削除"; override val deviceAddress = "受信ポート:IP:送信ポート"
+    override val defaultPortHint = "IP のみの場合は 9000:IP:9001 になります"; override val invalidDeviceAddress = "有効な IP とポートを入力してください"; override val cancel = "キャンセル"; override val translationAssistant = "翻訳"; override val translating = "翻訳中..."; override fun translatingRetry(attempt: Int, limit: Int) = "翻訳中...（再試行 $attempt/$limit）"
+    override val deviceManagement = "デバイス管理"; override val editDevice = "デバイスを編集"; override val ipAddress = "IP アドレス"; override val receivePort = "受信ポート"; override val sendPort = "送信ポート"; override val save = "保存"; override val noDevices = "デバイスが追加されていません"
+    override val deviceIpHint = "VRChat を実行しているデバイスの LAN 内 IP アドレスを入力してください。"; override val scanNetwork = "ローカルネットワークをスキャン"; override val scanningNetwork = "ローカルネットワークをスキャン中..."; override val scanResults = "見つかったデバイス"; override val noScanResults = "応答したデバイスはありません。両方のデバイスが同じローカルネットワークに接続されていることを確認して、もう一度お試しください。"; override val unknownDeviceName = "不明なデバイス"; override val alreadyAdded = "追加済み"
+    override val copyMessage = "コピー"; override val resendMessage = "再送信"
+    override val appearance = "外観"; override val language = "言語"; override val systemTheme = "システム"; override val lightTheme = "ライト"; override val darkTheme = "ダーク"
+    override val configureVrc = "VRC を設定"; override val configureVrcIntro = "生成された OSC 引数を VRChat の Steam 起動オプションに追加し、VRChat とこのデバイス間でデータを送受信できるようにします。"
+    override val steamStep1 = "Steam ライブラリを開き、VRChat を右クリックして「プロパティ」を選択します。"
+    override val steamStep2 = "「一般」で「起動オプション」を探します。"
+    override val steamStep3 = "下のコマンドを入力欄に貼り付け、VRChat を再起動します。"
+    override val oscLaunchCommand = "OSC 起動コマンド"; override val copyCommand = "コマンドをコピー"; override val commandCopied = "コピーしました"; override val refreshIp = "IP を更新"; override val selectLanIp = "このデバイスの LAN IP を選択"
+    override val currentLanIp = "このデバイスの LAN IP：%s"; override val lanIpUnavailable = "使用可能な LAN IPv4 アドレスが見つかりません。このデバイスと VRChat を実行しているパソコンを同じローカルネットワークに接続してから更新してください。"
+    override val localhostOscNote = "このアプリと VRChat を同じパソコンで実行する場合は、検出されたアドレスの代わりに localhost または 127.0.0.1 を使用できます。"
+    override val remoteOscNote = "ネットワーク上の別のデバイスへ VRChat からデータを送る場合、中央の値にはそのデバイスの IP を指定します。例：--osc=9000:192.168.1.42:9001"
+    override val yesterday = "昨日"; override val dayBeforeYesterday = "一昨日"
+    override val clearHistory = "チャット履歴を消去"; override val clearHistoryTitle = "チャット履歴を消去しますか？"; override val clearHistoryMessage = "保存されたすべてのメッセージが完全に削除されます。"; override val delete = "削除"; override val messageTooLong = "メッセージが VRChat Chatbox の上限（144 文字または 9 行）を超えています"
+    override val translationLlm = "翻訳と LLM"; override val provider = "プロバイダー"; override val customCompatible = "カスタム互換サービス"; override val apiKey = "API キー（Ollama は省略可）"; override val targetLanguage = "翻訳先言語"; override val translateBeforeSending = "送信前に翻訳"; override val testConnection = "接続をテスト"; override val testing = "テスト中..."; override val connectionFailed = "接続に失敗しました。URL、キー、モデルを確認してください"; override val connected = "接続しました：%s"; override val originalAndTranslationSent = "原文と翻訳を送信しました"
+    override val apiSettingsSubtitle = "プロバイダーごとに設定を保存し、プロトコルに応じたリクエストと接続診断を行います"
+    override val translationService = "翻訳サービス"; override val credentialsAndEndpoint = "認証情報とエンドポイント"; override val modelAndLanguage = "モデルと翻訳先言語"; override val translationBehavior = "翻訳動作"
+    override val apiKeyOptional = "API キー（任意）"; override val showApiKey = "API キーを表示"; override val apiKeyRequired = "このプロバイダーには API キーが必要です"
+    override val customEndpoint = "カスタムエンドポイント"; override val baseUrlHint = "プロバイダーまたは中継サービスから提供されたエンドポイントを入力してください"; override val officialEndpointLocked = "誤変更を防ぐため公式エンドポイントは固定されています"
+    override val model = "モデル"; override val chooseModel = "モデルを選択"; override val customModelPreserved = "カスタムモデル ID は入力どおりに保存されます"
+    override val fallbackModel = "フォールバックモデル"; override val enableFallbackModel = "フォールバックモデルを使用"; override val fallbackModelHint = "プライマリモデルで再試行可能な回数を使い切った場合のみ使用します"; override val fallbackRetryCount = "フォールバックの再試行回数"; override val fallbackRetryCountHint = "0～10 回。既定値は 3 回です"
+    override val translateBehaviorHint = "原文と翻訳を一緒に VRChat へ送信します"; override val advancedSettings = "リクエストの詳細設定"; override val requestTimeout = "リクエストのタイムアウト"; override val timeoutHint = "3～300 秒。リアルタイムチャットには短めの設定が適しています"
+    override val sendOriginalBeforeTranslation = "翻訳完了前に原文を送信"; override val sendOriginalBeforeTranslationHint = "翻訳中は先に VRChat へ原文を表示します"
+    override val retryCount = "再試行回数"; override val retryCountHint = "有効な翻訳が返らない場合に 0～10 回再試行します"
+    override val customHeaders = "カスタムリクエストヘッダー"; override val customHeadersHint = "1 行につき 1 つの Name: value ヘッダーを入力します。内容は現在のプロバイダー設定とともに安全に保存されます"
+    override val streamingResponse = "ストリーミング応答"; override val streamingHint = "サーバー送信チャンクを結合します。互換中継サービスに便利です"
+    override val connectionSuccessful = "接続に成功しました"; override val connectionFailedTitle = "接続に失敗しました"
+    override val chooseProvider = "プロバイダーを選択"; override val providerPickerHint = "画面を覆わず、コンパクトな一覧から検索できます"; override val searchProvider = "プロバイダーまたはプロトコルを検索"; override val recommended = "おすすめ"
+    override val chooseLanguage = "翻訳先言語を選択"; override val twoLanguageHint = "1～2 言語を選択できます。2 つの翻訳は並行して実行されます。"
+    override val languageSettings = "翻訳言語"; override val selectedLanguages = "翻訳先言語"; override val displayOrder = "表示順序"; override val effectPreview = "プレビュー"; override val originalText = "原文"; override val moveUp = "上へ"; override val moveDown = "下へ"
+    override val simultaneousInterpretation = "同時通訳"; override val enableSimultaneousInterpretation = "同時通訳を有効化"; override val simultaneousInterpretationInputHint = "この機能はキーボードの音声入力機能と併用してください。"; override val simultaneousInterpretationHint = "使用中デバイスのアドレスと送信ポートで VRChat の MuteSelf を監視します。マイクを開くと原文をリアルタイム送信し、ミュートまたは送信操作で通常の送信処理を行います。"; override val listeningPort = "待受エンドポイント"; override val listenerReady = "VRChat のマイクイベントを待機中"; override val listenerStopped = "リスナーは停止しています"; override val listenerFailed = "このエンドポイントで待受できません：%s"; override val interpreting = "マイクがオンです"
+    override val alwaysInterpretation = "常時通訳"; override val enableAlwaysInterpretation = "常時通訳を有効化"; override val alwaysInterpretationHint = "「送信」が「開始」に置き換わります。開始後、入力が設定時間途切れると、空でないテキストが自動送信されます。"; override val startAlwaysInterpretation = "常時通訳を開始"; override val stopAlwaysInterpretation = "常時通訳を停止"; override val alwaysInterpretationDelay = "自動送信までの時間"; override val alwaysInterpretationDelayHint = "最後の入力から自動送信までの待ち時間"; override fun seconds(value: String) = "$value 秒"
+    override val aboutApp = "アプリについて"; override val version = "バージョン"; override val errorLogs = "エラーログ"; override val noErrorLogs = "エラーログはありません"; override val clearErrorLogs = "エラーログを消去"; override val clearErrorLogsMessage = "保存されているエラーログをすべて削除しますか？"
+    override fun providerHint(provider: TranslationProvider): String = when (provider.id) {
+        "openai" -> "OpenAI 公式 API。Base URL は固定され、モデル ID はプリセットから選択できます。"
+        "openai_compatible" -> "OpenAI 互換プロキシ、中継サービス、セルフホスト API 向けです。カスタムモデル ID は入力どおりに保持されます。"
+        "anthropic" -> "Anthropic 公式 Messages API。"; "anthropic_compatible" -> "Anthropic Messages API 互換のプロキシまたは中継サービス向けです。"
+        "xai" -> "xAI 公式 OpenAI-compatible API。"; "grok_compatible" -> "Grok 互換中継サービス向けです。カスタムリクエストヘッダーを追加できます。"
+        "local_ai" -> "このパソコンまたは LAN 上の OpenAI-compatible サービスです。API Key は空欄にできます。"; "google_web" -> "API Key 不要の公開ウェブ翻訳 API です。一部のネットワークでは利用できない場合があります。"
+        "mymemory" -> "API Key 不要の翻訳メモリで、設定なしのフォールバックに適しています。"; "deepl" -> "既定では DeepL API Free を使用します。有料アカウントでは https://api.deepl.com/v2 を使用してください。"
+        "libretranslate" -> "セルフホストの LibreTranslate は通常 API Key が不要ですが、公開インスタンスでは必要な場合があります。"; "qianwen" -> "API Key の地域に対応するエンドポイントを選択します。日本リージョンではワークスペース専用 URL が必要です。"
+        "hunyuan" -> "Tencent Hunyuan OpenAI-compatible API。"; "xiaomi" -> "API Key の種類に応じてグローバル従量制または Token Plan クラスターを選択します。"
+        "deepseek" -> "DeepSeek 公式 API。中継サービスの API Key を使う場合は対応する Base URL を入力してください。"; "zhipu" -> "Zhipu GLM OpenAI-compatible API。"
+        "gemini" -> "Gemini 公式 OpenAI-compatible API。"; "kimi" -> "Moonshot 公式 OpenAI-compatible API。"; "mistral" -> "Mistral 公式 API。"
+        "doubao" -> "Volcengine Ark コンソールに表示される現在のモデルまたは推論エンドポイント ID を入力してください。"; "nvidia" -> "NVIDIA API Catalog、セルフホスト NIM、互換プロキシに対応しています。"
+        else -> provider.hint
+    }
+    override fun providerRegionLabel(providerId: String, region: ProviderRegion): String = when (providerId to region.id) {
+        "qianwen" to "china" -> "中国本土"; "qianwen" to "singapore" -> "シンガポール／国際"; "qianwen" to "japan" -> "日本（カスタム）"
+        "xiaomi" to "global" -> "グローバル従量制"; "xiaomi" to "china" -> "中国 Token Plan"; "xiaomi" to "singapore" -> "シンガポール Token Plan"; "xiaomi" to "europe" -> "ヨーロッパ Token Plan"
+        else -> region.label
+    }
+}
 
 fun localeStrings(language: AppLanguage): LocaleStrings = when (language) { AppLanguage.ZH_HANS -> LocaleStringsZhHans; AppLanguage.ZH_HANT -> LocaleStringsZhHant; AppLanguage.JA -> LocaleStringsJa; AppLanguage.EN -> LocaleStringsEn }

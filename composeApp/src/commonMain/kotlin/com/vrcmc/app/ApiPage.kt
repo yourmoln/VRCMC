@@ -70,7 +70,7 @@ fun ApiPage(state: AppState, strings: LocaleStrings) {
                         Icon(Icons.Default.UnfoldMore, strings.provider)
                     }
                 }
-                Text(provider.hint, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                Text(strings.providerHint(provider), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
             }
         }
 
@@ -94,10 +94,10 @@ fun ApiPage(state: AppState, strings: LocaleStrings) {
                     Box {
                         val selectedRegion = provider.regions.firstOrNull { it.id == config.region }
                         OutlinedButton({ regionMenu = true }, Modifier.fillMaxWidth(), shape = MaterialTheme.shapes.large) {
-                            Icon(Icons.Default.Public, null); Spacer(Modifier.width(8.dp)); Text(selectedRegion?.label ?: strings.customEndpoint, Modifier.weight(1f)); Icon(Icons.Default.ArrowDropDown, null)
+                            Icon(Icons.Default.Public, null); Spacer(Modifier.width(8.dp)); Text(selectedRegion?.let { strings.providerRegionLabel(provider.id, it) } ?: strings.customEndpoint, Modifier.weight(1f)); Icon(Icons.Default.ArrowDropDown, null)
                         }
                         DropdownMenu(regionMenu, { regionMenu = false }) {
-                            provider.regions.forEach { region -> DropdownMenuItem({ Text(region.label) }, leadingIcon = { if (region.id == config.region) Icon(Icons.Default.Check, null) }, onClick = { update { old -> old.copy(region = region.id, baseUrl = region.baseUrl) }; regionMenu = false }) }
+                            provider.regions.forEach { region -> DropdownMenuItem({ Text(strings.providerRegionLabel(provider.id, region)) }, leadingIcon = { if (region.id == config.region) Icon(Icons.Default.Check, null) }, onClick = { update { old -> old.copy(region = region.id, baseUrl = region.baseUrl) }; regionMenu = false }) }
                         }
                     }
                 }
