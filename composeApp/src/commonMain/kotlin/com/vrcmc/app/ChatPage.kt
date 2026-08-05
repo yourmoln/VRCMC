@@ -64,15 +64,16 @@ fun ChatPage(state: AppState, strings: LocaleStrings) {
     var activeLoadingMessages by remember { mutableStateOf<List<ChatMessage>>(emptyList()) }
     var translationGeneration by remember { mutableIntStateOf(0) }
     val scope = rememberCoroutineScope()
+    val messages = state.messages.toList()
     val listState = rememberLazyListState(
-        initialFirstVisibleItemIndex = state.messages.lastIndex.coerceAtLeast(0),
+        initialFirstVisibleItemIndex = messages.lastIndex.coerceAtLeast(0),
     )
     val active = state.activeDevice()
     val now = currentTimeMillis()
     val imeBottom = WindowInsets.ime.getBottom(LocalDensity.current)
     val clipboard = LocalClipboardManager.current
     val liveOriginalUpdates = remember { Channel<LiveOscAction>(Channel.UNLIMITED) }
-    val timestampVisibility = chatTimestampVisibility(state.messages.map(ChatMessage::timestamp))
+    val timestampVisibility = chatTimestampVisibility(messages.map(ChatMessage::timestamp))
 
     fun removeLoadingMessages(messages: List<ChatMessage>) {
         messages.forEach { message ->
@@ -231,13 +232,13 @@ fun ChatPage(state: AppState, strings: LocaleStrings) {
         }
     }
 
-    LaunchedEffect(state.messages.size) {
-        if (state.messages.isNotEmpty()) listState.animateScrollToItem(state.messages.lastIndex)
+    LaunchedEffect(messages.lastIndex) {
+        if (messages.isNotEmpty()) listState.requestScrollToItem(messages.lastIndex)
     }
 
     LaunchedEffect(imeBottom) {
-        if (imeBottom > 0 && state.messages.isNotEmpty()) {
-            listState.scrollToItem(state.messages.lastIndex)
+        if (imeBottom > 0 && messages.isNotEmpty()) {
+            listState.requestScrollToItem(messages.lastIndex)
         }
     }
 
@@ -248,7 +249,7 @@ fun ChatPage(state: AppState, strings: LocaleStrings) {
             contentPadding = PaddingValues(horizontal = 16.dp, vertical = 18.dp),
             verticalArrangement = Arrangement.spacedBy(14.dp),
         ) {
-            if (state.messages.isEmpty()) {
+            if (messages.isEmpty()) {
                 item {
                     Box(Modifier.fillParentMaxSize(), contentAlignment = Alignment.Center) {
                         Column(horizontalAlignment = Alignment.CenterHorizontally) {
@@ -273,7 +274,7 @@ fun ChatPage(state: AppState, strings: LocaleStrings) {
                     }
                 }
             } else {
-                itemsIndexed(state.messages) { index, message ->
+                itemsIndexed(messages) { index, message ->
                     Column(Modifier.fillMaxWidth()) {
                         if (timestampVisibility[index]) {
                             Text(
