@@ -2,6 +2,8 @@ package com.vrcmc.app
 
 expect fun localIpv4Addresses(): List<String>
 
+expect val localNetworkScanSupported: Boolean
+
 data class DiscoveredNetworkDevice(
     val name: String,
     val ipAddress: String,

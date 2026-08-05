@@ -511,60 +511,62 @@ private fun DeviceManagementPage(state: AppState, strings: LocaleStrings, onAddD
                 }
             }
         }
-        item {
-            Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
-                Row(verticalAlignment = Alignment.Top) {
-                    Icon(Icons.Default.Info, null, Modifier.size(20.dp), tint = MaterialTheme.colorScheme.onSurfaceVariant)
-                    Spacer(Modifier.width(8.dp))
-                    Text(strings.deviceIpHint, Modifier.weight(1f), style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                }
-                OutlinedButton(
-                    onClick = {
-                        scope.launch {
-                            isScanning = true
-                            discoveredDevices = scanLocalNetworkDevices()
-                            isScanning = false
-                        }
-                    },
-                    modifier = Modifier.fillMaxWidth(),
-                    enabled = !isScanning,
-                    shape = RoundedCornerShape(8.dp),
-                ) {
-                    Icon(Icons.Default.Radar, null)
-                    Spacer(Modifier.width(8.dp))
-                    Text(if (isScanning) strings.scanningNetwork else strings.scanNetwork)
-                }
-                if (isScanning) LinearProgressIndicator(Modifier.fillMaxWidth())
-            }
-        }
-        discoveredDevices?.let { results ->
+        if (localNetworkScanSupported) {
             item {
-                Text(strings.scanResults, style = MaterialTheme.typography.titleMedium)
-            }
-            if (results.isEmpty()) {
-                item {
-                    Text(strings.noScanResults, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                }
-            } else {
-                items(results, key = { "scan-${it.ipAddress}" }) { device ->
-                    val added = state.devices.any { it.address == device.ipAddress }
-                    Row(
-                        modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp),
-                        verticalAlignment = Alignment.CenterVertically,
+                Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                    Row(verticalAlignment = Alignment.Top) {
+                        Icon(Icons.Default.Info, null, Modifier.size(20.dp), tint = MaterialTheme.colorScheme.onSurfaceVariant)
+                        Spacer(Modifier.width(8.dp))
+                        Text(strings.deviceIpHint, Modifier.weight(1f), style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    }
+                    OutlinedButton(
+                        onClick = {
+                            scope.launch {
+                                isScanning = true
+                                discoveredDevices = scanLocalNetworkDevices()
+                                isScanning = false
+                            }
+                        },
+                        modifier = Modifier.fillMaxWidth(),
+                        enabled = !isScanning,
+                        shape = RoundedCornerShape(8.dp),
                     ) {
-                        Icon(Icons.Default.Computer, null, tint = MaterialTheme.colorScheme.secondary)
-                        Spacer(Modifier.width(12.dp))
-                        Column(Modifier.weight(1f)) {
-                            Text(device.name.ifBlank { strings.unknownDeviceName }, style = MaterialTheme.typography.titleSmall, maxLines = 1, overflow = TextOverflow.Ellipsis)
-                            Text(device.ipAddress, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                        }
-                        TextButton(
-                            onClick = { state.addDevice(device.ipAddress) },
-                            enabled = !added,
+                        Icon(Icons.Default.Radar, null)
+                        Spacer(Modifier.width(8.dp))
+                        Text(if (isScanning) strings.scanningNetwork else strings.scanNetwork)
+                    }
+                    if (isScanning) LinearProgressIndicator(Modifier.fillMaxWidth())
+                }
+            }
+            discoveredDevices?.let { results ->
+                item {
+                    Text(strings.scanResults, style = MaterialTheme.typography.titleMedium)
+                }
+                if (results.isEmpty()) {
+                    item {
+                        Text(strings.noScanResults, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    }
+                } else {
+                    items(results, key = { "scan-${it.ipAddress}" }) { device ->
+                        val added = state.devices.any { it.address == device.ipAddress }
+                        Row(
+                            modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp),
+                            verticalAlignment = Alignment.CenterVertically,
                         ) {
-                            Icon(if (added) Icons.Default.Check else Icons.Default.Add, null)
-                            Spacer(Modifier.width(6.dp))
-                            Text(if (added) strings.alreadyAdded else strings.addDevice)
+                            Icon(Icons.Default.Computer, null, tint = MaterialTheme.colorScheme.secondary)
+                            Spacer(Modifier.width(12.dp))
+                            Column(Modifier.weight(1f)) {
+                                Text(device.name.ifBlank { strings.unknownDeviceName }, style = MaterialTheme.typography.titleSmall, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                                Text(device.ipAddress, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                            }
+                            TextButton(
+                                onClick = { state.addDevice(device.ipAddress) },
+                                enabled = !added,
+                            ) {
+                                Icon(if (added) Icons.Default.Check else Icons.Default.Add, null)
+                                Spacer(Modifier.width(6.dp))
+                                Text(if (added) strings.alreadyAdded else strings.addDevice)
+                            }
                         }
                     }
                 }
