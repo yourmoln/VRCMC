@@ -2,6 +2,24 @@ package com.vrcmc.app
 
 expect fun localIpv4Addresses(): List<String>
 
+data class DiscoveredNetworkDevice(
+    val name: String,
+    val ipAddress: String,
+)
+
+expect suspend fun scanLocalNetworkDevices(): List<DiscoveredNetworkDevice>
+
+internal fun localIpv4ScanTargets(addresses: List<String>): List<String> {
+    val ownAddresses = addresses.map(String::trim).filter(::isUsableIpv4Address).toSet()
+    return ownAddresses
+        .asSequence()
+        .map { it.substringBeforeLast('.') }
+        .distinct()
+        .flatMap { prefix -> (1..254).asSequence().map { "$prefix.$it" } }
+        .filterNot { it in ownAddresses }
+        .toList()
+}
+
 internal fun preferredLocalIpv4Address(addresses: List<String>): String? =
     addresses
         .asSequence()

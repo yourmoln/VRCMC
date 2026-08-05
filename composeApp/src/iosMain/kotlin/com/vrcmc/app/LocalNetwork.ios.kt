@@ -41,3 +41,5 @@ actual fun localIpv4Addresses(): List<String> = memScoped {
     }
     addresses
 }
+
+actual suspend fun scanLocalNetworkDevices(): List<DiscoveredNetworkDevice> = emptyList()

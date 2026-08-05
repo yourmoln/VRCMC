@@ -422,15 +422,18 @@ private fun AddDeviceDialog(state: AppState, strings: LocaleStrings, close: () -
         icon = { Icon(Icons.Default.AddToQueue, null) },
         title = { Text(strings.addDevice) },
         text = {
-            OutlinedTextField(
-                value = endpoint,
-                onValueChange = { endpoint = it; invalid = false },
-                singleLine = true,
-                label = { Text(strings.deviceAddress) },
-                placeholder = { Text("9000:192.168.1.10:9001") },
-                supportingText = { Text(if (invalid) strings.invalidDeviceAddress else strings.defaultPortHint) },
-                isError = invalid,
-            )
+            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                Text(strings.deviceIpHint, style = MaterialTheme.typography.bodyMedium)
+                OutlinedTextField(
+                    value = endpoint,
+                    onValueChange = { endpoint = it; invalid = false },
+                    singleLine = true,
+                    label = { Text(strings.deviceAddress) },
+                    placeholder = { Text("9000:192.168.1.10:9001") },
+                    supportingText = { Text(if (invalid) strings.invalidDeviceAddress else strings.defaultPortHint) },
+                    isError = invalid,
+                )
+            }
         },
         confirmButton = {
             TextButton(onClick = {
@@ -444,6 +447,9 @@ private fun AddDeviceDialog(state: AppState, strings: LocaleStrings, close: () -
 @Composable
 private fun DeviceManagementPage(state: AppState, strings: LocaleStrings, onAddDevice: () -> Unit) {
     var editing by remember { mutableStateOf<Device?>(null) }
+    var discoveredDevices by remember { mutableStateOf<List<DiscoveredNetworkDevice>?>(null) }
+    var isScanning by remember { mutableStateOf(false) }
+    val scope = rememberCoroutineScope()
     LazyColumn(
         modifier = Modifier.fillMaxSize(),
         contentPadding = PaddingValues(16.dp),
@@ -459,9 +465,7 @@ private fun DeviceManagementPage(state: AppState, strings: LocaleStrings, onAddD
         }
         if (state.devices.isEmpty()) {
             item {
-                Box(Modifier.fillParentMaxSize(), contentAlignment = Alignment.Center) {
-                    Text(strings.noDevices, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                }
+                Text(strings.noDevices, modifier = Modifier.fillMaxWidth().padding(vertical = 24.dp), color = MaterialTheme.colorScheme.onSurfaceVariant)
             }
         } else {
             items(state.devices.size, key = { state.devices[it].address }) { index ->
@@ -481,6 +485,65 @@ private fun DeviceManagementPage(state: AppState, strings: LocaleStrings, onAddD
                         }
                         IconButton({ editing = device }) { Icon(Icons.Default.Edit, strings.editDevice) }
                         IconButton({ state.removeDevice(device) }) { Icon(Icons.Default.Delete, strings.deleteDevice, tint = MaterialTheme.colorScheme.error) }
+                    }
+                }
+            }
+        }
+        item {
+            Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                Row(verticalAlignment = Alignment.Top) {
+                    Icon(Icons.Default.Info, null, Modifier.size(20.dp), tint = MaterialTheme.colorScheme.onSurfaceVariant)
+                    Spacer(Modifier.width(8.dp))
+                    Text(strings.deviceIpHint, Modifier.weight(1f), style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                }
+                OutlinedButton(
+                    onClick = {
+                        scope.launch {
+                            isScanning = true
+                            discoveredDevices = scanLocalNetworkDevices()
+                            isScanning = false
+                        }
+                    },
+                    modifier = Modifier.fillMaxWidth(),
+                    enabled = !isScanning,
+                    shape = RoundedCornerShape(8.dp),
+                ) {
+                    Icon(Icons.Default.Radar, null)
+                    Spacer(Modifier.width(8.dp))
+                    Text(if (isScanning) strings.scanningNetwork else strings.scanNetwork)
+                }
+                if (isScanning) LinearProgressIndicator(Modifier.fillMaxWidth())
+            }
+        }
+        discoveredDevices?.let { results ->
+            item {
+                Text(strings.scanResults, style = MaterialTheme.typography.titleMedium)
+            }
+            if (results.isEmpty()) {
+                item {
+                    Text(strings.noScanResults, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                }
+            } else {
+                items(results, key = { "scan-${it.ipAddress}" }) { device ->
+                    val added = state.devices.any { it.address == device.ipAddress }
+                    Row(
+                        modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                    ) {
+                        Icon(Icons.Default.Computer, null, tint = MaterialTheme.colorScheme.secondary)
+                        Spacer(Modifier.width(12.dp))
+                        Column(Modifier.weight(1f)) {
+                            Text(device.name.ifBlank { strings.unknownDeviceName }, style = MaterialTheme.typography.titleSmall, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                            Text(device.ipAddress, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                        }
+                        TextButton(
+                            onClick = { state.addDevice(device.ipAddress) },
+                            enabled = !added,
+                        ) {
+                            Icon(if (added) Icons.Default.Check else Icons.Default.Add, null)
+                            Spacer(Modifier.width(6.dp))
+                            Text(if (added) strings.alreadyAdded else strings.addDevice)
+                        }
                     }
                 }
             }
