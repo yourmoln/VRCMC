@@ -64,12 +64,15 @@ fun ChatPage(state: AppState, strings: LocaleStrings) {
     var activeLoadingMessages by remember { mutableStateOf<List<ChatMessage>>(emptyList()) }
     var translationGeneration by remember { mutableIntStateOf(0) }
     val scope = rememberCoroutineScope()
-    val listState = rememberLazyListState()
+    val listState = rememberLazyListState(
+        initialFirstVisibleItemIndex = state.messages.lastIndex.coerceAtLeast(0),
+    )
     val active = state.activeDevice()
     val now = currentTimeMillis()
     val imeBottom = WindowInsets.ime.getBottom(LocalDensity.current)
     val clipboard = LocalClipboardManager.current
     val liveOriginalUpdates = remember { Channel<LiveOscAction>(Channel.UNLIMITED) }
+    val timestampVisibility = chatTimestampVisibility(state.messages.map(ChatMessage::timestamp))
 
     fun removeLoadingMessages(messages: List<ChatMessage>) {
         messages.forEach { message ->
@@ -263,7 +266,7 @@ fun ChatPage(state: AppState, strings: LocaleStrings) {
             } else {
                 itemsIndexed(state.messages) { index, message ->
                     Column(Modifier.fillMaxWidth()) {
-                        if (shouldShowChatTimestamp(message.timestamp, state.messages.getOrNull(index - 1)?.timestamp)) {
+                        if (timestampVisibility[index]) {
                             Text(
                                 formatChatTime(
                                     timestamp = message.timestamp,
@@ -405,6 +408,15 @@ internal fun shouldShowChatTimestamp(timestamp: Long, previousTimestamp: Long?):
     if (previousTimestamp == null) return true
     val elapsed = timestamp - previousTimestamp
     return elapsed < 0 || elapsed >= 10 * 60 * 1_000L
+}
+
+internal fun chatTimestampVisibility(timestamps: List<Long>): List<Boolean> {
+    var lastDisplayedTimestamp: Long? = null
+    return timestamps.map { timestamp ->
+        shouldShowChatTimestamp(timestamp, lastDisplayedTimestamp).also { shouldShow ->
+            if (shouldShow) lastDisplayedTimestamp = timestamp
+        }
+    }
 }
 
 @Composable
