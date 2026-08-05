@@ -45,6 +45,8 @@ class AppState {
     var activeAddress by mutableStateOf(loadStoredActiveAddress().takeIf { saved -> devices.any { it.address == saved } } ?: devices.firstOrNull()?.address.orEmpty())
     var providerId by mutableStateOf(storedTranslation.providerId.takeIf { id -> translationProviders.any { it.id == id } } ?: "deepseek")
     var translate by mutableStateOf(storedTranslation.translate)
+    var sendOriginalBeforeTranslation by mutableStateOf(storedTranslation.sendOriginalBeforeTranslation)
+        private set
     val languages = mutableStateListOf<String>().apply { addAll(storedTranslation.targetLanguages.take(2).ifEmpty { listOf("English") }) }
     val outputOrder = mutableStateListOf<String>().apply { addAll(normalizeOutputOrder(languages, storedTranslation.outputOrder)) }
     val providerConfigs = initialProviderConfigs(storedTranslation.configs, storedSecrets)
@@ -62,6 +64,10 @@ class AppState {
         outputOrder.addAll(normalizeOutputOrder(languages, values))
         persistTranslation()
     }
+    fun updateSendOriginalBeforeTranslation(enabled: Boolean) {
+        sendOriginalBeforeTranslation = enabled
+        persistTranslation()
+    }
     init {
         if (storedTranslation.configs.values.any { it.apiKey.isNotBlank() || it.customHeaders.isNotBlank() }) persistTranslation()
         if (simultaneousInterpretationEnabled && loadStoredAlwaysInterpretationEnabled()) {
@@ -71,7 +77,7 @@ class AppState {
 
     fun persistTranslation() {
         saveStoredTranslationSecrets(providerConfigs.mapValues { (_, value) -> ProviderSecrets(value.apiKey, value.customHeaders) }.toSecretsJson())
-        saveStoredTranslationSettings(StoredTranslationSettings(providerId = providerId, translate = translate, targetLanguages = languages.toList(), outputOrder = outputOrder.toList(), configs = providerConfigs.toMap()).toJson())
+        saveStoredTranslationSettings(StoredTranslationSettings(providerId = providerId, translate = translate, sendOriginalBeforeTranslation = sendOriginalBeforeTranslation, targetLanguages = languages.toList(), outputOrder = outputOrder.toList(), configs = providerConfigs.toMap()).toJson())
     }
     fun persist() = saveStoredDevices(devices.toList(), activeAddress)
     fun updateSimultaneousInterpretationEnabled(enabled: Boolean) {

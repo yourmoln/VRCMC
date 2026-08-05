@@ -6,6 +6,7 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.Send
 import androidx.compose.material.icons.filled.ArrowDownward
 import androidx.compose.material.icons.filled.ArrowUpward
 import androidx.compose.material.icons.filled.DragHandle
@@ -121,6 +122,29 @@ fun TranslationLanguagePage(state: AppState, strings: LocaleStrings) {
                     contentColor = MaterialTheme.colorScheme.onSecondaryContainer,
                 ) {
                     Text(preview, Modifier.padding(16.dp), style = MaterialTheme.typography.bodyLarge)
+                }
+            }
+        }
+
+        item {
+            LanguageSettingsSection(strings.translationBehavior, Icons.AutoMirrored.Filled.Send) {
+                Row(
+                    modifier = Modifier.fillMaxWidth().heightIn(min = 48.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    Column(Modifier.weight(1f)) {
+                        Text(strings.sendOriginalBeforeTranslation)
+                        Text(
+                            strings.sendOriginalBeforeTranslationHint,
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
+                    }
+                    Spacer(Modifier.width(12.dp))
+                    Switch(
+                        checked = state.sendOriginalBeforeTranslation,
+                        onCheckedChange = state::updateSendOriginalBeforeTranslation,
+                    )
                 }
             }
         }

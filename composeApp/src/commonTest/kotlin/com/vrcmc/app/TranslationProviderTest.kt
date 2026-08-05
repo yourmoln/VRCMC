@@ -51,6 +51,14 @@ class TranslationProviderTest {
         val restored = storedTranslationSettingsFromJson("not-json")
         assertEquals("deepseek", restored.providerId)
         assertFalse(restored.translate)
+        assertTrue(restored.sendOriginalBeforeTranslation)
+    }
+
+    @Test
+    fun sendingOriginalBeforeTranslationDefaultsOnAndRoundTrips() {
+        assertTrue(storedTranslationSettingsFromJson("{}").sendOriginalBeforeTranslation)
+        val disabled = StoredTranslationSettings(sendOriginalBeforeTranslation = false)
+        assertFalse(storedTranslationSettingsFromJson(disabled.toJson()).sendOriginalBeforeTranslation)
     }
 
     @Test

@@ -105,9 +105,10 @@ fun ChatPage(state: AppState, strings: LocaleStrings) {
         val shouldTranslate = state.translate && !isArabicDigitsOnly(original)
         val targetLanguages = state.languages.toList()
         val outputOrder = state.outputOrder.toList()
+        val sendOriginalBeforeTranslation = state.sendOriginalBeforeTranslation
         val displayLanguages = outputOrder.filter { it in targetLanguages }
         val translatingText = "$original\n(Translating...)"
-        if (shouldTranslate && !isValidChatboxText(translatingText)) {
+        if (shouldTranslate && sendOriginalBeforeTranslation && !isValidChatboxText(translatingText)) {
             error = strings.messageTooLong
             return
         }
@@ -127,7 +128,7 @@ fun ChatPage(state: AppState, strings: LocaleStrings) {
         val requestGeneration = ++translationGeneration
         val job = scope.launch(start = CoroutineStart.LAZY) {
             try {
-                if (shouldTranslate && !sendChatboxOsc(target.address, translatingText, target.receivePort)) {
+                if (shouldTranslate && sendOriginalBeforeTranslation && !sendChatboxOsc(target.address, translatingText, target.receivePort)) {
                     error = strings.sendFailed
                 }
                 val translations = if (shouldTranslate) coroutineScope {

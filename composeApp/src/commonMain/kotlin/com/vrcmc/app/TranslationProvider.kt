@@ -73,6 +73,7 @@ fun defaultProviderConfig(provider: TranslationProvider) = ProviderConfig(
 data class StoredTranslationSettings(
     val providerId: String = "deepseek",
     val translate: Boolean = false,
+    val sendOriginalBeforeTranslation: Boolean = true,
     val targetLanguages: List<String> = listOf("English"),
     val outputOrder: List<String> = targetLanguages + originalOutputKey,
     val configs: Map<String, ProviderConfig> = emptyMap(),
@@ -84,7 +85,7 @@ data class ProviderSecrets(
 )
 
 fun StoredTranslationSettings.toJson(): String = buildJsonObject {
-    put("provider", providerId); put("translate", translate); putJsonArray("targetLanguages") { targetLanguages.take(2).forEach(::add) }
+    put("provider", providerId); put("translate", translate); put("sendOriginalBeforeTranslation", sendOriginalBeforeTranslation); putJsonArray("targetLanguages") { targetLanguages.take(2).forEach(::add) }
     putJsonArray("outputOrder") { normalizeOutputOrder(targetLanguages, outputOrder).forEach(::add) }
     putJsonObject("configs") { configs.forEach { (id, value) -> putJsonObject(id) {
         put("baseUrl", value.baseUrl); put("model", value.model); put("region", value.region); put("timeout", value.timeoutSeconds); put("streaming", value.streaming); put("retries", value.retryCount)
@@ -136,6 +137,7 @@ fun storedTranslationSettingsFromJson(value: String): StoredTranslationSettings 
     StoredTranslationSettings(
         providerId = root["provider"]?.jsonPrimitive?.content ?: "deepseek",
         translate = root["translate"]?.jsonPrimitive?.booleanOrNull ?: false,
+        sendOriginalBeforeTranslation = root["sendOriginalBeforeTranslation"]?.jsonPrimitive?.booleanOrNull ?: true,
         targetLanguages = selectedLanguages,
         outputOrder = normalizeOutputOrder(selectedLanguages, storedOrder),
         configs = configs,
