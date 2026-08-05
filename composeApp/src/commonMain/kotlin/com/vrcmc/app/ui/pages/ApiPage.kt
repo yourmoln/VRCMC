@@ -34,10 +34,10 @@ fun ApiPage(state: AppState, strings: LocaleStrings) {
         contentPadding = PaddingValues(16.dp),
         verticalArrangement = Arrangement.spacedBy(12.dp),
     ) {
+        item { ApiTranslationToggleSection(state, strings) }
         item { ApiProviderSection(provider, strings) { showProviderPicker = true } }
         item { ApiCredentialsSection(provider, config, strings, ::update) }
         item { ApiModelSection(provider, config, strings, ::update) }
-        item { ApiBehaviorSection(state, provider, config, strings, ::update) }
         item {
             Button(
                 onClick = {

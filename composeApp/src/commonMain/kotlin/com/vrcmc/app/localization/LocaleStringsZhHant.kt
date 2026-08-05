@@ -76,7 +76,7 @@ object LocaleStringsZhHant : LocaleStrings {
     override val customCompatible = "自訂相容服務"
     override val apiKey = "API 金鑰（Ollama 可不填）"
     override val targetLanguage = "目標語言"
-    override val translateBeforeSending = "傳送前翻譯"
+    override val translateBeforeSending = "啟用翻譯"
     override val testConnection = "測試連線"
     override val testing = "測試中..."
     override val connectionFailed = "連線失敗；請檢查 URL、金鑰和模型"

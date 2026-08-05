@@ -82,7 +82,7 @@ object LocaleStringsZhHans : LocaleStrings {
     override val customCompatible = "自定义兼容接口"
     override val apiKey = "API Key"
     override val targetLanguage = "目标语言"
-    override val translateBeforeSending = "发送前翻译"
+    override val translateBeforeSending = "开启翻译"
     override val testConnection = "测试连接"
     override val testing = "测试中..."
     override val connectionFailed = "连接失败，请检查 URL、Key 和模型"

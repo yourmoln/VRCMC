@@ -81,7 +81,7 @@ object LocaleStringsEn : LocaleStrings {
     override val customCompatible = "Custom compatible"
     override val apiKey = "API Key (optional for Ollama)"
     override val targetLanguage = "Target language"
-    override val translateBeforeSending = "Translate before sending"
+    override val translateBeforeSending = "Enable translation"
     override val testConnection = "Test connection"
     override val testing = "Testing..."
     override val connectionFailed = "Connection failed; check URL, key and model"

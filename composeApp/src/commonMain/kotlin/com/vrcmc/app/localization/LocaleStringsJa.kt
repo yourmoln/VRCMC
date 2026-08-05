@@ -79,7 +79,7 @@ object LocaleStringsJa : LocaleStrings {
     override val customCompatible = "カスタム互換サービス"
     override val apiKey = "API キー（Ollama は省略可）"
     override val targetLanguage = "翻訳先言語"
-    override val translateBeforeSending = "送信前に翻訳"
+    override val translateBeforeSending = "翻訳を有効化"
     override val testConnection = "接続をテスト"
     override val testing = "テスト中..."
     override val connectionFailed = "接続に失敗しました。URL、キー、モデルを確認してください"
