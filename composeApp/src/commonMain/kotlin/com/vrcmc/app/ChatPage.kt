@@ -139,16 +139,14 @@ fun ChatPage(state: AppState, strings: LocaleStrings) {
                                 text = original,
                                 onRetry = { attempt ->
                                     retryAttempt = maxOf(retryAttempt, attempt)
-                                    state.addErrorLog("Translation retry $attempt for ${provider.label} / $language")
                                 },
-                                onApiResponse = { raw -> state.addErrorLog("API response (${provider.label} / $language):\n$raw") },
+                                onApiFailure = state::addErrorLog,
                             )
                         }
                     }.awaitAll()
                 } else emptyList()
                 val failure = translations.firstNotNullOfOrNull { (_, result) -> result as? TranslationResult.Failure }
                 if (failure != null) {
-                    state.addErrorLog("Translation failed: ${failure.message}")
                     removeLoadingMessages(loadingMessages)
                     error = failure.message
                     return@launch
@@ -176,7 +174,6 @@ fun ChatPage(state: AppState, strings: LocaleStrings) {
                 val outgoing = buildTranslationOutput(original, successful, outputOrder)
                 if (!isValidChatboxText(outgoing)) error = strings.messageTooLong
                 else if (!sendChatboxOsc(target.address, outgoing, target.receivePort)) {
-                    state.addErrorLog("OSC send failed to ${target.address}:${target.receivePort}")
                     error = strings.sendFailed
                 }
             } finally {
@@ -197,7 +194,6 @@ fun ChatPage(state: AppState, strings: LocaleStrings) {
         for (action in liveOriginalUpdates) {
             when (action) {
                 is LiveOriginalUpdate -> if (!sendChatboxOsc(action.device.address, action.text, action.device.receivePort)) {
-                    state.addErrorLog("OSC send failed to ${action.device.address}:${action.device.receivePort}")
                     error = strings.sendFailed
                 }
                 is LiveOscBarrier -> action.completed.complete(Unit)

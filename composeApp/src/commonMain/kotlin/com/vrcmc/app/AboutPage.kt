@@ -5,6 +5,7 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.selection.SelectionContainer
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.DeleteSweep
 import androidx.compose.material.icons.filled.ErrorOutline
@@ -16,6 +17,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.text.font.FontFamily
 import com.vrcmc.app.generated.resources.Res
 import com.vrcmc.app.generated.resources.logo
 import org.jetbrains.compose.resources.painterResource
@@ -51,7 +53,9 @@ fun ErrorLogsPage(state: AppState, strings: LocaleStrings) {
         if (state.errorLogs.isEmpty()) Text(strings.noErrorLogs, color = MaterialTheme.colorScheme.onSurfaceVariant)
         else LazyColumn(verticalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.fillMaxSize()) {
             items(state.errorLogs.asReversed()) { log ->
-                Text("[${log.timestamp}] ${log.message}", style = MaterialTheme.typography.bodySmall, modifier = Modifier.fillMaxWidth())
+                SelectionContainer {
+                    Text(log.message, style = MaterialTheme.typography.bodySmall.copy(fontFamily = FontFamily.Monospace), modifier = Modifier.fillMaxWidth())
+                }
                 HorizontalDivider()
             }
         }

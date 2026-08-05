@@ -7,6 +7,22 @@ import kotlin.test.assertIs
 
 class TranslationRetryTest {
     @Test
+    fun parsesTruncatedOpenAiOutputWithoutTreatingPartialContentAsComplete() {
+        val output = parseOpenAiResponse("""{"choices":[{"message":{"content":"partial"},"finish_reason":"length"}]}""")
+
+        assertEquals("partial", output?.content)
+        assertEquals("length", output?.finishReason)
+    }
+
+    @Test
+    fun parsesCompletedOpenAiOutput() {
+        val output = parseOpenAiResponse("""{"choices":[{"message":{"content":"complete"},"finish_reason":"stop"}]}""")
+
+        assertEquals("complete", output?.content)
+        assertEquals("stop", output?.finishReason)
+    }
+
+    @Test
     fun retriesThreeTimesAfterTheInitialAttempt() {
         runBlocking {
             var attempts = 0

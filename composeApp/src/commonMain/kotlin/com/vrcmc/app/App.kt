@@ -61,7 +61,6 @@ fun VrcmcApp() {
             .retryListenerFailures(
                 onFailure = {
                     state.simultaneousListenerError = it.message ?: it::class.simpleName
-                    state.addErrorLog("OSC listener failed: ${it.message ?: it::class.simpleName}")
                 },
                 onRetry = { state.simultaneousListenerError = null },
             )
