@@ -25,6 +25,9 @@ internal val translationJson = Json { ignoreUnknownKeys = true }
 internal fun isArabicDigitsOnly(text: String): Boolean =
     text.any { it in '0'..'9' } && text.all { it in '0'..'9' || it.isWhitespace() }
 
+internal fun shouldSkipTranslation(text: String): Boolean =
+    text.any { !it.isWhitespace() } && text.none(Char::isLetter)
+
 suspend fun translateText(
     provider: TranslationProvider,
     config: ProviderConfig,

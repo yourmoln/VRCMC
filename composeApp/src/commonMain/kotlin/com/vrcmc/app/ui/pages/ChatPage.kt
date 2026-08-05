@@ -78,7 +78,7 @@ fun ChatPage(state: AppState, strings: LocaleStrings) {
             error = strings.messageTooLong
             return
         }
-        val shouldTranslate = state.translate && !isArabicDigitsOnly(original)
+        val shouldTranslate = state.translate && !shouldSkipTranslation(original)
         val targetLanguages = state.languages.toList()
         val outputOrder = state.outputOrder.toList()
         val sendOriginalBeforeTranslation = state.sendOriginalBeforeTranslation
