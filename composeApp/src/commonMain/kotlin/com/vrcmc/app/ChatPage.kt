@@ -391,12 +391,14 @@ private fun MessageBubble(
                         leadingIcon = { Icon(Icons.Default.ContentCopy, null) },
                         onClick = { menuExpanded = false; onCopy() },
                     )
-                    DropdownMenuItem(
-                        text = { Text(strings.resendMessage) },
-                        leadingIcon = { Icon(Icons.Default.Refresh, null) },
-                        enabled = resendEnabled,
-                        onClick = { menuExpanded = false; onResend() },
-                    )
+                    if (user) {
+                        DropdownMenuItem(
+                            text = { Text(strings.resendMessage) },
+                            leadingIcon = { Icon(Icons.Default.Refresh, null) },
+                            enabled = resendEnabled,
+                            onClick = { menuExpanded = false; onResend() },
+                        )
+                    }
                 }
             }
             if (!user) Spacer(Modifier.weight(1f))
