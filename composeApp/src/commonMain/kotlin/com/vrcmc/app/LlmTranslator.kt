@@ -265,7 +265,7 @@ private suspend fun requestOpenAi(provider: TranslationProvider, config: Provide
     val endpoint = config.baseUrl.trim().trimEnd('/').let { if (it.endsWith("/chat/completions")) it else "$it/chat/completions" }
     val (systemPrompt, userPrompt) = llmPrompts(provider, config.model, targetLanguage, text)
     val body = buildJsonObject {
-        put("model", config.model.trim()); put("temperature", 0.2); put("max_tokens", 192); put("stream", config.streaming)
+        put("model", config.model.trim()); put("temperature", 0.2); put("max_tokens", 512); put("stream", config.streaming)
         putJsonArray("messages") {
             addJsonObject { put("role", "system"); put("content", systemPrompt) }
             addJsonObject { put("role", "user"); put("content", userPrompt) }
