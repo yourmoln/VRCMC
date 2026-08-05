@@ -68,4 +68,59 @@ class TranslationRetryTest {
             assertEquals(TranslationResult.Success("Bonjour"), result)
         }
     }
+
+    @Test
+    fun switchesToFallbackOnlyAfterPrimaryRetriesAreExhausted() {
+        runBlocking {
+            val requestedModels = mutableListOf<String>()
+            val retries = mutableListOf<Int>()
+            val result = translateWithFallback(
+                sourceText = "Hello",
+                primaryModel = "deepseek-v4-flash",
+                retryCount = 2,
+                fallbackModel = "deepseek-v4-pro",
+                fallbackRetryCount = 3,
+                onRetry = retries::add,
+            ) { model ->
+                requestedModels += model
+                if (requestedModels.size < 5) TranslationResult.Failure("unavailable", retryable = true)
+                else TranslationResult.Success("你好")
+            }
+
+            assertEquals(
+                listOf("deepseek-v4-flash", "deepseek-v4-flash", "deepseek-v4-flash", "deepseek-v4-pro", "deepseek-v4-pro"),
+                requestedModels,
+            )
+            assertEquals(listOf(1, 2, 3, 4), retries)
+            assertEquals(TranslationResult.Success("你好"), result)
+        }
+    }
+
+    @Test
+    fun doesNotUseFallbackForNonRetryableFailure() {
+        runBlocking {
+            val requestedModels = mutableListOf<String>()
+            val result = translateWithFallback("Hello", "primary", 3, "fallback", 3) { model ->
+                requestedModels += model
+                TranslationResult.Failure("invalid key", status = 401)
+            }
+
+            assertEquals(listOf("primary"), requestedModels)
+            assertIs<TranslationResult.Failure>(result)
+        }
+    }
+
+    @Test
+    fun successfulPrimaryNeverUsesFallback() {
+        runBlocking {
+            val requestedModels = mutableListOf<String>()
+            val result = translateWithFallback("Hello", "primary", 3, "fallback", 3) { model ->
+                requestedModels += model
+                TranslationResult.Success("Bonjour")
+            }
+
+            assertEquals(listOf("primary"), requestedModels)
+            assertEquals(TranslationResult.Success("Bonjour"), result)
+        }
+    }
 }

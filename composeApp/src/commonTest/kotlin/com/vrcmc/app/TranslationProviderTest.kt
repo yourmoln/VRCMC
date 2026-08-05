@@ -79,5 +79,31 @@ class TranslationProviderTest {
     fun legacyConfigsUseFiveRetries() {
         val restored = storedTranslationSettingsFromJson("""{"provider":"deepseek","configs":{"deepseek":{"timeout":20}}}""")
         assertEquals(5, restored.configs.getValue("deepseek").retryCount)
+        assertEquals(3, restored.configs.getValue("deepseek").fallbackRetryCount)
+        assertFalse(restored.configs.getValue("deepseek").fallbackEnabled)
+    }
+
+    @Test
+    fun fallbackModelSettingsRoundTrip() {
+        val value = StoredTranslationSettings(
+            configs = mapOf(
+                "deepseek" to ProviderConfig(
+                    model = "deepseek-v4-flash",
+                    fallbackModel = "deepseek-v4-pro",
+                    fallbackRetryCount = 4,
+                    fallbackEnabled = true,
+                ),
+            ),
+        )
+
+        assertEquals(value, storedTranslationSettingsFromJson(value.toJson()))
+    }
+
+    @Test
+    fun deepSeekDefaultsToDisabledProFallback() {
+        val config = defaultProviderConfig(providerById("deepseek"))
+        assertEquals("deepseek-v4-pro", config.fallbackModel)
+        assertEquals(3, config.fallbackRetryCount)
+        assertFalse(config.fallbackEnabled)
     }
 }

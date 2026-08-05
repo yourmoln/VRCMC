@@ -112,7 +112,7 @@ fun ChatPage(state: AppState, strings: LocaleStrings) {
         }
         sending = true
         retryAttempt = 0
-        retryLimit = state.providerConfig.retryCount.coerceIn(0, 10)
+        retryLimit = state.providerConfig.totalRetryCount()
         error = null
         if (clearDraft) state.chatDraft = ""
         state.addMessage(ChatMessage(original, MessageRole.USER))

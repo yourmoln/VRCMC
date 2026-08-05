@@ -34,6 +34,7 @@ fun ApiPage(state: AppState, strings: LocaleStrings) {
     val config = state.providerConfig
     var showProviderPicker by remember { mutableStateOf(false) }
     var modelMenu by remember(provider.id) { mutableStateOf(false) }
+    var fallbackModelMenu by remember(provider.id) { mutableStateOf(false) }
     var regionMenu by remember(provider.id) { mutableStateOf(false) }
     var showKey by remember(provider.id) { mutableStateOf(false) }
     var advanced by remember(provider.id) { mutableStateOf(false) }
@@ -120,8 +121,58 @@ fun ApiPage(state: AppState, strings: LocaleStrings) {
                     )
                     if (provider.models.isNotEmpty()) DropdownMenu(modelMenu, { modelMenu = false }) {
                         provider.models.let { if (config.model.isNotBlank() && config.model !in it) listOf(config.model) + it else it }.forEach { model ->
-                            DropdownMenuItem({ Text(model) }, leadingIcon = { if (model == config.model) Icon(Icons.Default.Check, null) }, onClick = { update { old -> old.copy(model = model) }; modelMenu = false })
+                            DropdownMenuItem({ Text(model) }, leadingIcon = { if (model == config.model) Icon(Icons.Default.Check, null) }, onClick = {
+                                update { old ->
+                                    val replacementFallback = provider.models.firstOrNull { it != model }.orEmpty()
+                                    old.copy(model = model, fallbackModel = old.fallbackModel.takeUnless { it == model } ?: replacementFallback)
+                                }
+                                modelMenu = false
+                            })
                         }
+                    }
+                }
+                if (provider.editableModel || provider.models.any { it != config.model } || config.fallbackEnabled) {
+                    HorizontalDivider()
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Column(Modifier.weight(1f)) {
+                            Text(strings.enableFallbackModel)
+                            Text(strings.fallbackModelHint, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                        }
+                        Switch(config.fallbackEnabled, { enabled ->
+                            update { old ->
+                                val suggested = provider.models.firstOrNull { it != old.model }.orEmpty()
+                                old.copy(
+                                    fallbackEnabled = enabled,
+                                    fallbackModel = if (enabled && old.fallbackModel.isBlank()) suggested else old.fallbackModel,
+                                )
+                            }
+                        })
+                    }
+                    if (config.fallbackEnabled) {
+                        Box {
+                            OutlinedTextField(
+                                value = config.fallbackModel,
+                                onValueChange = { if (provider.editableModel) update { old -> old.copy(fallbackModel = it) } },
+                                modifier = Modifier.fillMaxWidth(), singleLine = true, readOnly = !provider.editableModel,
+                                label = { Text(strings.fallbackModel) },
+                                trailingIcon = if (provider.models.any { it != config.model }) ({ IconButton({ fallbackModelMenu = true }) { Icon(Icons.Default.ArrowDropDown, strings.chooseModel) } }) else null,
+                                isError = config.fallbackModel.isBlank() || config.fallbackModel.trim() == config.model.trim(),
+                                shape = MaterialTheme.shapes.large,
+                            )
+                            if (provider.models.any { it != config.model }) DropdownMenu(fallbackModelMenu, { fallbackModelMenu = false }) {
+                                provider.models.filter { it != config.model }.let { models ->
+                                    if (config.fallbackModel.isNotBlank() && config.fallbackModel !in models) listOf(config.fallbackModel) + models else models
+                                }.forEach { model ->
+                                    DropdownMenuItem({ Text(model) }, leadingIcon = { if (model == config.fallbackModel) Icon(Icons.Default.Check, null) }, onClick = { update { old -> old.copy(fallbackModel = model) }; fallbackModelMenu = false })
+                                }
+                            }
+                        }
+                        OutlinedTextField(
+                            value = config.fallbackRetryCount.toString(),
+                            onValueChange = { value -> value.filter(Char::isDigit).toIntOrNull()?.let { retries -> update { old -> old.copy(fallbackRetryCount = retries.coerceIn(0, 10)) } } },
+                            modifier = Modifier.fillMaxWidth(), singleLine = true, label = { Text(strings.fallbackRetryCount) },
+                            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number), supportingText = { Text(strings.fallbackRetryCountHint) }, shape = MaterialTheme.shapes.large,
+                        )
                     }
                 }
             }

@@ -32,22 +32,60 @@ suspend fun translateText(
     if (config.model.isBlank()) return TranslationResult.Failure("模型 ID 不能为空")
     if (provider.keyRequired && config.apiKey.isBlank()) return TranslationResult.Failure("${provider.label} 需要 API Key")
     endpointSecurityError(config)?.let { return TranslationResult.Failure(it) }
-    return translateWithRetries(text, config.retryCount, onRetry) {
+    return translateWithFallback(
+        sourceText = text,
+        primaryModel = config.model,
+        retryCount = config.retryCount,
+        fallbackModel = config.fallbackModel.takeIf { config.fallbackEnabled }.orEmpty(),
+        fallbackRetryCount = config.fallbackRetryCount,
+        onRetry = onRetry,
+    ) { model ->
+        val requestConfig = config.copy(model = model)
         try {
             when (provider.protocol) {
-                ProviderProtocol.OPENAI -> requestOpenAi(provider, config, targetLanguage, text)
-                ProviderProtocol.ANTHROPIC -> requestAnthropic(config, targetLanguage, text)
-                ProviderProtocol.GOOGLE_WEB -> requestGoogleWeb(config, targetLanguage, text)
-                ProviderProtocol.MYMEMORY -> requestMyMemory(config, targetLanguage, text)
-                ProviderProtocol.DEEPL -> requestDeepL(config, targetLanguage, text)
-                ProviderProtocol.LIBRE -> requestLibre(config, targetLanguage, text)
+                ProviderProtocol.OPENAI -> requestOpenAi(provider, requestConfig, targetLanguage, text)
+                ProviderProtocol.ANTHROPIC -> requestAnthropic(requestConfig, targetLanguage, text)
+                ProviderProtocol.GOOGLE_WEB -> requestGoogleWeb(requestConfig, targetLanguage, text)
+                ProviderProtocol.MYMEMORY -> requestMyMemory(requestConfig, targetLanguage, text)
+                ProviderProtocol.DEEPL -> requestDeepL(requestConfig, targetLanguage, text)
+                ProviderProtocol.LIBRE -> requestLibre(requestConfig, targetLanguage, text)
             }
         } catch (error: CancellationException) {
             throw error
         } catch (error: Throwable) {
-            TranslationResult.Failure(error.message?.takeIf { it.isNotBlank() } ?: error::class.simpleName ?: "网络请求失败")
+            TranslationResult.Failure(error.message?.takeIf { it.isNotBlank() } ?: error::class.simpleName ?: "网络请求失败", retryable = true)
         }
     }
+}
+
+internal fun ProviderConfig.totalRetryCount(): Int {
+    val primaryRetries = retryCount.coerceIn(0, 10)
+    val hasFallback = fallbackEnabled && fallbackModel.isNotBlank() && fallbackModel.trim() != model.trim()
+    return primaryRetries + if (hasFallback) fallbackRetryCount.coerceIn(0, 10) + 1 else 0
+}
+
+internal suspend fun translateWithFallback(
+    sourceText: String,
+    primaryModel: String,
+    retryCount: Int,
+    fallbackModel: String,
+    fallbackRetryCount: Int,
+    onRetry: (Int) -> Unit = {},
+    request: suspend (String) -> TranslationResult,
+): TranslationResult {
+    val primaryRetries = retryCount.coerceIn(0, 10)
+    val primaryResult = translateWithRetries(sourceText, primaryRetries, onRetry) { request(primaryModel) }
+    if (primaryResult is TranslationResult.Success || primaryResult !is TranslationResult.Failure || !primaryResult.retryable) return primaryResult
+
+    val fallback = fallbackModel.trim()
+    if (fallback.isEmpty() || fallback == primaryModel.trim()) return primaryResult
+
+    onRetry(primaryRetries + 1)
+    return translateWithRetries(
+        sourceText = sourceText,
+        retryCount = fallbackRetryCount,
+        onRetry = { attempt -> onRetry(primaryRetries + 1 + attempt) },
+    ) { request(fallback) }
 }
 
 internal fun endpointSecurityError(config: ProviderConfig): String? {
@@ -198,7 +236,8 @@ private fun responseFailure(status: Int, raw: String): TranslationResult.Failure
         root["error"]?.let { error -> if (error is JsonObject) error["message"]?.jsonPrimitive?.contentOrNull else error.jsonPrimitive.contentOrNull }
             ?: root["message"]?.jsonPrimitive?.contentOrNull ?: root["detail"]?.jsonPrimitive?.contentOrNull
     }.getOrNull()?.take(300)
-    return TranslationResult.Failure("HTTP $status${detail?.let { ": $it" }.orEmpty()}", status)
+    val retryable = status == 408 || status == 409 || status == 425 || status == 429 || status in 500..599
+    return TranslationResult.Failure("HTTP $status${detail?.let { ": $it" }.orEmpty()}", status, retryable)
 }
 
 private fun languageCode(language: String): String = when (language.trim().lowercase()) {

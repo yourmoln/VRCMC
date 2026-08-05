@@ -33,6 +33,9 @@ data class ProviderConfig(
     val customHeaders: String = "",
     val streaming: Boolean = false,
     val retryCount: Int = 5,
+    val fallbackModel: String = "",
+    val fallbackRetryCount: Int = 3,
+    val fallbackEnabled: Boolean = false,
 )
 
 val translationProviders = listOf(
@@ -60,7 +63,12 @@ val translationProviders = listOf(
 )
 
 fun providerById(id: String) = translationProviders.firstOrNull { it.id == id } ?: translationProviders.first()
-fun defaultProviderConfig(provider: TranslationProvider) = ProviderConfig(baseUrl = provider.defaultBaseUrl, model = provider.defaultModel, region = provider.regions.firstOrNull()?.id.orEmpty())
+fun defaultProviderConfig(provider: TranslationProvider) = ProviderConfig(
+    baseUrl = provider.defaultBaseUrl,
+    model = provider.defaultModel,
+    region = provider.regions.firstOrNull()?.id.orEmpty(),
+    fallbackModel = provider.models.firstOrNull { it != provider.defaultModel }.orEmpty(),
+)
 
 data class StoredTranslationSettings(
     val providerId: String = "deepseek",
@@ -78,7 +86,10 @@ data class ProviderSecrets(
 fun StoredTranslationSettings.toJson(): String = buildJsonObject {
     put("provider", providerId); put("translate", translate); putJsonArray("targetLanguages") { targetLanguages.take(2).forEach(::add) }
     putJsonArray("outputOrder") { normalizeOutputOrder(targetLanguages, outputOrder).forEach(::add) }
-    putJsonObject("configs") { configs.forEach { (id, value) -> putJsonObject(id) { put("baseUrl", value.baseUrl); put("model", value.model); put("region", value.region); put("timeout", value.timeoutSeconds); put("streaming", value.streaming); put("retries", value.retryCount) } } }
+    putJsonObject("configs") { configs.forEach { (id, value) -> putJsonObject(id) {
+        put("baseUrl", value.baseUrl); put("model", value.model); put("region", value.region); put("timeout", value.timeoutSeconds); put("streaming", value.streaming); put("retries", value.retryCount)
+        put("fallbackModel", value.fallbackModel); put("fallbackRetries", value.fallbackRetryCount); put("fallbackEnabled", value.fallbackEnabled)
+    } } }
 }.toString()
 
 fun Map<String, ProviderSecrets>.toSecretsJson(): String = buildJsonObject {
@@ -103,7 +114,21 @@ fun storedProviderSecretsFromJson(value: String): Map<String, ProviderSecrets> =
 
 fun storedTranslationSettingsFromJson(value: String): StoredTranslationSettings = runCatching {
     val root = Json.parseToJsonElement(value).jsonObject
-    val configs = root["configs"]?.jsonObject?.mapValues { (_, element) -> element.jsonObject.let { obj -> ProviderConfig(obj["apiKey"]?.jsonPrimitive?.content.orEmpty(), obj["baseUrl"]?.jsonPrimitive?.content.orEmpty(), obj["model"]?.jsonPrimitive?.content.orEmpty(), obj["region"]?.jsonPrimitive?.content.orEmpty(), obj["timeout"]?.jsonPrimitive?.intOrNull ?: 20, obj["headers"]?.jsonPrimitive?.content.orEmpty(), obj["streaming"]?.jsonPrimitive?.booleanOrNull ?: false, (obj["retries"]?.jsonPrimitive?.intOrNull ?: 5).coerceIn(0, 10)) } }.orEmpty()
+    val configs = root["configs"]?.jsonObject?.mapValues { (_, element) -> element.jsonObject.let { obj ->
+        ProviderConfig(
+            apiKey = obj["apiKey"]?.jsonPrimitive?.content.orEmpty(),
+            baseUrl = obj["baseUrl"]?.jsonPrimitive?.content.orEmpty(),
+            model = obj["model"]?.jsonPrimitive?.content.orEmpty(),
+            region = obj["region"]?.jsonPrimitive?.content.orEmpty(),
+            timeoutSeconds = obj["timeout"]?.jsonPrimitive?.intOrNull ?: 20,
+            customHeaders = obj["headers"]?.jsonPrimitive?.content.orEmpty(),
+            streaming = obj["streaming"]?.jsonPrimitive?.booleanOrNull ?: false,
+            retryCount = (obj["retries"]?.jsonPrimitive?.intOrNull ?: 5).coerceIn(0, 10),
+            fallbackModel = obj["fallbackModel"]?.jsonPrimitive?.content.orEmpty(),
+            fallbackRetryCount = (obj["fallbackRetries"]?.jsonPrimitive?.intOrNull ?: 3).coerceIn(0, 10),
+            fallbackEnabled = obj["fallbackEnabled"]?.jsonPrimitive?.booleanOrNull ?: false,
+        )
+    } }.orEmpty()
     val languages = root["targetLanguages"]?.jsonArray?.mapNotNull { it.jsonPrimitive.contentOrNull }?.filter { it.isNotBlank() }?.distinct()?.take(2)
         ?: listOf(root["targetLanguage"]?.jsonPrimitive?.contentOrNull ?: "English")
     val selectedLanguages = languages.ifEmpty { listOf("English") }
