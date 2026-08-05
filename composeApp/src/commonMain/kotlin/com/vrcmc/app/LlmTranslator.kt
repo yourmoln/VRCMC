@@ -26,6 +26,7 @@ suspend fun translateText(
     targetLanguage: String,
     text: String,
     onRetry: (Int) -> Unit = {},
+    onApiResponse: (String) -> Unit = {},
 ): TranslationResult {
     if (text.isBlank()) return TranslationResult.Failure("翻译内容为空")
     if (config.baseUrl.isBlank()) return TranslationResult.Failure("Base URL 不能为空")
@@ -43,12 +44,12 @@ suspend fun translateText(
         val requestConfig = config.copy(model = model)
         try {
             when (provider.protocol) {
-                ProviderProtocol.OPENAI -> requestOpenAi(provider, requestConfig, targetLanguage, text)
-                ProviderProtocol.ANTHROPIC -> requestAnthropic(requestConfig, targetLanguage, text)
-                ProviderProtocol.GOOGLE_WEB -> requestGoogleWeb(requestConfig, targetLanguage, text)
-                ProviderProtocol.MYMEMORY -> requestMyMemory(requestConfig, targetLanguage, text)
-                ProviderProtocol.DEEPL -> requestDeepL(requestConfig, targetLanguage, text)
-                ProviderProtocol.LIBRE -> requestLibre(requestConfig, targetLanguage, text)
+                ProviderProtocol.OPENAI -> requestOpenAi(provider, requestConfig, targetLanguage, text, onApiResponse)
+                ProviderProtocol.ANTHROPIC -> requestAnthropic(requestConfig, targetLanguage, text, onApiResponse)
+                ProviderProtocol.GOOGLE_WEB -> requestGoogleWeb(requestConfig, targetLanguage, text, onApiResponse)
+                ProviderProtocol.MYMEMORY -> requestMyMemory(requestConfig, targetLanguage, text, onApiResponse)
+                ProviderProtocol.DEEPL -> requestDeepL(requestConfig, targetLanguage, text, onApiResponse)
+                ProviderProtocol.LIBRE -> requestLibre(requestConfig, targetLanguage, text, onApiResponse)
             }
         } catch (error: CancellationException) {
             throw error
@@ -260,7 +261,7 @@ private fun ProviderConfig.applyHeaders(builder: HttpRequestBuilder) {
     }
 }
 
-private suspend fun requestOpenAi(provider: TranslationProvider, config: ProviderConfig, targetLanguage: String, text: String): TranslationResult {
+private suspend fun requestOpenAi(provider: TranslationProvider, config: ProviderConfig, targetLanguage: String, text: String, onApiResponse: (String) -> Unit): TranslationResult {
     val endpoint = config.baseUrl.trim().trimEnd('/').let { if (it.endsWith("/chat/completions")) it else "$it/chat/completions" }
     val (systemPrompt, userPrompt) = llmPrompts(provider, config.model, targetLanguage, text)
     val body = buildJsonObject {
@@ -280,6 +281,7 @@ private suspend fun requestOpenAi(provider: TranslationProvider, config: Provide
         setBody(body.toString())
     }
     val raw = response.body<String>()
+    onApiResponse(raw)
     if (!response.status.isSuccess()) return responseFailure(response.status.value, raw)
     val translated = if (config.streaming) parseOpenAiStream(raw) else runCatching { translationJson.parseToJsonElement(raw).jsonObject["choices"]!!.jsonArray.first().jsonObject["message"]!!.jsonObject["content"]!!.jsonPrimitive.content }.getOrNull()
     return translated?.trim()?.takeIf { it.isNotEmpty() }?.let(TranslationResult::Success) ?: TranslationResult.Failure("服务返回成功，但没有可用的翻译内容", response.status.value, retryable = true)
@@ -291,7 +293,7 @@ private fun parseOpenAiStream(raw: String): String? = buildString {
     }
 }.takeIf { it.isNotBlank() }
 
-private suspend fun requestAnthropic(config: ProviderConfig, targetLanguage: String, text: String): TranslationResult {
+private suspend fun requestAnthropic(config: ProviderConfig, targetLanguage: String, text: String, onApiResponse: (String) -> Unit): TranslationResult {
     val endpoint = config.baseUrl.trim().trimEnd('/').let { if (it.endsWith("/v1/messages")) it else "$it/v1/messages" }
     val (systemPrompt, userPrompt) = llmPrompts(null, config.model, targetLanguage, text)
     val body = buildJsonObject {
@@ -303,40 +305,41 @@ private suspend fun requestAnthropic(config: ProviderConfig, targetLanguage: Str
         contentType(ContentType.Application.Json); header("x-api-key", config.apiKey.trim()); header("anthropic-version", "2023-06-01"); config.applyHeaders(this); setBody(body.toString())
     }
     val raw = response.body<String>()
+    onApiResponse(raw)
     if (!response.status.isSuccess()) return responseFailure(response.status.value, raw)
     val translated = runCatching { translationJson.parseToJsonElement(raw).jsonObject["content"]!!.jsonArray.first().jsonObject["text"]!!.jsonPrimitive.content }.getOrNull()
     return translated?.trim()?.takeIf { it.isNotEmpty() }?.let(TranslationResult::Success) ?: TranslationResult.Failure("Claude 未返回可用文本", response.status.value, retryable = true)
 }
 
-private suspend fun requestGoogleWeb(config: ProviderConfig, targetLanguage: String, text: String): TranslationResult {
+private suspend fun requestGoogleWeb(config: ProviderConfig, targetLanguage: String, text: String, onApiResponse: (String) -> Unit): TranslationResult {
     val response = translationHttpClient.get(config.baseUrl.trim()) { timeout { requestTimeoutMillis = config.timeoutMillis() }; parameter("client", "gtx"); parameter("sl", "auto"); parameter("tl", languageCode(targetLanguage)); parameter("dt", "t"); parameter("q", text) }
-    val raw = response.body<String>(); if (!response.status.isSuccess()) return responseFailure(response.status.value, raw)
+    val raw = response.body<String>(); onApiResponse(raw); if (!response.status.isSuccess()) return responseFailure(response.status.value, raw)
     val translated = runCatching { translationJson.parseToJsonElement(raw).jsonArray.first().jsonArray.joinToString("") { it.jsonArray.first().jsonPrimitive.content } }.getOrNull()
     return translated?.takeIf { it.isNotBlank() }?.let(TranslationResult::Success) ?: TranslationResult.Failure("Google Web 未返回可用文本", retryable = true)
 }
 
-private suspend fun requestMyMemory(config: ProviderConfig, targetLanguage: String, text: String): TranslationResult {
+private suspend fun requestMyMemory(config: ProviderConfig, targetLanguage: String, text: String, onApiResponse: (String) -> Unit): TranslationResult {
     val response = translationHttpClient.get(config.baseUrl.trim()) { timeout { requestTimeoutMillis = config.timeoutMillis() }; parameter("q", text); parameter("langpair", "Autodetect|${languageCode(targetLanguage)}") }
-    val raw = response.body<String>(); if (!response.status.isSuccess()) return responseFailure(response.status.value, raw)
+    val raw = response.body<String>(); onApiResponse(raw); if (!response.status.isSuccess()) return responseFailure(response.status.value, raw)
     val translated = runCatching { translationJson.parseToJsonElement(raw).jsonObject["responseData"]!!.jsonObject["translatedText"]!!.jsonPrimitive.content }.getOrNull()
     return translated?.takeIf { it.isNotBlank() }?.let(TranslationResult::Success) ?: TranslationResult.Failure("MyMemory 未返回可用文本", retryable = true)
 }
 
-private suspend fun requestDeepL(config: ProviderConfig, targetLanguage: String, text: String): TranslationResult {
+private suspend fun requestDeepL(config: ProviderConfig, targetLanguage: String, text: String, onApiResponse: (String) -> Unit): TranslationResult {
     val endpoint = config.baseUrl.trim().trimEnd('/').let { if (it.endsWith("/translate")) it else "$it/translate" }
     val response = translationHttpClient.submitForm(endpoint, Parameters.build { append("text", text); append("target_lang", languageCode(targetLanguage).uppercase()) }) {
         timeout { requestTimeoutMillis = config.timeoutMillis() }; header("Authorization", "DeepL-Auth-Key ${config.apiKey.trim()}")
     }
-    val raw = response.body<String>(); if (!response.status.isSuccess()) return responseFailure(response.status.value, raw)
+    val raw = response.body<String>(); onApiResponse(raw); if (!response.status.isSuccess()) return responseFailure(response.status.value, raw)
     val translated = runCatching { translationJson.parseToJsonElement(raw).jsonObject["translations"]!!.jsonArray.first().jsonObject["text"]!!.jsonPrimitive.content }.getOrNull()
     return translated?.takeIf { it.isNotBlank() }?.let(TranslationResult::Success) ?: TranslationResult.Failure("DeepL 未返回可用文本", retryable = true)
 }
 
-private suspend fun requestLibre(config: ProviderConfig, targetLanguage: String, text: String): TranslationResult {
+private suspend fun requestLibre(config: ProviderConfig, targetLanguage: String, text: String, onApiResponse: (String) -> Unit): TranslationResult {
     val endpoint = config.baseUrl.trim().trimEnd('/').let { if (it.endsWith("/translate")) it else "$it/translate" }
     val body = buildJsonObject { put("q", text); put("source", "auto"); put("target", languageCode(targetLanguage)); put("format", "text"); if (config.apiKey.isNotBlank()) put("api_key", config.apiKey.trim()) }
     val response = translationHttpClient.post(endpoint) { timeout { requestTimeoutMillis = config.timeoutMillis() }; contentType(ContentType.Application.Json); setBody(body.toString()) }
-    val raw = response.body<String>(); if (!response.status.isSuccess()) return responseFailure(response.status.value, raw)
+    val raw = response.body<String>(); onApiResponse(raw); if (!response.status.isSuccess()) return responseFailure(response.status.value, raw)
     val translated = runCatching { translationJson.parseToJsonElement(raw).jsonObject["translatedText"]!!.jsonPrimitive.content }.getOrNull()
     return translated?.takeIf { it.isNotBlank() }?.let(TranslationResult::Success) ?: TranslationResult.Failure("LibreTranslate 未返回可用文本", retryable = true)
 }

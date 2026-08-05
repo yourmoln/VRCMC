@@ -23,6 +23,7 @@ class AppState {
     private val storedSecrets = storedProviderSecretsFromJson(loadStoredTranslationSecrets())
     val devices = mutableStateListOf<Device>().apply { addAll(loadStoredDevices()) }
     val messages = mutableStateListOf<ChatMessage>().apply { addAll(chatHistoryFromJson(loadStoredChatHistory())) }
+    val errorLogs = mutableStateListOf<ErrorLog>().apply { addAll(errorLogsFromJson(loadStoredErrorLogs())) }
     var chatDraft by mutableStateOf("")
     var simultaneousInterpretationEnabled by mutableStateOf(loadStoredSimultaneousInterpretationEnabled())
         private set
@@ -174,6 +175,13 @@ class AppState {
         messages.clear()
         persistChatHistory()
     }
+    fun addErrorLog(message: String) {
+        val clean = message.trim().takeIf { it.isNotBlank() } ?: return
+        errorLogs += ErrorLog(currentTimeMillis(), clean)
+        while (errorLogs.size > maxErrorLogs) errorLogs.removeAt(0)
+        saveStoredErrorLogs(errorLogs.toErrorLogsJson())
+    }
+    fun clearErrorLogs() { errorLogs.clear(); saveStoredErrorLogs("[]") }
     private fun persistChatHistory() = saveStoredChatHistory(messages.toChatHistoryJson())
 }
 

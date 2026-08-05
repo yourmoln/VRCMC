@@ -38,6 +38,8 @@ actual fun saveStoredTranslationSecrets(value: String) {
 }
 actual fun loadStoredChatHistory(): String = prefs()?.getString("chatHistory", "") ?: ""
 actual fun saveStoredChatHistory(value: String) { prefs()?.edit { putString("chatHistory", value) } }
+actual fun loadStoredErrorLogs(): String = prefs()?.getString("errorLogs", "") ?: ""
+actual fun saveStoredErrorLogs(value: String) { prefs()?.edit { putString("errorLogs", value) } }
 actual fun loadStoredSimultaneousInterpretationEnabled(): Boolean = prefs()?.getBoolean("simultaneousInterpretation", false) ?: false
 actual fun saveStoredSimultaneousInterpretationEnabled(value: Boolean) { prefs()?.edit { putBoolean("simultaneousInterpretation", value) } }
 actual fun loadStoredAlwaysInterpretationEnabled(): Boolean = prefs()?.getBoolean("alwaysInterpretation", false) ?: false

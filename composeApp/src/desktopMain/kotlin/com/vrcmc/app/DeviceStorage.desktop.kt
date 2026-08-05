@@ -13,6 +13,7 @@ private val storageDirectory: Path = System.getenv("APPDATA")?.takeIf { it.isNot
     ?: Path.of(System.getProperty("user.home"), ".vrcmc")
 private val translationFile = storageDirectory.resolve("translation-settings.json")
 private val chatHistoryFile = storageDirectory.resolve("chat-history.json")
+private val errorLogsFile = storageDirectory.resolve("error-logs.json")
 private val translationSecretsFile = storageDirectory.resolve("translation-secrets.dpapi")
 private val isWindows = System.getProperty("os.name").startsWith("Windows", ignoreCase = true)
 
@@ -49,6 +50,8 @@ actual fun saveStoredTranslationSecrets(value: String) {
 }
 actual fun loadStoredChatHistory(): String = readText(chatHistoryFile).ifBlank { prefs.get("chatHistory", "") }
 actual fun saveStoredChatHistory(value: String) { writeTextAtomically(chatHistoryFile, value); prefs.remove("chatHistory") }
+actual fun loadStoredErrorLogs(): String = readText(errorLogsFile).ifBlank { prefs.get("errorLogs", "") }
+actual fun saveStoredErrorLogs(value: String) { writeTextAtomically(errorLogsFile, value); prefs.remove("errorLogs") }
 actual fun loadStoredSimultaneousInterpretationEnabled(): Boolean = prefs.getBoolean("simultaneousInterpretation", false)
 actual fun saveStoredSimultaneousInterpretationEnabled(value: Boolean) { prefs.putBoolean("simultaneousInterpretation", value) }
 actual fun loadStoredAlwaysInterpretationEnabled(): Boolean = prefs.getBoolean("alwaysInterpretation", false)

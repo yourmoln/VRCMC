@@ -30,7 +30,7 @@ import org.jetbrains.compose.resources.painterResource
 import kotlin.math.roundToInt
 
 private enum class ThemeMode { SYSTEM, DARK, LIGHT }
-private enum class AppScreen { CHAT, DEVICES, API, TRANSLATION_LANGUAGE, SIMULTANEOUS_INTERPRETATION, CONFIGURE_VRC, PREFERENCES }
+private enum class AppScreen { CHAT, DEVICES, API, TRANSLATION_LANGUAGE, SIMULTANEOUS_INTERPRETATION, CONFIGURE_VRC, PREFERENCES, ABOUT, ERROR_LOGS }
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalComposeUiApi::class)
 @Composable
@@ -59,7 +59,10 @@ fun VrcmcApp() {
         vrchatMuteSelfEvents(listenAddress, listenPort)
             .distinctUntilChanged()
             .retryListenerFailures(
-                onFailure = { state.simultaneousListenerError = it.message ?: it::class.simpleName },
+                onFailure = {
+                    state.simultaneousListenerError = it.message ?: it::class.simpleName
+                    state.addErrorLog("OSC listener failed: ${it.message ?: it::class.simpleName}")
+                },
                 onRetry = { state.simultaneousListenerError = null },
             )
             .collect(state::handleVrchatMuteSelf)
@@ -157,6 +160,13 @@ fun VrcmcApp() {
                         },
                         modifier = Modifier.padding(horizontal = 12.dp),
                     )
+                    NavigationDrawerItem(
+                        label = { Text(strings.aboutApp) },
+                        selected = screen == AppScreen.ABOUT,
+                        icon = { Icon(Icons.Default.Info, null) },
+                        onClick = { screen = AppScreen.ABOUT; scope.launch { drawerState.close() } },
+                        modifier = Modifier.padding(horizontal = 12.dp),
+                    )
                 }
             },
         ) {
@@ -199,6 +209,8 @@ fun VrcmcApp() {
                         AppScreen.SIMULTANEOUS_INTERPRETATION -> SimultaneousInterpretationPage(state, strings)
                         AppScreen.CONFIGURE_VRC -> ConfigureVrcPage(strings)
                         AppScreen.PREFERENCES -> PreferencesPage(theme, language, strings, { theme = it }, { language = it })
+                        AppScreen.ABOUT -> AboutPage(state, strings) { screen = AppScreen.ERROR_LOGS }
+                        AppScreen.ERROR_LOGS -> ErrorLogsPage(state, strings)
                     }
                 }
             }

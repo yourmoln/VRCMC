@@ -15,3 +15,5 @@ expect fun loadStoredAlwaysInterpretationEnabled(): Boolean
 expect fun saveStoredAlwaysInterpretationEnabled(value: Boolean)
 expect fun loadStoredAlwaysInterpretationDelayMillis(): Int
 expect fun saveStoredAlwaysInterpretationDelayMillis(value: Int)
+expect fun loadStoredErrorLogs(): String
+expect fun saveStoredErrorLogs(value: String)
