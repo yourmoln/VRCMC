@@ -1,0 +1,80 @@
+package com.vrcmc.app
+
+import kotlinx.serialization.json.*
+
+internal val additionalProviders =
+    listOf(
+        TranslationProvider(
+            "deepseek",
+            "DeepSeek",
+            ProviderProtocol.OPENAI,
+            "https://api.deepseek.com",
+            "deepseek-v4-flash",
+            listOf("deepseek-v4-flash", "deepseek-v4-pro"),
+            editableBaseUrl = true,
+            hint = "DeepSeek 官方接口；使用中转 Key 时请填写对应 Base URL。",
+        ),
+        TranslationProvider(
+            "zhipu",
+            "GLM / 智谱",
+            ProviderProtocol.OPENAI,
+            "https://open.bigmodel.cn/api/paas/v4",
+            "glm-5.1",
+            listOf("glm-5.1", "glm-5-turbo", "glm-5", "glm-4.7-flash", "glm-4.7-flashx", "glm-4.7"),
+            hint = "智谱 GLM OpenAI-compatible 接口。",
+        ),
+        TranslationProvider(
+            "gemini",
+            "Google Gemini",
+            ProviderProtocol.OPENAI,
+            "https://generativelanguage.googleapis.com/v1beta/openai",
+            "gemini-3.5-flash",
+            listOf("gemini-3.5-flash", "gemini-2.5-flash", "gemini-2.5-flash-lite"),
+            keyPlaceholder = "AI...",
+            hint = "Gemini 官方 OpenAI-compatible 接口。",
+        ),
+        TranslationProvider(
+            "kimi",
+            "Kimi / Moonshot",
+            ProviderProtocol.OPENAI,
+            "https://api.moonshot.cn/v1",
+            "kimi-k2.6",
+            listOf("kimi-k2.6", "kimi-k2.5"),
+            hint = "Moonshot 官方 OpenAI-compatible 接口。",
+        ),
+        TranslationProvider(
+            "mistral",
+            "Mistral",
+            ProviderProtocol.OPENAI,
+            "https://api.mistral.ai/v1",
+            "mistral-medium-3-5",
+            listOf(
+                "mistral-medium-3-5",
+                "mistral-medium-latest",
+                "mistral-small-latest",
+                "ministral-8b-latest",
+            ),
+            hint = "Mistral 官方接口。",
+        ),
+        TranslationProvider(
+            "doubao",
+            "豆包 / 火山方舟",
+            ProviderProtocol.OPENAI,
+            "https://ark.cn-beijing.volces.com/api/v3",
+            "doubao-seed-2-0-pro-260215",
+            emptyList(),
+            editableModel = true,
+            hint = "请填写火山方舟控制台提供的当前模型或推理接入点 ID。",
+        ),
+        TranslationProvider(
+            "nvidia",
+            "NVIDIA AI",
+            ProviderProtocol.OPENAI,
+            "https://integrate.api.nvidia.com/v1",
+            "nvidia/nemotron-3-nano-30b-a3b",
+            listOf("nvidia/nemotron-3-nano-30b-a3b"),
+            editableBaseUrl = true,
+            editableModel = true,
+            hint = "支持 NVIDIA API Catalog、NIM 自部署或兼容代理。",
+        ),
+    )

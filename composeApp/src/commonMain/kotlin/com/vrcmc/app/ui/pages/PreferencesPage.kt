@@ -1,0 +1,107 @@
+package com.vrcmc.app
+
+import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.*
+import androidx.compose.material3.*
+import androidx.compose.runtime.*
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.unit.dp
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+internal fun PreferencesPage(
+    theme: ThemeMode,
+    language: AppLanguage,
+    strings: LocaleStrings,
+    setTheme: (ThemeMode) -> Unit,
+    setLanguage: (AppLanguage) -> Unit,
+) {
+    var expanded by remember { mutableStateOf(false) }
+    val modes = ThemeMode.values()
+    LazyColumn(
+        modifier = Modifier.fillMaxSize(),
+        contentPadding = PaddingValues(16.dp),
+        verticalArrangement = Arrangement.spacedBy(12.dp),
+    ) {
+        item {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Icon(Icons.Default.Settings, null, tint = MaterialTheme.colorScheme.primary)
+                Spacer(Modifier.width(10.dp))
+                Text(strings.preferences, style = MaterialTheme.typography.titleLarge)
+            }
+        }
+        item {
+            Surface(
+                modifier = Modifier.fillMaxWidth(),
+                shape = RoundedCornerShape(8.dp),
+                color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = .45f),
+                border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant),
+            ) {
+                Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(14.dp)) {
+                    Text(strings.appearance, style = MaterialTheme.typography.titleMedium)
+                    Text(
+                        strings.theme,
+                        style = MaterialTheme.typography.labelLarge,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                    SingleChoiceSegmentedButtonRow(Modifier.fillMaxWidth()) {
+                        modes.forEachIndexed { index, mode ->
+                            SegmentedButton(
+                                selected = mode == theme,
+                                onClick = { setTheme(mode) },
+                                shape = SegmentedButtonDefaults.itemShape(index, modes.size),
+                                label = {
+                                    Text(
+                                        when (mode) {
+                                            ThemeMode.SYSTEM -> strings.systemTheme
+                                            ThemeMode.LIGHT -> strings.lightTheme
+                                            ThemeMode.DARK -> strings.darkTheme
+                                        },
+                                        maxLines = 1,
+                                    )
+                                },
+                            )
+                        }
+                    }
+                    HorizontalDivider()
+                    Text(
+                        strings.language,
+                        style = MaterialTheme.typography.labelLarge,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                    Box {
+                        OutlinedButton(
+                            onClick = { expanded = true },
+                            modifier = Modifier.fillMaxWidth(),
+                            shape = RoundedCornerShape(8.dp),
+                        ) {
+                            Icon(Icons.Default.Language, null)
+                            Spacer(Modifier.width(8.dp))
+                            Text(language.label, Modifier.weight(1f))
+                            Icon(Icons.Default.ArrowDropDown, null)
+                        }
+                        DropdownMenu(expanded, { expanded = false }) {
+                            AppLanguage.values().forEach { item ->
+                                DropdownMenuItem(
+                                    text = { Text(item.label) },
+                                    leadingIcon = {
+                                        if (item == language) Icon(Icons.Default.Check, null)
+                                    },
+                                    onClick = {
+                                        setLanguage(item)
+                                        expanded = false
+                                    },
+                                )
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+}

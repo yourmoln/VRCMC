@@ -1,0 +1,370 @@
+package com.vrcmc.app
+
+import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.itemsIndexed
+import androidx.compose.foundation.lazy.rememberLazyListState
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.ChatBubbleOutline
+import androidx.compose.material3.*
+import androidx.compose.runtime.*
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalClipboardManager
+import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.text.AnnotatedString
+import androidx.compose.ui.unit.dp
+import kotlinx.coroutines.CompletableDeferred
+import kotlinx.coroutines.CoroutineStart
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.async
+import kotlinx.coroutines.awaitAll
+import kotlinx.coroutines.channels.Channel
+import kotlinx.coroutines.coroutineScope
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
+
+private sealed interface LiveOscAction
+
+private data class LiveOriginalUpdate(val device: Device, val text: String) : LiveOscAction
+
+private data class LiveOscBarrier(val completed: CompletableDeferred<Unit>) : LiveOscAction
+
+@Composable
+fun ChatPage(state: AppState, strings: LocaleStrings) {
+    var error by remember { mutableStateOf<String?>(null) }
+    var sending by remember { mutableStateOf(false) }
+    var retryAttempt by remember { mutableIntStateOf(0) }
+    var retryLimit by remember { mutableIntStateOf(0) }
+    var activeTranslationJob by remember { mutableStateOf<Job?>(null) }
+    var activeLoadingMessages by remember { mutableStateOf<List<ChatMessage>>(emptyList()) }
+    var translationGeneration by remember { mutableIntStateOf(0) }
+    val scope = rememberCoroutineScope()
+    val messages = state.messages.toList()
+    val listState =
+        rememberLazyListState(initialFirstVisibleItemIndex = messages.lastIndex.coerceAtLeast(0))
+    val active = state.activeDevice()
+    val now = currentTimeMillis()
+    val imeBottom = WindowInsets.ime.getBottom(LocalDensity.current)
+    val clipboard = LocalClipboardManager.current
+    val liveOriginalUpdates = remember { Channel<LiveOscAction>(Channel.UNLIMITED) }
+    val timestampVisibility = chatTimestampVisibility(messages.map(ChatMessage::timestamp))
+
+    fun removeLoadingMessages(messages: List<ChatMessage>) {
+        messages.forEach { message ->
+            val index = state.messages.indexOfFirst { it === message }
+            if (index >= 0) state.removeMessageAt(index)
+        }
+    }
+
+    fun cancelActiveTranslation() {
+        if (activeTranslationJob == null) return
+        translationGeneration++
+        activeTranslationJob?.cancel()
+        activeTranslationJob = null
+        removeLoadingMessages(activeLoadingMessages)
+        activeLoadingMessages = emptyList()
+        retryAttempt = 0
+        retryLimit = 0
+        sending = false
+    }
+
+    fun sendMessage(rawText: String, clearDraft: Boolean) {
+        val original = rawText.trim()
+        val target = state.activeDevice() ?: return
+        cancelActiveTranslation()
+        if (!isValidChatboxText(original)) {
+            error = strings.messageTooLong
+            return
+        }
+        val shouldTranslate = state.translate && !isArabicDigitsOnly(original)
+        val targetLanguages = state.languages.toList()
+        val outputOrder = state.outputOrder.toList()
+        val sendOriginalBeforeTranslation = state.sendOriginalBeforeTranslation
+        val displayLanguages = outputOrder.filter { it in targetLanguages }
+        val translatingText = "$original\n(Translating...)"
+        if (
+            shouldTranslate && sendOriginalBeforeTranslation && !isValidChatboxText(translatingText)
+        ) {
+            error = strings.messageTooLong
+            return
+        }
+        sending = true
+        retryAttempt = 0
+        retryLimit = state.providerConfig.totalRetryCount()
+        error = null
+        if (clearDraft) state.chatDraft = ""
+        state.addMessage(ChatMessage(original, MessageRole.USER))
+        val loadingMessages =
+            if (shouldTranslate) {
+                displayLanguages
+                    .map { language ->
+                        ChatMessage(
+                                "",
+                                MessageRole.ASSISTANT,
+                                isLoading = true,
+                                language = language,
+                            )
+                            .also(state::addMessage)
+                    }
+                    .also { activeLoadingMessages = it }
+            } else emptyList()
+        val provider = state.provider
+        val providerConfig = state.providerConfig
+        val requestGeneration = ++translationGeneration
+        val job =
+            scope.launch(start = CoroutineStart.LAZY) {
+                try {
+                    if (
+                        shouldTranslate &&
+                            sendOriginalBeforeTranslation &&
+                            !sendChatboxOsc(target.address, translatingText, target.receivePort)
+                    ) {
+                        error = strings.sendFailed
+                    }
+                    val translations =
+                        if (shouldTranslate)
+                            coroutineScope {
+                                targetLanguages
+                                    .map { language ->
+                                        async {
+                                            language to
+                                                translateText(
+                                                    provider = provider,
+                                                    config = providerConfig,
+                                                    targetLanguage = language,
+                                                    text = original,
+                                                    onRetry = { attempt ->
+                                                        retryAttempt = maxOf(retryAttempt, attempt)
+                                                    },
+                                                    onApiFailure = state::addErrorLog,
+                                                )
+                                        }
+                                    }
+                                    .awaitAll()
+                            }
+                        else emptyList()
+                    val failure =
+                        translations.firstNotNullOfOrNull { (_, result) ->
+                            result as? TranslationResult.Failure
+                        }
+                    if (failure != null) {
+                        removeLoadingMessages(loadingMessages)
+                        error = failure.message
+                        return@launch
+                    }
+                    val successful =
+                        translations
+                            .mapNotNull { (language, result) ->
+                                (result as? TranslationResult.Success)
+                                    ?.text
+                                    ?.takeIf { it != original }
+                                    ?.let { language to it }
+                            }
+                            .toMap()
+                    loadingMessages.forEach { loadingMessage ->
+                        val loadingIndex = state.messages.indexOfFirst { it === loadingMessage }
+                        if (loadingIndex >= 0) {
+                            val language = loadingMessage.language ?: return@forEach
+                            val translatedText = successful[language]
+                            if (translatedText.isNullOrBlank()) state.removeMessageAt(loadingIndex)
+                            else
+                                state.replaceMessage(
+                                    loadingIndex,
+                                    ChatMessage(
+                                        translatedText,
+                                        MessageRole.ASSISTANT,
+                                        timestamp = loadingMessage.timestamp,
+                                        language = language,
+                                    ),
+                                )
+                        }
+                    }
+                    val outgoing = buildTranslationOutput(original, successful, outputOrder)
+                    if (!isValidChatboxText(outgoing)) error = strings.messageTooLong
+                    else if (!sendChatboxOsc(target.address, outgoing, target.receivePort)) {
+                        error = strings.sendFailed
+                    }
+                } finally {
+                    if (translationGeneration == requestGeneration) {
+                        activeTranslationJob = null
+                        activeLoadingMessages = emptyList()
+                        retryAttempt = 0
+                        retryLimit = 0
+                        sending = false
+                    }
+                }
+            }
+        if (shouldTranslate) activeTranslationJob = job
+        job.start()
+    }
+
+    LaunchedEffect(liveOriginalUpdates) {
+        for (action in liveOriginalUpdates) {
+            when (action) {
+                is LiveOriginalUpdate ->
+                    if (
+                        !sendChatboxOsc(
+                            action.device.address,
+                            action.text,
+                            action.device.receivePort,
+                        )
+                    ) {
+                        error = strings.sendFailed
+                    }
+                is LiveOscBarrier -> action.completed.complete(Unit)
+            }
+        }
+    }
+
+    DisposableEffect(liveOriginalUpdates) { onDispose { liveOriginalUpdates.close() } }
+
+    LaunchedEffect(state.simultaneousFinalPending) {
+        if (state.simultaneousFinalPending) {
+            val finalText = state.chatDraft
+            state.consumeSimultaneousFinalRequest()
+            val barrier = CompletableDeferred<Unit>()
+            liveOriginalUpdates.send(LiveOscBarrier(barrier))
+            barrier.await()
+            if (finalText.isNotBlank()) sendMessage(finalText, clearDraft = true)
+        }
+    }
+
+    LaunchedEffect(
+        state.isAlwaysInterpretationActive,
+        state.chatDraft,
+        state.alwaysInterpretationDelayMillis,
+        sending,
+    ) {
+        val pendingText = state.chatDraft
+        if (state.isAlwaysInterpretationActive && !sending && pendingText.isNotBlank()) {
+            delay(state.alwaysInterpretationDelayMillis.toLong())
+            if (state.isAlwaysInterpretationActive && !sending && state.chatDraft == pendingText) {
+                sendMessage(pendingText, clearDraft = true)
+            }
+        }
+    }
+
+    LaunchedEffect(messages.lastIndex) {
+        if (messages.isNotEmpty()) listState.requestScrollToItem(messages.lastIndex)
+    }
+
+    LaunchedEffect(imeBottom) {
+        if (imeBottom > 0 && messages.isNotEmpty()) {
+            listState.requestScrollToItem(messages.lastIndex)
+        }
+    }
+
+    Column(Modifier.fillMaxSize().imePadding()) {
+        LazyColumn(
+            state = listState,
+            modifier = Modifier.weight(1f).fillMaxWidth(),
+            contentPadding = PaddingValues(horizontal = 16.dp, vertical = 18.dp),
+            verticalArrangement = Arrangement.spacedBy(14.dp),
+        ) {
+            if (messages.isEmpty()) {
+                item {
+                    Box(Modifier.fillParentMaxSize(), contentAlignment = Alignment.Center) {
+                        Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                            Surface(
+                                shape = RoundedCornerShape(8.dp),
+                                color = MaterialTheme.colorScheme.secondaryContainer,
+                            ) {
+                                Icon(
+                                    Icons.Default.ChatBubbleOutline,
+                                    null,
+                                    Modifier.padding(14.dp).size(28.dp),
+                                    tint = MaterialTheme.colorScheme.onSecondaryContainer,
+                                )
+                            }
+                            Spacer(Modifier.height(14.dp))
+                            Text(
+                                active?.displayEndpoint() ?: strings.addIp,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                style = MaterialTheme.typography.bodySmall,
+                            )
+                        }
+                    }
+                }
+            } else {
+                itemsIndexed(messages) { index, message ->
+                    Column(Modifier.fillMaxWidth()) {
+                        if (timestampVisibility[index]) {
+                            Text(
+                                formatChatTime(
+                                    timestamp = message.timestamp,
+                                    now = now,
+                                    yesterdayLabel = strings.yesterday,
+                                    dayBeforeYesterdayLabel = strings.dayBeforeYesterday,
+                                ),
+                                style = MaterialTheme.typography.labelSmall,
+                                color =
+                                    MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = .7f),
+                                modifier =
+                                    Modifier.align(Alignment.CenterHorizontally)
+                                        .padding(bottom = 8.dp),
+                            )
+                        }
+                        MessageBubble(
+                            message = message,
+                            strings = strings,
+                            retryAttempt = retryAttempt,
+                            retryLimit = retryLimit,
+                            resendEnabled = active != null && !sending,
+                            onCopy = { clipboard.setText(AnnotatedString(message.text)) },
+                            onResend = { sendMessage(message.text, clearDraft = false) },
+                        )
+                    }
+                }
+            }
+        }
+
+        error?.let { message ->
+            Text(
+                message,
+                color = MaterialTheme.colorScheme.error,
+                style = MaterialTheme.typography.bodySmall,
+                modifier = Modifier.padding(horizontal = 18.dp, vertical = 4.dp),
+            )
+        }
+        ChatComposer(
+            input = state.chatDraft,
+            sending = sending,
+            enabled = active != null,
+            interpreting =
+                state.isSimultaneousInterpretationActive || state.isAlwaysInterpretationActive,
+            alwaysInterpretationEnabled = state.alwaysInterpretationEnabled,
+            alwaysInterpretationActive = state.isAlwaysInterpretationActive,
+            strings = strings,
+            onInputChange = {
+                state.chatDraft = it
+                error = null
+                val original = it.trim()
+                if (
+                    state.isSimultaneousInterpretationActive &&
+                        active != null &&
+                        isValidChatboxText(original)
+                ) {
+                    liveOriginalUpdates.trySend(LiveOriginalUpdate(active, original))
+                }
+            },
+            onSend = {
+                val wasInterpreting = state.isSimultaneousInterpretationActive
+                state.finishSimultaneousInterpretation()
+                val finalText = state.chatDraft
+                if (wasInterpreting)
+                    scope.launch {
+                        val barrier = CompletableDeferred<Unit>()
+                        liveOriginalUpdates.send(LiveOscBarrier(barrier))
+                        barrier.await()
+                        sendMessage(finalText, clearDraft = true)
+                    }
+                else {
+                    sendMessage(finalText, clearDraft = true)
+                }
+            },
+            onToggleAlwaysInterpretation = state::toggleAlwaysInterpretationActive,
+        )
+    }
+}
