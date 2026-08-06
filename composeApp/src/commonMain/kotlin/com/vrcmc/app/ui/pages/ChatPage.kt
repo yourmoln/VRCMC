@@ -476,6 +476,7 @@ fun ChatPage(state: AppState, strings: LocaleStrings) {
     LaunchedEffect(state.simultaneousFinalPending) {
         if (state.simultaneousFinalPending) {
             state.consumeSimultaneousFinalRequest()
+            cancelActiveTranslation()
             if (managedVoiceCapture) {
                 pendingSimultaneousVoiceSend = true
                 audioRecorder.stop()
@@ -493,20 +494,17 @@ fun ChatPage(state: AppState, strings: LocaleStrings) {
         state.isAlwaysInterpretationActive,
         state.chatDraft,
         state.alwaysInterpretationDelayMillis,
-        sending,
     ) {
         val pendingText = state.chatDraft
         if (
             state.isAlwaysInterpretationActive &&
                 !managedVoiceCapture &&
-                !sending &&
                 pendingText.isNotBlank()
         ) {
             delay(state.alwaysInterpretationDelayMillis.toLong())
             if (
                 state.isAlwaysInterpretationActive &&
                     !managedVoiceCapture &&
-                    !sending &&
                     state.chatDraft == pendingText
             ) {
                 sendMessage(pendingText, clearDraft = true)
@@ -623,6 +621,7 @@ fun ChatPage(state: AppState, strings: LocaleStrings) {
             },
             onSend = {
                 val wasInterpreting = state.isSimultaneousInterpretationActive
+                cancelActiveTranslation()
                 state.finishSimultaneousInterpretation()
                 val finalText = state.chatDraft
                 if (wasInterpreting)
