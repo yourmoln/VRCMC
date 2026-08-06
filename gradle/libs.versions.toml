@@ -1,7 +1,7 @@
 [versions]
 app-code = "1"
 app-version = "1.0.0"
-app-packageName = "io.github.yourmoln.vrcmcs"
+app-packageName = "io.github.vrcmteam.vrcmcs"
 agp = "8.13.2"
 kotlin = "2.2.20"
 compose = "1.8.2"
