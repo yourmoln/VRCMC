@@ -44,7 +44,6 @@ suspend fun translateText(
     endpointSecurityError(config)?.let {
         return TranslationResult.Failure(it)
     }
-    var openAiFailureCount = 0
     return translateWithFallback(
         sourceText = text,
         primaryModel = config.model,
@@ -57,21 +56,13 @@ suspend fun translateText(
         try {
             when (provider.protocol) {
                 ProviderProtocol.OPENAI -> {
-                    val maxTokens =
-                        when (openAiFailureCount) {
-                            0 -> 512
-                            1 -> 1024
-                            else -> 2048
-                        }
                     requestOpenAi(
                             provider,
                             requestConfig,
                             targetLanguage,
                             text,
-                            maxTokens,
                             onApiFailure,
                         )
-                        .also { if (it is TranslationResult.Failure) openAiFailureCount++ }
                 }
                 ProviderProtocol.ANTHROPIC ->
                     requestAnthropic(requestConfig, targetLanguage, text, onApiFailure)

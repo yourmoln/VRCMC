@@ -7,17 +7,6 @@ import kotlinx.coroutines.runBlocking
 
 class TranslationRetryTest {
     @Test
-    fun parsesTruncatedOpenAiOutputWithoutTreatingPartialContentAsComplete() {
-        val output =
-            parseOpenAiResponse(
-                """{"choices":[{"message":{"content":"partial"},"finish_reason":"length"}]}"""
-            )
-
-        assertEquals("partial", output?.content)
-        assertEquals("length", output?.finishReason)
-    }
-
-    @Test
     fun parsesCompletedOpenAiOutput() {
         val output =
             parseOpenAiResponse(
@@ -25,7 +14,6 @@ class TranslationRetryTest {
             )
 
         assertEquals("complete", output?.content)
-        assertEquals("stop", output?.finishReason)
     }
 
     @Test

@@ -13,7 +13,6 @@ internal suspend fun requestOpenAi(
     config: ProviderConfig,
     targetLanguage: String,
     text: String,
-    maxTokens: Int,
     onApiFailure: (String) -> Unit,
 ): TranslationResult {
     val endpoint =
@@ -24,7 +23,6 @@ internal suspend fun requestOpenAi(
     val body = buildJsonObject {
         put("model", config.model.trim())
         put("temperature", 0.2)
-        if (!config.disableMaxTokens) put("max_tokens", maxTokens)
         put("stream", config.streaming)
         putJsonArray("messages") {
             addJsonObject {
@@ -66,14 +64,6 @@ internal suspend fun requestOpenAi(
             retryable = true,
         )
     }
-    if (parsed.finishReason == "length") {
-        onApiFailure(raw)
-        return TranslationResult.Failure(
-            "Translation was truncated at the $maxTokens token limit",
-            response.status.value,
-            retryable = true,
-        )
-    }
     val translated = parsed.content
     return translated?.trim()?.takeIf { it.isNotEmpty() }?.let(TranslationResult::Success)
         ?: run {
@@ -82,7 +72,7 @@ internal suspend fun requestOpenAi(
         }
 }
 
-internal data class OpenAiOutput(val content: String?, val finishReason: String?)
+internal data class OpenAiOutput(val content: String?)
 
 internal fun parseOpenAiResponse(raw: String): OpenAiOutput? =
     runCatching {
@@ -96,14 +86,12 @@ internal fun parseOpenAiResponse(raw: String): OpenAiOutput? =
             OpenAiOutput(
                 content =
                     choice["message"]?.jsonObject?.get("content")?.jsonPrimitive?.contentOrNull,
-                finishReason = choice["finish_reason"]?.jsonPrimitive?.contentOrNull,
             )
         }
         .getOrNull()
 
 private fun parseOpenAiStream(raw: String): OpenAiOutput? {
     val content = StringBuilder()
-    var finishReason: String? = null
     var parsedAny = false
     raw.lineSequence()
         .map { it.trim() }
@@ -128,8 +116,7 @@ private fun parseOpenAiStream(raw: String): OpenAiOutput? {
                         ?.jsonPrimitive
                         ?.contentOrNull
                         ?.let(content::append)
-                    choice["finish_reason"]?.jsonPrimitive?.contentOrNull?.let { finishReason = it }
                 }
         }
-    return if (parsedAny) OpenAiOutput(content.toString(), finishReason) else null
+    return if (parsedAny) OpenAiOutput(content.toString()) else null
 }

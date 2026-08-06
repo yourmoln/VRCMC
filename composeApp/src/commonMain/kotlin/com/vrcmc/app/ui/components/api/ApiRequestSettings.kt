@@ -49,24 +49,6 @@ internal fun ApiRequestSettings(
         shape = MaterialTheme.shapes.large,
     )
     contentAfterRetry()
-    if (provider.protocol == ProviderProtocol.OPENAI) {
-        Row(verticalAlignment = Alignment.CenterVertically) {
-            Column(Modifier.weight(1f)) {
-                Text(strings.disableMaxTokens)
-                Text(
-                    strings.disableMaxTokensHint,
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                )
-            }
-            Switch(
-                checked = config.disableMaxTokens,
-                onCheckedChange = { disabled ->
-                    onUpdate { old -> old.copy(disableMaxTokens = disabled) }
-                },
-            )
-        }
-    }
     if (provider.supportsHeaders) {
         OutlinedTextField(
             value = config.customHeaders,

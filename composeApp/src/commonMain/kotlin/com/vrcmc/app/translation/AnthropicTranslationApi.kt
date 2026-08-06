@@ -21,7 +21,6 @@ internal suspend fun requestAnthropic(
     val (systemPrompt, userPrompt) = llmPrompts(null, config.model, targetLanguage, text)
     val body = buildJsonObject {
         put("model", config.model.trim())
-        put("max_tokens", 192)
         put("temperature", 0.2)
         put("system", systemPrompt)
         putJsonArray("messages") {

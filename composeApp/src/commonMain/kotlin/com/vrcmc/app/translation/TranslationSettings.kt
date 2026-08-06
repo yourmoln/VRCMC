@@ -55,7 +55,6 @@ fun StoredTranslationSettings.toJson(): String =
                         put("fallbackModel", value.fallbackModel)
                         put("fallbackRetries", value.fallbackRetryCount)
                         put("fallbackEnabled", value.fallbackEnabled)
-                        put("disableMaxTokens", value.disableMaxTokens)
                     }
                 }
             }
@@ -131,8 +130,6 @@ fun storedTranslationSettingsFromJson(value: String): StoredTranslationSettings 
                                         .coerceIn(0, 10),
                                 fallbackEnabled =
                                     obj["fallbackEnabled"]?.jsonPrimitive?.booleanOrNull ?: false,
-                                disableMaxTokens =
-                                    obj["disableMaxTokens"]?.jsonPrimitive?.booleanOrNull ?: false,
                             )
                         }
                     }

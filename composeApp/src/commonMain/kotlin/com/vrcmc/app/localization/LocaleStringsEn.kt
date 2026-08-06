@@ -119,8 +119,6 @@ object LocaleStringsEn : LocaleStrings {
         "Show the original text in VRChat while the translation is being generated"
     override val retryCount = "Retry attempts"
     override val retryCountHint = "0–10 retries when no usable translation is returned"
-    override val disableMaxTokens = "Disable max tokens"
-    override val disableMaxTokensHint = "Disable if the model retries multiple times"
     override val customHeaders = "Custom request headers"
     override val customHeadersHint =
         "One Name: value header per line. Secrets are hidden with the rest of this provider profile."
