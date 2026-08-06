@@ -2,10 +2,54 @@ package com.vrcmc.app
 
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertFalse
 import kotlin.test.assertIs
+import kotlin.test.assertTrue
 import kotlinx.coroutines.runBlocking
+import kotlinx.serialization.json.*
 
 class TranslationRetryTest {
+    @Test
+    fun buildsQwenMtRequestWithItsDedicatedTranslationContract() {
+        val provider = providerById("qianwen")
+        val body =
+            buildOpenAiRequestBody(
+                provider,
+                defaultProviderConfig(provider).copy(model = "qwen-mt-plus"),
+                "简体中文",
+                "今日はちょっと眠いかも",
+            )
+
+        val messages = body.getValue("messages").jsonArray
+        assertEquals(1, messages.size)
+        assertEquals("user", messages.single().jsonObject.getValue("role").jsonPrimitive.content)
+        assertEquals(
+            "今日はちょっと眠いかも",
+            messages.single().jsonObject.getValue("content").jsonPrimitive.content,
+        )
+        val options = body.getValue("translation_options").jsonObject
+        assertEquals("auto", options.getValue("source_lang").jsonPrimitive.content)
+        assertEquals("zh", options.getValue("target_lang").jsonPrimitive.content)
+        assertFalse("temperature" in body)
+    }
+
+    @Test
+    fun regularOpenAiRequestStillUsesSystemAndUserMessages() {
+        val provider = providerById("openai")
+        val body =
+            buildOpenAiRequestBody(
+                provider,
+                defaultProviderConfig(provider),
+                "English",
+                "你好",
+            )
+
+        val messages = body.getValue("messages").jsonArray
+        assertEquals(listOf("system", "user"), messages.map { it.jsonObject.getValue("role").jsonPrimitive.content })
+        assertTrue("temperature" in body)
+        assertFalse("translation_options" in body)
+    }
+
     @Test
     fun parsesCompletedOpenAiOutput() {
         val output =

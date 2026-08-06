@@ -35,18 +35,20 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.platform.LocalClipboardManager
-import androidx.compose.ui.text.AnnotatedString
+import androidx.compose.ui.platform.LocalClipboard
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.unit.dp
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
 
 @Composable
 fun ConfigureVrcPage(strings: LocaleStrings) {
-    val clipboard = LocalClipboardManager.current
+    val clipboard = LocalClipboard.current
+    val scope = rememberCoroutineScope()
     var refreshKey by remember { mutableIntStateOf(0) }
     var copied by remember { mutableStateOf(false) }
     val addresses = remember(refreshKey) { localIpv4Addresses().distinct() }
@@ -161,7 +163,11 @@ fun ConfigureVrcPage(strings: LocaleStrings) {
                     Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                         Button(
                             onClick = {
-                                command?.let { clipboard.setText(AnnotatedString(it)) }
+                                command?.let { text ->
+                                    scope.launch {
+                                        clipboard.setClipEntry(textClipEntry(text))
+                                    }
+                                }
                                 copied = command != null
                             },
                             enabled = command != null,

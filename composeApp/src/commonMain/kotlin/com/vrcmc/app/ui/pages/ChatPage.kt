@@ -11,9 +11,8 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.platform.LocalClipboardManager
+import androidx.compose.ui.platform.LocalClipboard
 import androidx.compose.ui.platform.LocalDensity
-import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.unit.dp
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.CoroutineStart
@@ -61,7 +60,7 @@ fun ChatPage(state: AppState, strings: LocaleStrings) {
     val active = state.activeDevice()
     val now = currentTimeMillis()
     val imeBottom = WindowInsets.ime.getBottom(LocalDensity.current)
-    val clipboard = LocalClipboardManager.current
+    val clipboard = LocalClipboard.current
     val liveOriginalUpdates = remember { Channel<LiveOscAction>(Channel.UNLIMITED) }
     val timestampVisibility = chatTimestampVisibility(messages.map(ChatMessage::timestamp))
     KeepScreenAwake(
@@ -582,7 +581,11 @@ fun ChatPage(state: AppState, strings: LocaleStrings) {
                             retryAttempt = retryAttempt,
                             retryLimit = retryLimit,
                             resendEnabled = active != null && !sending,
-                            onCopy = { clipboard.setText(AnnotatedString(message.text)) },
+                            onCopy = {
+                                scope.launch {
+                                    clipboard.setClipEntry(textClipEntry(message.text))
+                                }
+                            },
                             onResend = { sendMessage(message.text, clearDraft = false) },
                         )
                     }

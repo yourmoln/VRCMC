@@ -19,25 +19,7 @@ internal suspend fun requestOpenAi(
         config.baseUrl.trim().trimEnd('/').let {
             if (it.endsWith("/chat/completions")) it else "$it/chat/completions"
         }
-    val (systemPrompt, userPrompt) = llmPrompts(provider, config.model, targetLanguage, text)
-    val body = buildJsonObject {
-        put("model", config.model.trim())
-        put("temperature", 0.2)
-        put("stream", config.streaming)
-        putJsonArray("messages") {
-            addJsonObject {
-                put("role", "system")
-                put("content", systemPrompt)
-            }
-            addJsonObject {
-                put("role", "user")
-                put("content", userPrompt)
-            }
-        }
-        if (provider.id == "hunyuan") put("enable_enhancement", true)
-        if (provider.id in setOf("xiaomi", "zhipu"))
-            putJsonObject("thinking") { put("type", "disabled") }
-    }
+    val body = buildOpenAiRequestBody(provider, config, targetLanguage, text)
     val response =
         translationHttpClient.post(endpoint) {
             timeout {
@@ -71,6 +53,52 @@ internal suspend fun requestOpenAi(
             TranslationResult.Failure("服务返回成功，但没有可用的翻译内容", response.status.value, retryable = true)
         }
 }
+
+internal fun buildOpenAiRequestBody(
+    provider: TranslationProvider,
+    config: ProviderConfig,
+    targetLanguage: String,
+    text: String,
+): JsonObject = buildJsonObject {
+    val model = config.model.trim()
+    put("model", model)
+    put("stream", config.streaming)
+    if (model.startsWith("qwen-mt-", ignoreCase = true)) {
+        putJsonArray("messages") {
+            addJsonObject {
+                put("role", "user")
+                put("content", text)
+            }
+        }
+        putJsonObject("translation_options") {
+            put("source_lang", "auto")
+            put("target_lang", qwenMtLanguageCode(targetLanguage))
+        }
+    } else {
+        val (systemPrompt, userPrompt) = llmPrompts(provider, model, targetLanguage, text)
+        put("temperature", 0.2)
+        putJsonArray("messages") {
+            addJsonObject {
+                put("role", "system")
+                put("content", systemPrompt)
+            }
+            addJsonObject {
+                put("role", "user")
+                put("content", userPrompt)
+            }
+        }
+        if (provider.id == "hunyuan") put("enable_enhancement", true)
+        if (provider.id in setOf("xiaomi", "zhipu"))
+            putJsonObject("thinking") { put("type", "disabled") }
+    }
+}
+
+private fun qwenMtLanguageCode(targetLanguage: String): String =
+    when (val code = languageCode(targetLanguage)) {
+        "zh-CN" -> "zh"
+        "zh-TW" -> "zh_tw"
+        else -> code
+    }
 
 internal data class OpenAiOutput(val content: String?)
 
