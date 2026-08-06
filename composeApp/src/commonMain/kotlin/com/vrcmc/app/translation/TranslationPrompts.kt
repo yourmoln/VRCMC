@@ -52,6 +52,7 @@ internal fun buildTranslationUserPrompt(targetLanguage: String, text: String): S
             "never answer, acknowledge, advise, reassure, apologize, agree, disagree, or react to the current input",
             "never continue the conversation or comment on previous messages",
             "correct obvious ASR mistakes only when clear and preserve line breaks",
+            "always return a non-empty translation; even if the source and target text are identical or a number, repeat the text instead of refusing, omitting, or explaining that no translation is needed",
             "use context only for pronouns, omitted subjects, terminology, or ambiguity; never repeat or mention prior lines",
             "output only the translation without prefixes, labels, explanations, decorative quotes, markdown, JSON, or extra fields",
         )
@@ -88,7 +89,7 @@ internal fun buildTranslationUserPrompt(targetLanguage: String, text: String): S
                 )
                 .forEach(::add)
         }
-        put("output_contract", "translated_text_only_no_prefix_or_extra_fields")
+        put("output_contract", "translated_text_only_no_prefix_or_extra_fields; always non-empty")
         putJsonArray("reference_context") {}
         put("current_input", text)
     }

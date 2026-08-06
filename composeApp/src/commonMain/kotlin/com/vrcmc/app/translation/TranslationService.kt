@@ -190,7 +190,7 @@ internal suspend fun translateWithRetries(
         when (val result = request()) {
             is TranslationResult.Success -> {
                 val translated = result.text.trim()
-                if (translated.isNotEmpty() && translated != sourceText.trim())
+                if (translated.isNotEmpty())
                     return TranslationResult.Success(translated)
                 lastFailure = TranslationResult.Failure("翻译接口未返回可用翻译", retryable = true)
             }
