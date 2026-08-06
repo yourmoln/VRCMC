@@ -404,7 +404,6 @@ fun ChatPage(state: AppState, strings: LocaleStrings) {
                             .mapNotNull { (language, result) ->
                                 (result as? TranslationResult.Success)
                                     ?.text
-                                    ?.takeIf { it != original }
                                     ?.let { language to it }
                             }
                             .toMap()
