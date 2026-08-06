@@ -40,6 +40,16 @@ fun ChatPage(state: AppState, strings: LocaleStrings) {
     var activeTranslationJob by remember { mutableStateOf<Job?>(null) }
     var activeLoadingMessages by remember { mutableStateOf<List<ChatMessage>>(emptyList()) }
     var translationGeneration by remember { mutableIntStateOf(0) }
+    var voiceRecording by remember { mutableStateOf(false) }
+    var voiceSpeaking by remember { mutableStateOf(false) }
+    var voiceTranscribing by remember { mutableStateOf(false) }
+    var voiceGeneration by remember { mutableIntStateOf(0) }
+    var voiceBaseDraft by remember { mutableStateOf("") }
+    var voiceRequestConfig by remember { mutableStateOf<VoiceInputConfig?>(null) }
+    var activeVoiceRequestJob by remember { mutableStateOf<Job?>(null) }
+    var pendingPartialAudio by remember { mutableStateOf<ByteArray?>(null) }
+    val streamingMerger = remember { StreamingTextMerger() }
+    val audioRecorder = remember { createAudioRecorder() }
     val scope = rememberCoroutineScope()
     val messages = state.messages.toList()
     val listState =
@@ -50,6 +60,145 @@ fun ChatPage(state: AppState, strings: LocaleStrings) {
     val clipboard = LocalClipboardManager.current
     val liveOriginalUpdates = remember { Channel<LiveOscAction>(Channel.UNLIMITED) }
     val timestampVisibility = chatTimestampVisibility(messages.map(ChatMessage::timestamp))
+
+    DisposableEffect(audioRecorder) {
+        onDispose {
+            activeVoiceRequestJob?.cancel()
+            audioRecorder.release()
+        }
+    }
+    LaunchedEffect(state.voiceInputConfig.enabled) {
+        if (!state.voiceInputConfig.enabled && voiceRecording) {
+            audioRecorder.stop()
+            voiceRecording = false
+        }
+    }
+
+    fun applyVoiceText(text: String) {
+        state.chatDraft =
+            listOf(voiceBaseDraft, text).filter(String::isNotBlank).joinToString(" ")
+    }
+
+    fun submitPartialRecognition(wav: ByteArray) {
+        pendingPartialAudio = wav
+        if (activeVoiceRequestJob?.isActive == true) return
+        val audio = pendingPartialAudio ?: return
+        val config = voiceRequestConfig ?: return
+        val generation = voiceGeneration
+        pendingPartialAudio = null
+        activeVoiceRequestJob = scope.launch {
+            when (val result = transcribeQwenAudio(config, audio, state::addErrorLog)) {
+                is VoiceTranscriptionResult.Success ->
+                    if (generation == voiceGeneration) {
+                        applyVoiceText(streamingMerger.ingestPartial(result.text))
+                        error = null
+                    }
+                is VoiceTranscriptionResult.Failure -> Unit
+            }
+            activeVoiceRequestJob = null
+            pendingPartialAudio?.let(::submitPartialRecognition)
+        }
+    }
+
+    fun submitFinalRecognition(wav: ByteArray) {
+        val config = voiceRequestConfig ?: return
+        val generation = voiceGeneration
+        activeVoiceRequestJob?.cancel()
+        pendingPartialAudio = null
+        voiceTranscribing = true
+        activeVoiceRequestJob = scope.launch {
+            when (val result = transcribeQwenAudio(config, wav, state::addErrorLog)) {
+                is VoiceTranscriptionResult.Success ->
+                    if (generation == voiceGeneration) {
+                        applyVoiceText(streamingMerger.ingestFinal(result.text))
+                        error = null
+                    }
+                is VoiceTranscriptionResult.Failure ->
+                    if (generation == voiceGeneration) error = result.message
+            }
+            if (generation == voiceGeneration) voiceTranscribing = false
+            activeVoiceRequestJob = null
+        }
+    }
+
+    fun startVoiceInput() {
+        val config = state.voiceInputConfig
+        if (config.apiKey.isBlank()) {
+            error = "请先在 API 配置中填写 Qwen API Key"
+            return
+        }
+        val generation = ++voiceGeneration
+        activeVoiceRequestJob?.cancel()
+        pendingPartialAudio = null
+        voiceBaseDraft = state.chatDraft.trimEnd()
+        voiceRequestConfig = config
+        streamingMerger.reset()
+        error = null
+        voiceRecording = true
+        voiceSpeaking = false
+        voiceTranscribing = false
+        lateinit var processor: VoiceCaptureProcessor
+        processor =
+            VoiceCaptureProcessor(
+                config = config,
+                onSpeechState = { speaking ->
+                    scope.launch {
+                        if (generation == voiceGeneration) voiceSpeaking = speaking
+                    }
+                },
+                onPartial = { wav ->
+                    scope.launch {
+                        if (generation == voiceGeneration) submitPartialRecognition(wav)
+                    }
+                },
+                onFinal = { wav ->
+                    scope.launch {
+                        if (generation == voiceGeneration) {
+                            voiceRecording = false
+                            voiceSpeaking = false
+                            submitFinalRecognition(wav)
+                        }
+                    }
+                },
+                onNoSpeech = {
+                    scope.launch {
+                        if (generation == voiceGeneration) {
+                            voiceRecording = false
+                            voiceSpeaking = false
+                            voiceTranscribing = false
+                            error = "未检测到有效语音"
+                        }
+                    }
+                },
+                onAutoStop = audioRecorder::stop,
+            )
+        audioRecorder.start(
+            sampleRate = config.sampleRate,
+            maxDurationSeconds = (config.maxSegmentSeconds + 30).coerceAtMost(60),
+            onPcmData = processor::accept,
+            onStopped = {
+                processor.finish()
+                scope.launch {
+                    if (generation == voiceGeneration) voiceRecording = false
+                }
+            },
+            onError = { message ->
+                scope.launch {
+                    voiceRecording = false
+                    voiceTranscribing = false
+                    error = message
+                }
+            },
+        )
+    }
+
+    fun toggleVoiceInput() {
+        if (voiceRecording) {
+            audioRecorder.stop()
+            return
+        }
+        if (requestAudioPermissionIfNeeded(::startVoiceInput)) startVoiceInput()
+    }
 
     fun removeLoadingMessages(messages: List<ChatMessage>) {
         messages.forEach { message ->
@@ -336,6 +485,10 @@ fun ChatPage(state: AppState, strings: LocaleStrings) {
                 state.isSimultaneousInterpretationActive || state.isAlwaysInterpretationActive,
             alwaysInterpretationEnabled = state.alwaysInterpretationEnabled,
             alwaysInterpretationActive = state.isAlwaysInterpretationActive,
+            voiceInputEnabled = state.voiceInputConfig.enabled,
+            voiceRecording = voiceRecording,
+            voiceSpeaking = voiceSpeaking,
+            voiceTranscribing = voiceTranscribing,
             strings = strings,
             onInputChange = {
                 state.chatDraft = it
@@ -365,6 +518,7 @@ fun ChatPage(state: AppState, strings: LocaleStrings) {
                 }
             },
             onToggleAlwaysInterpretation = state::toggleAlwaysInterpretationActive,
+            onToggleVoiceInput = ::toggleVoiceInput,
         )
     }
 }

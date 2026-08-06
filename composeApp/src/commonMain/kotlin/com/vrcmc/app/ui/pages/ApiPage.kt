@@ -122,6 +122,13 @@ fun ApiPage(state: AppState, strings: LocaleStrings) {
                 }
             }
         }
+        item {
+            VoiceInputServiceSection(
+                config = state.voiceInputConfig,
+                strings = strings,
+                onUpdate = state::updateVoiceInputConfig,
+            )
+        }
     }
 
     if (showProviderPicker) {

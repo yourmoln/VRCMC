@@ -6,6 +6,8 @@ class AppState {
     private val storedTranslation =
         storedTranslationSettingsFromJson(loadStoredTranslationSettings())
     private val storedSecrets = storedProviderSecretsFromJson(loadStoredTranslationSecrets())
+    private val storedVoiceInput =
+        storedTranslation.voiceInput.copy(apiKey = storedSecrets["qwen3_asr"]?.apiKey.orEmpty())
     val devices = mutableStateListOf<Device>().apply { addAll(loadStoredDevices()) }
     val messages =
         mutableStateListOf<ChatMessage>().apply {
@@ -14,6 +16,8 @@ class AppState {
     val errorLogs =
         mutableStateListOf<ErrorLog>().apply { addAll(errorLogsFromJson(loadStoredErrorLogs())) }
     var chatDraft by mutableStateOf("")
+    var voiceInputConfig by mutableStateOf(storedVoiceInput)
+        private set
     var simultaneousInterpretationEnabled by
         mutableStateOf(loadStoredSimultaneousInterpretationEnabled())
         private set
@@ -75,6 +79,11 @@ class AppState {
         persistTranslation()
     }
 
+    fun updateVoiceInputConfig(transform: (VoiceInputConfig) -> VoiceInputConfig) {
+        voiceInputConfig = transform(voiceInputConfig)
+        persistTranslation()
+    }
+
     fun selectProvider(id: String) {
         providerId = id
         persistTranslation()
@@ -113,8 +122,9 @@ class AppState {
 
     fun persistTranslation() {
         saveStoredTranslationSecrets(
-            providerConfigs
+            (providerConfigs
                 .mapValues { (_, value) -> ProviderSecrets(value.apiKey, value.customHeaders) }
+                + ("qwen3_asr" to ProviderSecrets(voiceInputConfig.apiKey)))
                 .toSecretsJson()
         )
         saveStoredTranslationSettings(
@@ -125,6 +135,7 @@ class AppState {
                     targetLanguages = languages.toList(),
                     outputOrder = outputOrder.toList(),
                     configs = providerConfigs.toMap(),
+                    voiceInput = voiceInputConfig.copy(apiKey = ""),
                 )
                 .toJson()
         )

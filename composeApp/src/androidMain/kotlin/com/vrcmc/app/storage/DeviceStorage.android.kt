@@ -12,10 +12,14 @@ import javax.crypto.SecretKey
 import javax.crypto.spec.GCMParameterSpec
 
 private var appContext: Context? = null
+private var audioContext: Context? = null
 
 internal fun initDeviceStorage(context: Context) {
     appContext = context.applicationContext
+    audioContext = context
 }
+
+internal fun audioApplicationContext(): Context? = audioContext
 
 private fun prefs() = appContext?.getSharedPreferences("vrcmc", Context.MODE_PRIVATE)
 

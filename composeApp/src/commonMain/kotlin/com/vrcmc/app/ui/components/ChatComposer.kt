@@ -12,6 +12,7 @@ import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.Send
 import androidx.compose.material.icons.filled.PlayArrow
+import androidx.compose.material.icons.filled.Mic
 import androidx.compose.material.icons.filled.Stop
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -39,10 +40,15 @@ internal fun ChatComposer(
     interpreting: Boolean,
     alwaysInterpretationEnabled: Boolean,
     alwaysInterpretationActive: Boolean,
+    voiceInputEnabled: Boolean,
+    voiceRecording: Boolean,
+    voiceSpeaking: Boolean,
+    voiceTranscribing: Boolean,
     strings: LocaleStrings,
     onInputChange: (String) -> Unit,
     onSend: () -> Unit,
     onToggleAlwaysInterpretation: () -> Unit,
+    onToggleVoiceInput: () -> Unit,
 ) {
     val focusRequester = remember { FocusRequester() }
     val scope = rememberCoroutineScope()
@@ -103,9 +109,33 @@ internal fun ChatComposer(
                 modifier =
                     Modifier.fillMaxWidth()
                         .heightIn(min = 56.dp)
-                        .padding(start = 18.dp, end = 6.dp),
+                        .padding(start = 6.dp, end = 6.dp),
                 verticalAlignment = Alignment.CenterVertically,
             ) {
+                if (voiceInputEnabled) {
+                    FilledTonalIconButton(
+                        enabled = enabled && !sending && !voiceTranscribing,
+                        onClick = onToggleVoiceInput,
+                        modifier = Modifier.size(44.dp),
+                        colors =
+                            if (voiceSpeaking)
+                                IconButtonDefaults.filledTonalIconButtonColors(
+                                    containerColor = MaterialTheme.colorScheme.errorContainer,
+                                    contentColor = MaterialTheme.colorScheme.onErrorContainer,
+                                )
+                            else IconButtonDefaults.filledTonalIconButtonColors(),
+                    ) {
+                        if (voiceTranscribing) {
+                            CircularProgressIndicator(Modifier.size(20.dp), strokeWidth = 2.dp)
+                        } else {
+                            Icon(
+                                if (voiceRecording) Icons.Default.Stop else Icons.Default.Mic,
+                                if (voiceRecording) strings.stopVoiceInput else strings.startVoiceInput,
+                            )
+                        }
+                    }
+                    Spacer(Modifier.width(10.dp))
+                }
                 BasicTextField(
                     value = input,
                     onValueChange = onInputChange,
@@ -162,6 +192,16 @@ internal fun ChatComposer(
                         Icon(Icons.AutoMirrored.Filled.Send, strings.send)
                     }
                 }
+            }
+            if (voiceRecording) {
+                Text(
+                    if (voiceSpeaking) strings.voiceSpeechDetected else strings.voiceWaitingForSpeech,
+                    modifier = Modifier.padding(start = 12.dp, end = 12.dp, bottom = 8.dp),
+                    style = MaterialTheme.typography.labelSmall,
+                    color =
+                        if (voiceSpeaking) MaterialTheme.colorScheme.primary
+                        else MaterialTheme.colorScheme.onSurfaceVariant,
+                )
             }
         }
     }

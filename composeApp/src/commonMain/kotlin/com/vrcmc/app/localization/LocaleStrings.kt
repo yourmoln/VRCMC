@@ -153,6 +153,26 @@ interface LocaleStrings {
     val clearErrorLogs: String
     val clearErrorLogsMessage: String
 
+    val voiceInputService: String get() = "语音输入服务"
+    val enableVoiceInput: String get() = "启用语音输入"
+    val voiceInputHint: String get() = "使用 Qwen3-ASR 将录音转换为聊天文字"
+    val qwenApiKey: String get() = "Qwen API Key"
+    val qwenRegion: String get() = "区域"
+    val qwenLanguage: String get() = "识别语言"
+    val qwenModel: String get() = "模型"
+    val qwenSampleRate: String get() = "采样率"
+    val qwenMaxSegment: String get() = "最长录音"
+    val qwenTailSilence: String get() = "尾部静音"
+    val qwenVadMinRms: String get() = "最低语音音量（RMS）"
+    val qwenVadSpeechRatio: String get() = "语音帧比例"
+    val qwenPartialInterval: String get() = "实时识别间隔"
+    val qwenTimeout: String get() = "请求超时"
+    val startVoiceInput: String get() = "开始语音输入"
+    val stopVoiceInput: String get() = "停止语音输入"
+    val transcribingVoiceInput: String get() = "正在识别语音..."
+    val voiceWaitingForSpeech: String get() = "正在等待说话…"
+    val voiceSpeechDetected: String get() = "检测到语音，正在实时识别…"
+
     fun providerHint(provider: TranslationProvider): String
 
     fun providerRegionLabel(providerId: String, region: ProviderRegion): String

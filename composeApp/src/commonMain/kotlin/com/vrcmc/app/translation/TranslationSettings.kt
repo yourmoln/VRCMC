@@ -10,6 +10,25 @@ data class StoredTranslationSettings(
     val targetLanguages: List<String> = listOf("English"),
     val outputOrder: List<String> = targetLanguages + originalOutputKey,
     val configs: Map<String, ProviderConfig> = emptyMap(),
+    val voiceInput: VoiceInputConfig = VoiceInputConfig(),
+)
+
+data class VoiceInputConfig(
+    val enabled: Boolean = false,
+    val apiKey: String = "",
+    val region: String = "singapore",
+    val baseUrl: String = "https://dashscope-intl.aliyuncs.com/compatible-mode/v1",
+    val model: String = "qwen3-asr-flash-2026-02-10",
+    val language: String = "ja",
+    val sampleRate: Int = 16_000,
+    val maxSegmentSeconds: Int = 6,
+    val tailSilenceMillis: Int = 700,
+    val vadActivationMillis: Int = 200,
+    val vadMinRms: Double = 0.012,
+    val vadSpeechRatio: Double = 0.6,
+    val partialIntervalMillis: Int = 500,
+    val partialMinSpeechMillis: Int = 450,
+    val timeoutSeconds: Int = 25,
 )
 
 data class ProviderSecrets(val apiKey: String = "", val customHeaders: String = "")
@@ -37,6 +56,22 @@ fun StoredTranslationSettings.toJson(): String =
                         put("fallbackEnabled", value.fallbackEnabled)
                     }
                 }
+            }
+            putJsonObject("voiceInput") {
+                put("enabled", voiceInput.enabled)
+                put("region", voiceInput.region)
+                put("baseUrl", voiceInput.baseUrl)
+                put("model", voiceInput.model)
+                put("language", voiceInput.language)
+                put("sampleRate", voiceInput.sampleRate)
+                put("maxSegmentSeconds", voiceInput.maxSegmentSeconds)
+                put("tailSilenceMillis", voiceInput.tailSilenceMillis)
+                put("vadActivationMillis", voiceInput.vadActivationMillis)
+                put("vadMinRms", voiceInput.vadMinRms)
+                put("vadSpeechRatio", voiceInput.vadSpeechRatio)
+                put("partialIntervalMillis", voiceInput.partialIntervalMillis)
+                put("partialMinSpeechMillis", voiceInput.partialMinSpeechMillis)
+                put("timeout", voiceInput.timeoutSeconds)
             }
         }
         .toString()
@@ -119,6 +154,43 @@ fun storedTranslationSettingsFromJson(value: String): StoredTranslationSettings 
                 targetLanguages = selectedLanguages,
                 outputOrder = normalizeOutputOrder(selectedLanguages, storedOrder),
                 configs = configs,
+                voiceInput =
+                    root["voiceInput"]?.jsonObject?.let { obj ->
+                        VoiceInputConfig(
+                            enabled = obj["enabled"]?.jsonPrimitive?.booleanOrNull ?: false,
+                            region = obj["region"]?.jsonPrimitive?.contentOrNull ?: "singapore",
+                            baseUrl = obj["baseUrl"]?.jsonPrimitive?.contentOrNull
+                                ?: "https://dashscope-intl.aliyuncs.com/compatible-mode/v1",
+                            model = obj["model"]?.jsonPrimitive?.contentOrNull
+                                ?: "qwen3-asr-flash-2026-02-10",
+                            language = obj["language"]?.jsonPrimitive?.contentOrNull ?: "ja",
+                            sampleRate = (obj["sampleRate"]?.jsonPrimitive?.intOrNull ?: 16_000)
+                                .coerceIn(8_000, 48_000),
+                            maxSegmentSeconds =
+                                (obj["maxSegmentSeconds"]?.jsonPrimitive?.intOrNull ?: 6)
+                                    .coerceIn(1, 60),
+                            tailSilenceMillis =
+                                (obj["tailSilenceMillis"]?.jsonPrimitive?.intOrNull ?: 700)
+                                    .coerceIn(200, 3_000),
+                            vadActivationMillis =
+                                (obj["vadActivationMillis"]?.jsonPrimitive?.intOrNull ?: 200)
+                                    .coerceIn(60, 1_000),
+                            vadMinRms =
+                                (obj["vadMinRms"]?.jsonPrimitive?.doubleOrNull ?: 0.012)
+                                    .coerceIn(0.001, 0.5),
+                            vadSpeechRatio =
+                                (obj["vadSpeechRatio"]?.jsonPrimitive?.doubleOrNull ?: 0.6)
+                                    .coerceIn(0.1, 1.0),
+                            partialIntervalMillis =
+                                (obj["partialIntervalMillis"]?.jsonPrimitive?.intOrNull ?: 500)
+                                    .coerceIn(250, 2_000),
+                            partialMinSpeechMillis =
+                                (obj["partialMinSpeechMillis"]?.jsonPrimitive?.intOrNull ?: 450)
+                                    .coerceIn(200, 2_000),
+                            timeoutSeconds = (obj["timeout"]?.jsonPrimitive?.intOrNull ?: 25)
+                                .coerceIn(3, 120),
+                        )
+                    } ?: VoiceInputConfig(),
             )
         }
         .getOrDefault(StoredTranslationSettings())
