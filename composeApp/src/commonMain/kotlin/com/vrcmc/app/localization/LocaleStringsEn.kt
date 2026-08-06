@@ -130,6 +130,7 @@ object LocaleStringsEn : LocaleStrings {
     override val providerPickerHint = "Search a compact list without covering the page"
     override val searchProvider = "Search provider or protocol"
     override val recommended = "Recommended"
+    override val highlyRecommended = "Highly recommended"
     override val chooseLanguage = "Choose target language"
     override val twoLanguageHint = "Choose one or two languages. Two translations run in parallel."
     override val languageSettings = "Translation languages"

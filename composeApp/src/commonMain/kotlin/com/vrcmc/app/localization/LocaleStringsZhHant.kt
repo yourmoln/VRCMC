@@ -119,6 +119,7 @@ object LocaleStringsZhHant : LocaleStrings {
     override val providerPickerHint = "搜尋精簡清單，不會遮住目前頁面"
     override val searchProvider = "搜尋服務供應商或通訊協定"
     override val recommended = "推薦"
+    override val highlyRecommended = "非常推薦"
     override val chooseLanguage = "選擇目標語言"
     override val twoLanguageHint = "選擇一或兩種語言；兩個翻譯工作會平行執行。"
     override val languageSettings = "翻譯語言"

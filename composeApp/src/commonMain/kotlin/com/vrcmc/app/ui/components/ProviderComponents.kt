@@ -1,6 +1,7 @@
 package com.vrcmc.app
 
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -11,12 +12,15 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
 
 private val recommendedProviderIds = setOf("deepseek", "qianwen", "gemini", "openai", "local_ai")
+private val qwenGoldLight = Color(0xFF9A7000)
+private val qwenGoldDark = Color(0xFFFFD760)
 
 @Composable
 internal fun ProviderPickerDialog(
@@ -26,6 +30,7 @@ internal fun ProviderPickerDialog(
     onSelect: (String) -> Unit,
 ) {
     var query by remember { mutableStateOf("") }
+    val darkTheme = isSystemInDarkTheme()
     val filtered =
         remember(query) {
             translationProviders
@@ -36,7 +41,8 @@ internal fun ProviderPickerDialog(
                         it.protocol.displayName().contains(query, true)
                 }
                 .sortedWith(
-                    compareByDescending<TranslationProvider> { it.id in recommendedProviderIds }
+                    compareByDescending<TranslationProvider> { it.id == "qianwen" }
+                        .thenByDescending { it.id in recommendedProviderIds }
                         .thenBy { it.label }
                 )
         }
@@ -81,6 +87,8 @@ internal fun ProviderPickerDialog(
                     verticalArrangement = Arrangement.spacedBy(4.dp),
                 ) {
                     items(filtered, key = { it.id }) { option ->
+                        val isQwen = option.id == "qianwen"
+                        val qwenGold = if (darkTheme) qwenGoldDark else qwenGoldLight
                         Surface(
                             Modifier.fillMaxWidth().clickable { onSelect(option.id) },
                             color =
@@ -104,11 +112,28 @@ internal fun ProviderPickerDialog(
                                                 {},
                                                 {
                                                     Text(
-                                                        strings.recommended,
+                                                        if (isQwen) strings.highlyRecommended
+                                                        else strings.recommended,
                                                         style = MaterialTheme.typography.labelSmall,
                                                     )
                                                 },
                                                 Modifier.height(26.dp),
+                                                colors =
+                                                    if (isQwen)
+                                                        SuggestionChipDefaults.suggestionChipColors(
+                                                            labelColor = qwenGold,
+                                                        )
+                                                    else SuggestionChipDefaults.suggestionChipColors(),
+                                                border =
+                                                    if (isQwen)
+                                                        SuggestionChipDefaults.suggestionChipBorder(
+                                                            enabled = true,
+                                                            borderColor = qwenGold,
+                                                        )
+                                                    else
+                                                        SuggestionChipDefaults.suggestionChipBorder(
+                                                            enabled = true,
+                                                        ),
                                             )
                                         }
                                     }

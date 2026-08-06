@@ -118,6 +118,7 @@ interface LocaleStrings {
     val providerPickerHint: String
     val searchProvider: String
     val recommended: String
+    val highlyRecommended: String
     val chooseLanguage: String
     val twoLanguageHint: String
     val languageSettings: String
