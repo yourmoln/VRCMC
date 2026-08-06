@@ -76,6 +76,8 @@ class AppState {
         mutableStateListOf<String>().apply {
             addAll(normalizeOutputOrder(languages, storedTranslation.outputOrder))
         }
+    var lineBreakOutput by mutableStateOf(storedTranslation.lineBreakOutput)
+        private set
     val providerConfigs = initialProviderConfigs(storedTranslation.configs, storedSecrets)
     val provider
         get() = providerById(providerId)
@@ -134,6 +136,11 @@ class AppState {
         persistTranslation()
     }
 
+    fun updateLineBreakOutput(enabled: Boolean) {
+        lineBreakOutput = enabled
+        persistTranslation()
+    }
+
     fun updateSendOriginalBeforeTranslation(enabled: Boolean) {
         sendOriginalBeforeTranslation = enabled
         persistTranslation()
@@ -165,6 +172,7 @@ class AppState {
                     sendOriginalBeforeTranslation = sendOriginalBeforeTranslation,
                     targetLanguages = languages.toList(),
                     outputOrder = outputOrder.toList(),
+                    lineBreakOutput = lineBreakOutput,
                     configs = providerConfigs.toMap(),
                     voiceInput = voiceInputConfig.copy(apiKey = ""),
                     interpretationVoiceInputEnabled = interpretationVoiceInputEnabled,

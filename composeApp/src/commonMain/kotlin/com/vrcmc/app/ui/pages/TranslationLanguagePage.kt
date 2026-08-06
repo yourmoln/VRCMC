@@ -7,6 +7,7 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.Send
+import androidx.compose.material.icons.automirrored.filled.WrapText
 import androidx.compose.material.icons.filled.ArrowDownward
 import androidx.compose.material.icons.filled.ArrowUpward
 import androidx.compose.material.icons.filled.DragHandle
@@ -23,7 +24,13 @@ import androidx.compose.ui.unit.dp
 fun TranslationLanguagePage(state: AppState, strings: LocaleStrings) {
     val previewOriginal = "今晚一起玩吗？"
     val previewTranslations = state.languages.associateWith(::previewForLanguage)
-    val preview = buildTranslationOutput(previewOriginal, previewTranslations, state.outputOrder)
+    val preview =
+        buildTranslationOutput(
+            previewOriginal,
+            previewTranslations,
+            state.outputOrder,
+            state.lineBreakOutput,
+        )
 
     LazyColumn(
         modifier = Modifier.fillMaxSize(),
@@ -74,6 +81,29 @@ fun TranslationLanguagePage(state: AppState, strings: LocaleStrings) {
                                 else MaterialTheme.colorScheme.onSurface.copy(alpha = .38f),
                         )
                     }
+                }
+            }
+        }
+
+        item {
+            LanguageSettingsSection(strings.lineBreakOutput, Icons.AutoMirrored.Filled.WrapText) {
+                Row(
+                    modifier = Modifier.fillMaxWidth().heightIn(min = 48.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    Column(Modifier.weight(1f)) {
+                        Text(strings.enableLineBreakOutput)
+                        Text(
+                            strings.lineBreakOutputHint,
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
+                    }
+                    Spacer(Modifier.width(12.dp))
+                    Switch(
+                        checked = state.lineBreakOutput,
+                        onCheckedChange = state::updateLineBreakOutput,
+                    )
                 }
             }
         }

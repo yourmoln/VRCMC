@@ -9,6 +9,7 @@ data class StoredTranslationSettings(
     val sendOriginalBeforeTranslation: Boolean = true,
     val targetLanguages: List<String> = listOf("English"),
     val outputOrder: List<String> = targetLanguages + originalOutputKey,
+    val lineBreakOutput: Boolean = true,
     val configs: Map<String, ProviderConfig> = emptyMap(),
     val voiceInput: VoiceInputConfig = VoiceInputConfig(),
     val interpretationVoiceInputEnabled: Boolean = false,
@@ -43,6 +44,7 @@ fun StoredTranslationSettings.toJson(): String =
             putJsonArray("outputOrder") {
                 normalizeOutputOrder(targetLanguages, outputOrder).forEach(::add)
             }
+            put("lineBreakOutput", lineBreakOutput)
             putJsonObject("configs") {
                 configs.forEach { (id, value) ->
                     putJsonObject(id) {
@@ -155,6 +157,8 @@ fun storedTranslationSettingsFromJson(value: String): StoredTranslationSettings 
                     root["sendOriginalBeforeTranslation"]?.jsonPrimitive?.booleanOrNull ?: true,
                 targetLanguages = selectedLanguages,
                 outputOrder = normalizeOutputOrder(selectedLanguages, storedOrder),
+                lineBreakOutput =
+                    root["lineBreakOutput"]?.jsonPrimitive?.booleanOrNull ?: true,
                 configs = configs,
                 voiceInput =
                     root["voiceInput"]?.jsonObject?.let { obj ->

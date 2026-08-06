@@ -18,6 +18,9 @@ interface LocaleStrings {
     val addAndFinish: String get() = "Add device and finish"
     val quickStartComplete: String get() = "Setup complete. You can now use VRCMC."
     val stepProgress: String get() = "Step %d of 3"
+    val lineBreakOutput: String get() = "Line breaks"
+    val enableLineBreakOutput: String get() = "Put each language on a new line"
+    val lineBreakOutputHint: String get() = "When disabled, the second item in the display order is enclosed in parentheses."
     val chat: String
     val devices: String
     val api: String

@@ -325,6 +325,7 @@ fun ChatPage(state: AppState, strings: LocaleStrings) {
         val shouldTranslate = state.translate && !shouldSkipTranslation(original)
         val targetLanguages = state.languages.toList()
         val outputOrder = state.outputOrder.toList()
+        val lineBreakOutput = state.lineBreakOutput
         val sendOriginalBeforeTranslation = state.sendOriginalBeforeTranslation
         val displayLanguages = outputOrder.filter { it in targetLanguages }
         val translatingText = "$original\n(Translating...)"
@@ -424,7 +425,13 @@ fun ChatPage(state: AppState, strings: LocaleStrings) {
                                 )
                         }
                     }
-                    val outgoing = buildTranslationOutput(original, successful, outputOrder)
+                    val outgoing =
+                        buildTranslationOutput(
+                            original,
+                            successful,
+                            outputOrder,
+                            lineBreakOutput,
+                        )
                     if (!isValidChatboxText(outgoing)) error = strings.messageTooLong
                     else if (!sendChatboxOsc(target.address, outgoing, target.receivePort)) {
                         error = strings.sendFailed

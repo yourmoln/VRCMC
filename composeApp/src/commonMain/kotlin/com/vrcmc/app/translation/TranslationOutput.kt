@@ -26,12 +26,16 @@ internal fun buildTranslationOutput(
     original: String,
     translations: Map<String, String>,
     outputOrder: List<String>,
-): String =
-    outputOrder
+    lineBreakOutput: Boolean = true,
+): String {
+    val values =
+        outputOrder
         .mapNotNull { key ->
             when (key) {
                 originalOutputKey -> original.takeIf(String::isNotBlank)
                 else -> translations[key]?.takeIf(String::isNotBlank)
             }
         }
-        .joinToString("\n")
+    if (lineBreakOutput) return values.joinToString("\n")
+    return values.mapIndexed { index, value -> if (index == 1) "($value)" else value }.joinToString("")
+}

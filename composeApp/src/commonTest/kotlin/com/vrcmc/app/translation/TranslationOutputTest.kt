@@ -30,4 +30,30 @@ class TranslationOutputTest {
             ),
         )
     }
+
+    @Test
+    fun inlineOutputWrapsTheSecondEffectiveItemInAsciiParentheses() {
+        assertEquals(
+            "Original(Hello)Konnichiwa",
+            buildTranslationOutput(
+                original = "Original",
+                translations = mapOf("English" to "Hello", "Japanese" to "Konnichiwa"),
+                outputOrder = listOf(originalOutputKey, "English", "Japanese"),
+                lineBreakOutput = false,
+            ),
+        )
+    }
+
+    @Test
+    fun inlineOutputIgnoresMissingItemsBeforeApplyingParentheses() {
+        assertEquals(
+            "Original(Hello)",
+            buildTranslationOutput(
+                original = "Original",
+                translations = mapOf("English" to "Hello"),
+                outputOrder = listOf(originalOutputKey, "French", "English"),
+                lineBreakOutput = false,
+            ),
+        )
+    }
 }

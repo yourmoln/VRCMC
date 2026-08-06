@@ -86,6 +86,13 @@ class TranslationProviderTest {
     }
 
     @Test
+    fun lineBreakOutputDefaultsOnAndRoundTrips() {
+        assertTrue(storedTranslationSettingsFromJson("{}").lineBreakOutput)
+        val disabled = StoredTranslationSettings(lineBreakOutput = false)
+        assertFalse(storedTranslationSettingsFromJson(disabled.toJson()).lineBreakOutput)
+    }
+
+    @Test
     fun legacySingleLanguageMigratesToLanguageList() {
         val restored =
             storedTranslationSettingsFromJson(

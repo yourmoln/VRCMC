@@ -1,6 +1,9 @@
 package com.vrcmc.app
 
 object LocaleStringsEn : LocaleStrings {
+    override val lineBreakOutput = "Line breaks"
+    override val enableLineBreakOutput = "Put each language on a new line"
+    override val lineBreakOutputHint = "When disabled, the second item in the display order is enclosed in parentheses."
     override val skipQwenConfiguration = "Skip Qwen configuration"
     override val computerIpGuide = "On the computer running VRChat, right-click the network icon in the system tray, open Network & Internet settings, select Properties, and find the IPv4 address. Then add it below."
     override val chat = "Chat"
