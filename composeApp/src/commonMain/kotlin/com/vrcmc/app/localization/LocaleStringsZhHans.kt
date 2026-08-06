@@ -1,6 +1,23 @@
 package com.vrcmc.app
 
 object LocaleStringsZhHans : LocaleStrings {
+    override val quickStart = "快速上手"
+    override val quickStartQwen = "配置 Qwen"
+    override val quickStartVrc = "配置 VRC"
+    override val quickStartDevice = "添加电脑"
+    override val quickStartQwenIntro = "打开千问平台，充值所需额度并创建 API Key。连接测试成功后，Key 才会保存到本机。"
+    override val openQianwen = "打开千问充值并获取 API Key"
+    override val autoConfigure = "测试并自动配置"
+    override val autoConfiguring = "正在测试 qwen-mt-plus..."
+    override val autoConfigureSuccess = "Qwen 翻译和语音输入已配置并开启。"
+    override val skipQwenConfiguration = "跳过 Qwen 配置"
+    override val continueToVrc = "继续配置 VRC"
+    override val vrcConfigured = "VRC 已配置，继续"
+    override val computerIpGuide = "在运行 VRChat 的电脑上，右键点击右下角托盘中的网络图标，打开“网络和 Internet”设置，点击“属性”，找到 IPv4 地址，然后添加到下方。"
+    override val computerIpPlaceholder = "例如：192.168.1.100"
+    override val addAndFinish = "添加设备并完成"
+    override val quickStartComplete = "配置完成，现在可以使用 VRCMC。"
+    override val stepProgress = "第 %d 步，共 3 步"
     override val aboutApp = "关于 APP"
     override val version = "版本号"
     override val errorLogs = "错误日志"

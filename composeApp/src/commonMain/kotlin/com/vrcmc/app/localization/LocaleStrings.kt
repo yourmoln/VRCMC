@@ -1,6 +1,23 @@
 package com.vrcmc.app
 
 interface LocaleStrings {
+    val quickStart: String get() = "Quick start"
+    val quickStartQwen: String get() = "Configure Qwen"
+    val quickStartVrc: String get() = "Configure VRC"
+    val quickStartDevice: String get() = "Add computer"
+    val quickStartQwenIntro: String get() = "Open Qianwen, top up your account, and create an API Key. The key is saved only after the connection test succeeds."
+    val openQianwen: String get() = "Open Qianwen"
+    val autoConfigure: String get() = "Test and configure automatically"
+    val autoConfiguring: String get() = "Testing qwen-mt-plus..."
+    val autoConfigureSuccess: String get() = "Qwen translation and voice input are ready."
+    val skipQwenConfiguration: String get() = "Skip Qwen configuration"
+    val continueToVrc: String get() = "Continue to VRC configuration"
+    val vrcConfigured: String get() = "VRC is configured, continue"
+    val computerIpGuide: String get() = "On the computer running VRChat, right-click the network icon in the system tray, open Network & Internet settings, select Properties, and find the IPv4 address. Then add it below."
+    val computerIpPlaceholder: String get() = "For example: 192.168.1.100"
+    val addAndFinish: String get() = "Add device and finish"
+    val quickStartComplete: String get() = "Setup complete. You can now use VRCMC."
+    val stepProgress: String get() = "Step %d of 3"
     val chat: String
     val devices: String
     val api: String

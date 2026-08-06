@@ -15,6 +15,7 @@ import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.RecordVoiceOver
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.filled.SettingsInputAntenna
+import androidx.compose.material.icons.filled.Start
 import androidx.compose.material.icons.filled.Translate
 import androidx.compose.material.icons.filled.Tune
 import androidx.compose.material3.HorizontalDivider
@@ -39,6 +40,7 @@ internal enum class AppScreen {
     API,
     TRANSLATION_LANGUAGE,
     SIMULTANEOUS_INTERPRETATION,
+    QUICK_START,
     CONFIGURE_VRC,
     PREFERENCES,
     ABOUT,
@@ -71,6 +73,7 @@ internal fun VrcmcNavigationDrawer(
         )
     val secondaryItems =
         listOf(
+            NavigationItem(AppScreen.QUICK_START, strings.quickStart, Icons.Default.Start),
             NavigationItem(
                 AppScreen.CONFIGURE_VRC,
                 strings.configureVrc,

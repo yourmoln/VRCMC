@@ -1,6 +1,8 @@
 package com.vrcmc.app
 
 object LocaleStringsEn : LocaleStrings {
+    override val skipQwenConfiguration = "Skip Qwen configuration"
+    override val computerIpGuide = "On the computer running VRChat, right-click the network icon in the system tray, open Network & Internet settings, select Properties, and find the IPv4 address. Then add it below."
     override val chat = "Chat"
     override val devices = "Devices"
     override val api = "API"

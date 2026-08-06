@@ -108,6 +108,8 @@ fun VrcmcApp() {
                                     TranslationLanguagePage(state, strings)
                                 AppScreen.SIMULTANEOUS_INTERPRETATION ->
                                     SimultaneousInterpretationPage(state, strings)
+                                AppScreen.QUICK_START ->
+                                    QuickStartPage(state, strings) { screen = AppScreen.CHAT }
                                 AppScreen.CONFIGURE_VRC -> ConfigureVrcPage(strings)
                                 AppScreen.PREFERENCES ->
                                     PreferencesPage(

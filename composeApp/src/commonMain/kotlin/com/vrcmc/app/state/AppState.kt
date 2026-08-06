@@ -98,6 +98,28 @@ class AppState {
         persistTranslation()
     }
 
+    fun configureQwenServices(apiKey: String, regionId: String) {
+        val provider = providerById("qianwen")
+        val region = provider.regions.firstOrNull { it.id == regionId } ?: provider.regions.first()
+        providerId = provider.id
+        providerConfigs[provider.id] =
+            defaultProviderConfig(provider).copy(
+                apiKey = apiKey.trim(),
+                baseUrl = region.baseUrl,
+                model = "qwen-mt-plus",
+                region = region.id,
+            )
+        translate = true
+        voiceInputConfig =
+            voiceInputConfig.copy(
+                enabled = true,
+                apiKey = apiKey.trim(),
+                region = if (region.id == "china") "china_mainland" else region.id,
+                baseUrl = region.baseUrl,
+            )
+        persistTranslation()
+    }
+
     fun setLanguages(values: List<String>) {
         languages.clear()
         languages.addAll(
