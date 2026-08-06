@@ -45,6 +45,13 @@ class AppState {
             loadStoredAlwaysInterpretationDelayMillis().takeIf { it in 500..10_000 } ?: 2_000
         )
         private set
+    var interpretationKeepScreenOn by mutableStateOf(loadStoredInterpretationKeepScreenOn())
+        private set
+
+    fun updateInterpretationKeepScreenOn(enabled: Boolean) {
+        interpretationKeepScreenOn = enabled
+        saveStoredInterpretationKeepScreenOn(enabled)
+    }
 
     var activeAddress by
         mutableStateOf(

@@ -177,6 +177,14 @@ actual fun saveStoredAlwaysInterpretationDelayMillis(value: Int) {
     defaults.setInteger(value.toLong(), forKey = "alwaysInterpretationDelayMillis")
 }
 
+actual fun loadStoredInterpretationKeepScreenOn(): Boolean =
+    if (defaults.objectForKey("interpretationKeepScreenOn") == null) true
+    else defaults.boolForKey("interpretationKeepScreenOn")
+
+actual fun saveStoredInterpretationKeepScreenOn(value: Boolean) {
+    defaults.setBool(value, forKey = "interpretationKeepScreenOn")
+}
+
 @OptIn(ExperimentalForeignApi::class)
 private fun keychainQuery() =
     mutableDictionary()?.also { query ->

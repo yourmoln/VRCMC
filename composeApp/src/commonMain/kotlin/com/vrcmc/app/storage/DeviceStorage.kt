@@ -30,6 +30,10 @@ expect fun loadStoredAlwaysInterpretationDelayMillis(): Int
 
 expect fun saveStoredAlwaysInterpretationDelayMillis(value: Int)
 
+expect fun loadStoredInterpretationKeepScreenOn(): Boolean
+
+expect fun saveStoredInterpretationKeepScreenOn(value: Boolean)
+
 expect fun loadStoredErrorLogs(): String
 
 expect fun saveStoredErrorLogs(value: String)

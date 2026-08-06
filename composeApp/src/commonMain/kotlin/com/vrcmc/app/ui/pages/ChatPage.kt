@@ -64,6 +64,11 @@ fun ChatPage(state: AppState, strings: LocaleStrings) {
     val clipboard = LocalClipboardManager.current
     val liveOriginalUpdates = remember { Channel<LiveOscAction>(Channel.UNLIMITED) }
     val timestampVisibility = chatTimestampVisibility(messages.map(ChatMessage::timestamp))
+    KeepScreenAwake(
+        state.interpretationKeepScreenOn &&
+            (state.isSimultaneousInterpretationActive || state.isAlwaysInterpretationActive ||
+                voiceRecording || voiceTranscribing)
+    )
 
     DisposableEffect(audioRecorder) {
         onDispose {

@@ -63,6 +63,27 @@ internal fun SimultaneousInterpretationPage(state: AppState, strings: LocaleStri
                 verticalAlignment = Alignment.CenterVertically,
             ) {
                 Column(Modifier.weight(1f)) {
+                    Text(strings.keepScreenOn, style = MaterialTheme.typography.titleMedium)
+                    Spacer(Modifier.height(2.dp))
+                    Text(
+                        strings.keepScreenOnHint,
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                }
+                Spacer(Modifier.width(12.dp))
+                Switch(
+                    checked = state.interpretationKeepScreenOn,
+                    onCheckedChange = state::updateInterpretationKeepScreenOn,
+                )
+            }
+        }
+        item {
+            Row(
+                modifier = Modifier.fillMaxWidth().padding(horizontal = 4.dp),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Column(Modifier.weight(1f)) {
                     Text(strings.interpretationVoiceInput, style = MaterialTheme.typography.titleMedium)
                     Spacer(Modifier.height(2.dp))
                     Text(

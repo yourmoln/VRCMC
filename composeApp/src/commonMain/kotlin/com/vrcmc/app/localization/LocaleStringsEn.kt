@@ -164,6 +164,8 @@ object LocaleStringsEn : LocaleStrings {
     override val alwaysInterpretationDelay = "Automatic send delay"
     override val alwaysInterpretationDelayHint =
         "Send after this much time without another input event"
+    override val keepScreenOn = "Keep screen on"
+    override val keepScreenOnHint = "Keep the screen awake while interpretation is running"
 
     override fun seconds(value: String) = "$value seconds"
 

@@ -148,6 +148,9 @@ interface LocaleStrings {
     val alwaysInterpretationDelay: String
     val alwaysInterpretationDelayHint: String
 
+    val keepScreenOn: String get() = "防止熄屏"
+    val keepScreenOnHint: String get() = "传译运行期间保持屏幕常亮"
+
     fun seconds(value: String): String
 
     val aboutApp: String

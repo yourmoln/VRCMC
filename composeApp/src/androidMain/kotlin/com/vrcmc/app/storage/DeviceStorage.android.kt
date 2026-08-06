@@ -110,6 +110,13 @@ actual fun saveStoredAlwaysInterpretationDelayMillis(value: Int) {
     prefs()?.edit { putInt("alwaysInterpretationDelayMillis", value) }
 }
 
+actual fun loadStoredInterpretationKeepScreenOn(): Boolean =
+    prefs()?.getBoolean("interpretationKeepScreenOn", true) ?: true
+
+actual fun saveStoredInterpretationKeepScreenOn(value: Boolean) {
+    prefs()?.edit { putBoolean("interpretationKeepScreenOn", value) }
+}
+
 private const val secretKeyAlias = "vrcmc.translation.secrets"
 
 private fun getOrCreateSecretKey(): SecretKey {

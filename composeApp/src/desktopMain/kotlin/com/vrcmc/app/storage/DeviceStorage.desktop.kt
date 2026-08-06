@@ -117,6 +117,13 @@ actual fun saveStoredAlwaysInterpretationDelayMillis(value: Int) {
     prefs.putInt("alwaysInterpretationDelayMillis", value)
 }
 
+actual fun loadStoredInterpretationKeepScreenOn(): Boolean =
+    prefs.getBoolean("interpretationKeepScreenOn", true)
+
+actual fun saveStoredInterpretationKeepScreenOn(value: Boolean) {
+    prefs.putBoolean("interpretationKeepScreenOn", value)
+}
+
 private fun readText(path: Path): String =
     runCatching { Files.readString(path, StandardCharsets.UTF_8) }.getOrDefault("")
 
