@@ -13,6 +13,7 @@ data class StoredTranslationSettings(
     val configs: Map<String, ProviderConfig> = emptyMap(),
     val voiceInput: VoiceInputConfig = VoiceInputConfig(),
     val interpretationVoiceInputEnabled: Boolean = false,
+    val disableDynamicInputLimit: Boolean = false,
 )
 
 data class VoiceInputConfig(
@@ -77,6 +78,7 @@ fun StoredTranslationSettings.toJson(): String =
                 put("timeout", voiceInput.timeoutSeconds)
             }
             put("interpretationVoiceInputEnabled", interpretationVoiceInputEnabled)
+            put("disableDynamicInputLimit", disableDynamicInputLimit)
         }
         .toString()
 
@@ -199,6 +201,8 @@ fun storedTranslationSettingsFromJson(value: String): StoredTranslationSettings 
                     } ?: VoiceInputConfig(),
                 interpretationVoiceInputEnabled =
                     root["interpretationVoiceInputEnabled"]?.jsonPrimitive?.booleanOrNull ?: false,
+                disableDynamicInputLimit =
+                    root["disableDynamicInputLimit"]?.jsonPrimitive?.booleanOrNull ?: false,
             )
         }
         .getOrDefault(StoredTranslationSettings())

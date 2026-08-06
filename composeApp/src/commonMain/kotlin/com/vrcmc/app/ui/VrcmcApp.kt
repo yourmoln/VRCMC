@@ -118,6 +118,8 @@ fun VrcmcApp() {
                                         strings,
                                         { theme = it },
                                         { language = it },
+                                        state.disableDynamicInputLimit,
+                                        state::updateDisableDynamicInputLimit,
                                     )
                                 AppScreen.ABOUT ->
                                     AboutPage(state, strings) { screen = AppScreen.ERROR_LOGS }

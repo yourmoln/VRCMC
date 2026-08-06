@@ -28,6 +28,7 @@ interface LocaleStrings {
     val done: String
     val theme: String
     val preferences: String
+    val disableDynamicInputLimit: String get() = "Disable dynamic input limit"
     val chatbox: String
     val addDevice: String
     val activeDevice: String

@@ -13,6 +13,7 @@ object LocaleStringsZhHant : LocaleStrings {
     override val done = "完成"
     override val theme = "主題"
     override val preferences = "偏好設定"
+    override val disableDynamicInputLimit = "關閉輸入框動態上限"
     override val chatbox = "Chatbox 訊息"
     override val addDevice = "新增裝置"
     override val activeDevice = "目前裝置"

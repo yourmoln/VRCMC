@@ -64,6 +64,7 @@ class AppState {
                 ?: "deepseek"
         )
     var translate by mutableStateOf(storedTranslation.translate)
+    var disableDynamicInputLimit by mutableStateOf(storedTranslation.disableDynamicInputLimit)
     var sendOriginalBeforeTranslation by
         mutableStateOf(storedTranslation.sendOriginalBeforeTranslation)
         private set
@@ -141,6 +142,11 @@ class AppState {
         persistTranslation()
     }
 
+    fun updateDisableDynamicInputLimit(enabled: Boolean) {
+        disableDynamicInputLimit = enabled
+        persistTranslation()
+    }
+
     fun updateSendOriginalBeforeTranslation(enabled: Boolean) {
         sendOriginalBeforeTranslation = enabled
         persistTranslation()
@@ -176,6 +182,7 @@ class AppState {
                     configs = providerConfigs.toMap(),
                     voiceInput = voiceInputConfig.copy(apiKey = ""),
                     interpretationVoiceInputEnabled = interpretationVoiceInputEnabled,
+                    disableDynamicInputLimit = disableDynamicInputLimit,
                 )
                 .toJson()
         )

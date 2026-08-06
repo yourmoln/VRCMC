@@ -20,6 +20,8 @@ internal fun PreferencesPage(
     strings: LocaleStrings,
     setTheme: (ThemeMode) -> Unit,
     setLanguage: (AppLanguage) -> Unit,
+    disableDynamicInputLimit: Boolean,
+    setDisableDynamicInputLimit: (Boolean) -> Unit,
 ) {
     var expanded by remember { mutableStateOf(false) }
     val modes = ThemeMode.values()
@@ -99,6 +101,21 @@ internal fun PreferencesPage(
                                 )
                             }
                         }
+                    }
+                    HorizontalDivider()
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        verticalAlignment = Alignment.CenterVertically,
+                    ) {
+                        Text(
+                            strings.disableDynamicInputLimit,
+                            modifier = Modifier.weight(1f),
+                            style = MaterialTheme.typography.labelLarge,
+                        )
+                        Switch(
+                            checked = disableDynamicInputLimit,
+                            onCheckedChange = setDisableDynamicInputLimit,
+                        )
                     }
                 }
             }

@@ -3,9 +3,14 @@ package com.vrcmc.app
 internal const val maxChatboxCharacters = 144
 internal const val maxChatboxLines = 9
 
-internal fun isValidChatboxText(text: String): Boolean =
+internal fun chatboxInputCharacterLimit(translationEnabled: Boolean, translationLanguageCount: Int): Int {
+    val outputParts = if (translationEnabled) translationLanguageCount.coerceIn(1, 2) + 1 else 1
+    return maxChatboxCharacters / outputParts
+}
+
+internal fun isValidChatboxText(text: String, maxCharacters: Int = maxChatboxCharacters): Boolean =
     text.isNotBlank() &&
-        text.length <= maxChatboxCharacters &&
+        text.length <= maxCharacters &&
         text.lineSequence().count() <= maxChatboxLines
 
 internal fun chatboxPacket(text: String): ByteArray {

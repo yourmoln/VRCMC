@@ -1,6 +1,7 @@
 package com.vrcmc.app
 
 import kotlin.test.Test
+import kotlin.test.assertEquals
 import kotlin.test.assertFalse
 import kotlin.test.assertTrue
 
@@ -16,5 +17,12 @@ class OscValidationTest {
         assertFalse(isValidChatboxText("x".repeat(maxChatboxCharacters + 1)))
         assertFalse(isValidChatboxText((1..maxChatboxLines + 1).joinToString("\n") { "line" }))
         assertFalse(isValidChatboxText(""))
+    }
+
+    @Test
+    fun inputLimitAccountsForTranslationOutputs() {
+        assertEquals(144, chatboxInputCharacterLimit(false, 2))
+        assertEquals(72, chatboxInputCharacterLimit(true, 1))
+        assertEquals(48, chatboxInputCharacterLimit(true, 2))
     }
 }

@@ -44,6 +44,7 @@ internal fun ChatComposer(
     voiceRecording: Boolean,
     voiceSpeaking: Boolean,
     voiceTranscribing: Boolean,
+    maxInputCharacters: Int,
     strings: LocaleStrings,
     onInputChange: (String) -> Unit,
     onSend: () -> Unit,
@@ -138,7 +139,7 @@ internal fun ChatComposer(
                 }
                 BasicTextField(
                     value = input,
-                    onValueChange = onInputChange,
+                    onValueChange = { onInputChange(it.take(maxInputCharacters)) },
                     modifier =
                         Modifier.weight(1f)
                             .focusRequester(focusRequester)

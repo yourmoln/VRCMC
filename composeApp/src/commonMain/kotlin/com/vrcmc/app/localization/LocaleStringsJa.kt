@@ -13,6 +13,7 @@ object LocaleStringsJa : LocaleStrings {
     override val done = "完了"
     override val theme = "テーマ"
     override val preferences = "環境設定"
+    override val disableDynamicInputLimit = "入力欄の動的な文字数制限を無効化"
     override val chatbox = "Chatbox メッセージ"
     override val addDevice = "デバイスを追加"
     override val activeDevice = "使用中のデバイス"

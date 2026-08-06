@@ -58,11 +58,19 @@ fun ChatPage(state: AppState, strings: LocaleStrings) {
     val listState =
         rememberLazyListState(initialFirstVisibleItemIndex = messages.lastIndex.coerceAtLeast(0))
     val active = state.activeDevice()
+    val maxInputCharacters =
+        if (state.disableDynamicInputLimit) maxChatboxCharacters
+        else chatboxInputCharacterLimit(state.translate, state.languages.size)
     val now = currentTimeMillis()
     val imeBottom = WindowInsets.ime.getBottom(LocalDensity.current)
     val clipboard = LocalClipboard.current
     val liveOriginalUpdates = remember { Channel<LiveOscAction>(Channel.UNLIMITED) }
     val timestampVisibility = chatTimestampVisibility(messages.map(ChatMessage::timestamp))
+    LaunchedEffect(maxInputCharacters) {
+        if (state.chatDraft.length > maxInputCharacters) {
+            state.chatDraft = state.chatDraft.take(maxInputCharacters)
+        }
+    }
     KeepScreenAwake(
         state.interpretationKeepScreenOn &&
             (state.isSimultaneousInterpretationActive || state.isAlwaysInterpretationActive ||
@@ -85,6 +93,7 @@ fun ChatPage(state: AppState, strings: LocaleStrings) {
     fun applyVoiceText(text: String) {
         state.chatDraft =
             listOf(voiceBaseDraft, text).filter(String::isNotBlank).joinToString(" ")
+                .take(maxInputCharacters)
     }
 
     fun submitPartialRecognition(wav: ByteArray) {
@@ -318,7 +327,7 @@ fun ChatPage(state: AppState, strings: LocaleStrings) {
         val original = rawText.trim()
         val target = state.activeDevice() ?: return
         cancelActiveTranslation()
-        if (!isValidChatboxText(original)) {
+        if (!isValidChatboxText(original, maxInputCharacters)) {
             error = strings.messageTooLong
             return
         }
@@ -620,15 +629,16 @@ fun ChatPage(state: AppState, strings: LocaleStrings) {
             voiceRecording = voiceRecording,
             voiceSpeaking = voiceSpeaking,
             voiceTranscribing = voiceTranscribing,
+            maxInputCharacters = maxInputCharacters,
             strings = strings,
             onInputChange = {
-                state.chatDraft = it
+                state.chatDraft = it.take(maxInputCharacters)
                 error = null
                 val original = it.trim()
                 if (
                     state.isSimultaneousInterpretationActive &&
                         active != null &&
-                        isValidChatboxText(original)
+                        isValidChatboxText(original, maxInputCharacters)
                 ) {
                     liveOriginalUpdates.trySend(LiveOriginalUpdate(active, original))
                 }
