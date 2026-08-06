@@ -113,7 +113,7 @@ object LocaleStringsJa : LocaleStrings {
     override val retryCount = "再試行回数"
     override val retryCountHint = "有効な翻訳が返らない場合に 0～10 回再試行します"
     override val disableMaxTokens = "max_tokens を無効化"
-    override val disableMaxTokensHint = "OpenAI 互換リクエストから max_tokens 制限を省略します"
+    override val disableMaxTokensHint = "モデルが何度も再試行する場合は無効にします"
     override val customHeaders = "カスタムリクエストヘッダー"
     override val customHeadersHint =
         "1 行につき 1 つの Name: value ヘッダーを入力します。内容は現在のプロバイダー設定とともに安全に保存されます"

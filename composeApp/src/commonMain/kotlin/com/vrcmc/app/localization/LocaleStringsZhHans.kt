@@ -135,7 +135,7 @@ object LocaleStringsZhHans : LocaleStrings {
     override val retryCount = "重试次数"
     override val retryCountHint = "未返回可用翻译时重试 0–10 次"
     override val disableMaxTokens = "关闭 max_tokens"
-    override val disableMaxTokensHint = "从 OpenAI 兼容请求中省略 max_tokens 限制"
+    override val disableMaxTokensHint = "如果模型多次重试则关闭"
     override val customHeaders = "自定义请求头"
     override val customHeadersHint = "每行填写一个 Name: value；内容随当前服务商配置一同保存"
     override val streamingResponse = "流式响应"
