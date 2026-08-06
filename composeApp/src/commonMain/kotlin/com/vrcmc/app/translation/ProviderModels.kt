@@ -42,4 +42,5 @@ data class ProviderConfig(
     val fallbackModel: String = "",
     val fallbackRetryCount: Int = 3,
     val fallbackEnabled: Boolean = false,
+    val disableMaxTokens: Boolean = false,
 )

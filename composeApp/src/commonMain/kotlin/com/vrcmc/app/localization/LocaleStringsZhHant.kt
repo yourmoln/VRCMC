@@ -109,6 +109,8 @@ object LocaleStringsZhHant : LocaleStrings {
     override val sendOriginalBeforeTranslationHint = "翻譯期間先在 VRChat 中顯示原文"
     override val retryCount = "重試次數"
     override val retryCountHint = "未傳回可用譯文時重試 0–10 次"
+    override val disableMaxTokens = "關閉 max_tokens"
+    override val disableMaxTokensHint = "從 OpenAI 相容要求中省略 max_tokens 限制"
     override val customHeaders = "自訂要求標頭"
     override val customHeadersHint = "每行輸入一個 Name: value 標頭；內容會和目前的服務供應商設定一起安全儲存"
     override val streamingResponse = "串流回應"

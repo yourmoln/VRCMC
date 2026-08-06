@@ -148,6 +148,16 @@ class TranslationProviderTest {
     }
 
     @Test
+    fun disableMaxTokensSettingRoundTrips() {
+        val value =
+            StoredTranslationSettings(
+                configs = mapOf("openai" to ProviderConfig(disableMaxTokens = true))
+            )
+
+        assertTrue(storedTranslationSettingsFromJson(value.toJson()).configs.getValue("openai").disableMaxTokens)
+    }
+
+    @Test
     fun deepSeekDefaultsToDisabledProFallback() {
         val config = defaultProviderConfig(providerById("deepseek"))
         assertEquals("deepseek-v4-pro", config.fallbackModel)

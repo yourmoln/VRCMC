@@ -24,7 +24,7 @@ internal suspend fun requestOpenAi(
     val body = buildJsonObject {
         put("model", config.model.trim())
         put("temperature", 0.2)
-        put("max_tokens", maxTokens)
+        if (!config.disableMaxTokens) put("max_tokens", maxTokens)
         put("stream", config.streaming)
         putJsonArray("messages") {
             addJsonObject {

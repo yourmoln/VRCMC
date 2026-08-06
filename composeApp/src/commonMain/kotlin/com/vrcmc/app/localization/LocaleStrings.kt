@@ -108,6 +108,8 @@ interface LocaleStrings {
     val sendOriginalBeforeTranslationHint: String
     val retryCount: String
     val retryCountHint: String
+    val disableMaxTokens: String
+    val disableMaxTokensHint: String
     val customHeaders: String
     val customHeadersHint: String
     val streamingResponse: String
