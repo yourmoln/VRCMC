@@ -18,6 +18,8 @@ class AppState {
     var chatDraft by mutableStateOf("")
     var voiceInputConfig by mutableStateOf(storedVoiceInput)
         private set
+    var interpretationVoiceInputEnabled by mutableStateOf(storedTranslation.interpretationVoiceInputEnabled)
+        private set
     var simultaneousInterpretationEnabled by
         mutableStateOf(loadStoredSimultaneousInterpretationEnabled())
         private set
@@ -136,9 +138,15 @@ class AppState {
                     outputOrder = outputOrder.toList(),
                     configs = providerConfigs.toMap(),
                     voiceInput = voiceInputConfig.copy(apiKey = ""),
+                    interpretationVoiceInputEnabled = interpretationVoiceInputEnabled,
                 )
                 .toJson()
         )
+    }
+
+    fun updateInterpretationVoiceInputEnabled(enabled: Boolean) {
+        interpretationVoiceInputEnabled = enabled
+        persistTranslation()
     }
 
     fun persist() = saveStoredDevices(devices.toList(), activeAddress)

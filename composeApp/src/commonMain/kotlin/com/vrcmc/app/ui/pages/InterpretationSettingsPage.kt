@@ -58,6 +58,27 @@ internal fun SimultaneousInterpretationPage(state: AppState, strings: LocaleStri
             }
         }
         item {
+            Row(
+                modifier = Modifier.fillMaxWidth().padding(horizontal = 4.dp),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Column(Modifier.weight(1f)) {
+                    Text(strings.interpretationVoiceInput, style = MaterialTheme.typography.titleMedium)
+                    Spacer(Modifier.height(2.dp))
+                    Text(
+                        strings.interpretationVoiceInputHint,
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                }
+                Spacer(Modifier.width(12.dp))
+                Switch(
+                    checked = state.interpretationVoiceInputEnabled,
+                    onCheckedChange = state::updateInterpretationVoiceInputEnabled,
+                )
+            }
+        }
+        item {
             Surface(
                 modifier = Modifier.fillMaxWidth(),
                 shape = RoundedCornerShape(8.dp),

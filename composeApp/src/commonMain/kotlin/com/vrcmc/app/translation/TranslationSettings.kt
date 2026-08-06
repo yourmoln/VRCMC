@@ -11,6 +11,7 @@ data class StoredTranslationSettings(
     val outputOrder: List<String> = targetLanguages + originalOutputKey,
     val configs: Map<String, ProviderConfig> = emptyMap(),
     val voiceInput: VoiceInputConfig = VoiceInputConfig(),
+    val interpretationVoiceInputEnabled: Boolean = false,
 )
 
 data class VoiceInputConfig(
@@ -73,6 +74,7 @@ fun StoredTranslationSettings.toJson(): String =
                 put("partialMinSpeechMillis", voiceInput.partialMinSpeechMillis)
                 put("timeout", voiceInput.timeoutSeconds)
             }
+            put("interpretationVoiceInputEnabled", interpretationVoiceInputEnabled)
         }
         .toString()
 
@@ -191,6 +193,8 @@ fun storedTranslationSettingsFromJson(value: String): StoredTranslationSettings 
                                 .coerceIn(3, 120),
                         )
                     } ?: VoiceInputConfig(),
+                interpretationVoiceInputEnabled =
+                    root["interpretationVoiceInputEnabled"]?.jsonPrimitive?.booleanOrNull ?: false,
             )
         }
         .getOrDefault(StoredTranslationSettings())

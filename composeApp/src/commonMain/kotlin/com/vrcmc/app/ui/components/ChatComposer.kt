@@ -193,16 +193,6 @@ internal fun ChatComposer(
                     }
                 }
             }
-            if (voiceRecording) {
-                Text(
-                    if (voiceSpeaking) strings.voiceSpeechDetected else strings.voiceWaitingForSpeech,
-                    modifier = Modifier.padding(start = 12.dp, end = 12.dp, bottom = 8.dp),
-                    style = MaterialTheme.typography.labelSmall,
-                    color =
-                        if (voiceSpeaking) MaterialTheme.colorScheme.primary
-                        else MaterialTheme.colorScheme.onSurfaceVariant,
-                )
-            }
         }
     }
 }

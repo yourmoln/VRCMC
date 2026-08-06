@@ -10,13 +10,15 @@ internal class VoiceCaptureProcessor(
     private val onFinal: (ByteArray) -> Unit,
     private val onNoSpeech: () -> Unit,
     private val onAutoStop: () -> Unit,
+    private val stopOnSilence: Boolean = true,
 ) {
     private val sampleRate = config.sampleRate
     private val frameDurationMillis = 30
     private val frameBytes = (sampleRate * frameDurationMillis / 1_000) * 2
     private val activationFrameCount = max(1, config.vadActivationMillis / frameDurationMillis)
     private val silenceFrameCount = max(1, config.tailSilenceMillis / frameDurationMillis)
-    private val preRollFrameCount = max(1, 300 / frameDurationMillis)
+    // Keep a longer lead-in so the first syllable is retained while VAD activates.
+    private val preRollFrameCount = max(1, 600 / frameDurationMillis)
     private val minimumSpeechSamples = sampleRate * config.partialMinSpeechMillis / 1_000
     private val partialIntervalFrames = max(1, config.partialIntervalMillis / frameDurationMillis)
     private val maxSegmentFrames = max(1, config.maxSegmentSeconds * 1_000 / frameDurationMillis)
@@ -97,7 +99,9 @@ internal class VoiceCaptureProcessor(
             onPartial(currentWav())
         }
 
-        if (trailingSilenceFrames >= silenceFrameCount || segment.size >= maxSegmentFrames) {
+        if (stopOnSilence &&
+            (trailingSilenceFrames >= silenceFrameCount || segment.size >= maxSegmentFrames)
+        ) {
             finalizeSpeech(autoStop = true)
         }
     }

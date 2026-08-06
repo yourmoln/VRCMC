@@ -48,6 +48,10 @@ fun ChatPage(state: AppState, strings: LocaleStrings) {
     var voiceRequestConfig by remember { mutableStateOf<VoiceInputConfig?>(null) }
     var activeVoiceRequestJob by remember { mutableStateOf<Job?>(null) }
     var pendingPartialAudio by remember { mutableStateOf<ByteArray?>(null) }
+    var managedVoiceCapture by remember { mutableStateOf(false) }
+    var pendingSimultaneousVoiceSend by remember { mutableStateOf(false) }
+    var pendingManagedSendText by remember { mutableStateOf<String?>(null) }
+    var managedVoiceRestartToken by remember { mutableIntStateOf(0) }
     val streamingMerger = remember { StreamingTextMerger() }
     val audioRecorder = remember { createAudioRecorder() }
     val scope = rememberCoroutineScope()
@@ -90,7 +94,9 @@ fun ChatPage(state: AppState, strings: LocaleStrings) {
             when (val result = transcribeQwenAudio(config, audio, state::addErrorLog)) {
                 is VoiceTranscriptionResult.Success ->
                     if (generation == voiceGeneration) {
-                        applyVoiceText(streamingMerger.ingestPartial(result.text))
+                        if (!managedVoiceCapture) {
+                            applyVoiceText(streamingMerger.ingestPartial(result.text))
+                        }
                         error = null
                     }
                 is VoiceTranscriptionResult.Failure -> Unit
@@ -110,18 +116,34 @@ fun ChatPage(state: AppState, strings: LocaleStrings) {
             when (val result = transcribeQwenAudio(config, wav, state::addErrorLog)) {
                 is VoiceTranscriptionResult.Success ->
                     if (generation == voiceGeneration) {
-                        applyVoiceText(streamingMerger.ingestFinal(result.text))
+                        val finalText = streamingMerger.ingestFinal(result.text)
+                        applyVoiceText(finalText)
                         error = null
+                        if (pendingSimultaneousVoiceSend) {
+                            pendingSimultaneousVoiceSend = false
+                            pendingManagedSendText = finalText
+                        } else if (managedVoiceCapture && state.isAlwaysInterpretationActive) {
+                            pendingManagedSendText = finalText
+                        }
                     }
                 is VoiceTranscriptionResult.Failure ->
-                    if (generation == voiceGeneration) error = result.message
+                    if (generation == voiceGeneration) {
+                        error = result.message
+                        if (
+                            managedVoiceCapture &&
+                                (state.isAlwaysInterpretationActive ||
+                                    state.isSimultaneousInterpretationActive)
+                        ) {
+                            managedVoiceRestartToken++
+                        }
+                    }
             }
             if (generation == voiceGeneration) voiceTranscribing = false
             activeVoiceRequestJob = null
         }
     }
 
-    fun startVoiceInput() {
+    fun startVoiceInput(stopOnSilence: Boolean = true, managed: Boolean = false) {
         val config = state.voiceInputConfig
         if (config.apiKey.isBlank()) {
             error = "请先在 API 配置中填写 Qwen API Key"
@@ -132,6 +154,7 @@ fun ChatPage(state: AppState, strings: LocaleStrings) {
         pendingPartialAudio = null
         voiceBaseDraft = state.chatDraft.trimEnd()
         voiceRequestConfig = config
+        managedVoiceCapture = managed
         streamingMerger.reset()
         error = null
         voiceRecording = true
@@ -166,11 +189,20 @@ fun ChatPage(state: AppState, strings: LocaleStrings) {
                             voiceRecording = false
                             voiceSpeaking = false
                             voiceTranscribing = false
+                            if (
+                                managedVoiceCapture &&
+                                    (state.isAlwaysInterpretationActive ||
+                                        state.isSimultaneousInterpretationActive)
+                            ) {
+                                error = null
+                                managedVoiceRestartToken++
+                            }
                             error = "未检测到有效语音"
                         }
                     }
                 },
                 onAutoStop = audioRecorder::stop,
+                stopOnSilence = stopOnSilence,
             )
         audioRecorder.start(
             sampleRate = config.sampleRate,
@@ -198,6 +230,65 @@ fun ChatPage(state: AppState, strings: LocaleStrings) {
             return
         }
         if (requestAudioPermissionIfNeeded(::startVoiceInput)) startVoiceInput()
+    }
+
+    fun stopManagedAlwaysCapture() {
+        if (!managedVoiceCapture) return
+        voiceGeneration++
+        activeVoiceRequestJob?.cancel()
+        activeVoiceRequestJob = null
+        pendingPartialAudio = null
+        pendingManagedSendText = null
+        audioRecorder.stop()
+        voiceRecording = false
+        voiceSpeaking = false
+        voiceTranscribing = false
+        managedVoiceCapture = false
+    }
+
+    LaunchedEffect(managedVoiceRestartToken) {
+        if (managedVoiceRestartToken == 0) return@LaunchedEffect
+        while (voiceRecording || voiceTranscribing) delay(50)
+        delay(120)
+        if (
+            (state.isAlwaysInterpretationActive || state.isSimultaneousInterpretationActive) &&
+                state.interpretationVoiceInputEnabled &&
+                managedVoiceCapture &&
+                !voiceRecording &&
+                !voiceTranscribing
+        ) {
+            startVoiceInput(
+                stopOnSilence = !state.isSimultaneousInterpretationActive,
+                managed = true,
+            )
+        }
+    }
+
+    LaunchedEffect(state.isSimultaneousInterpretationActive, state.interpretationVoiceInputEnabled) {
+        if (state.isSimultaneousInterpretationActive && state.interpretationVoiceInputEnabled) {
+            if (!voiceRecording && !voiceTranscribing) {
+                if (requestAudioPermissionIfNeeded { startVoiceInput(stopOnSilence = false, managed = true) }) {
+                    startVoiceInput(stopOnSilence = false, managed = true)
+                }
+            }
+        } else if (managedVoiceCapture && voiceRecording && !state.isAlwaysInterpretationActive) {
+            audioRecorder.stop()
+        }
+    }
+
+    LaunchedEffect(state.isAlwaysInterpretationActive, state.interpretationVoiceInputEnabled) {
+        if (
+            state.isAlwaysInterpretationActive &&
+                state.interpretationVoiceInputEnabled &&
+                !voiceRecording &&
+                !voiceTranscribing
+        ) {
+            if (requestAudioPermissionIfNeeded { startVoiceInput(stopOnSilence = true, managed = true) }) {
+                startVoiceInput(stopOnSilence = true, managed = true)
+            }
+        } else if (managedVoiceCapture && voiceRecording && !state.isSimultaneousInterpretationActive) {
+            audioRecorder.stop()
+        }
     }
 
     fun removeLoadingMessages(messages: List<ChatMessage>) {
@@ -349,6 +440,19 @@ fun ChatPage(state: AppState, strings: LocaleStrings) {
         job.start()
     }
 
+    LaunchedEffect(pendingManagedSendText) {
+        val text = pendingManagedSendText ?: return@LaunchedEffect
+        if (text.isNotBlank()) sendMessage(text, clearDraft = true)
+        if (state.isAlwaysInterpretationActive && managedVoiceCapture) {
+            while (voiceRecording || voiceTranscribing) delay(50)
+            delay(120)
+            if (state.isAlwaysInterpretationActive && managedVoiceCapture && !voiceRecording) {
+                startVoiceInput(stopOnSilence = true, managed = true)
+            }
+        }
+        pendingManagedSendText = null
+    }
+
     LaunchedEffect(liveOriginalUpdates) {
         for (action in liveOriginalUpdates) {
             when (action) {
@@ -371,8 +475,13 @@ fun ChatPage(state: AppState, strings: LocaleStrings) {
 
     LaunchedEffect(state.simultaneousFinalPending) {
         if (state.simultaneousFinalPending) {
-            val finalText = state.chatDraft
             state.consumeSimultaneousFinalRequest()
+            if (managedVoiceCapture) {
+                pendingSimultaneousVoiceSend = true
+                audioRecorder.stop()
+                return@LaunchedEffect
+            }
+            val finalText = state.chatDraft
             val barrier = CompletableDeferred<Unit>()
             liveOriginalUpdates.send(LiveOscBarrier(barrier))
             barrier.await()
@@ -387,9 +496,19 @@ fun ChatPage(state: AppState, strings: LocaleStrings) {
         sending,
     ) {
         val pendingText = state.chatDraft
-        if (state.isAlwaysInterpretationActive && !sending && pendingText.isNotBlank()) {
+        if (
+            state.isAlwaysInterpretationActive &&
+                !managedVoiceCapture &&
+                !sending &&
+                pendingText.isNotBlank()
+        ) {
             delay(state.alwaysInterpretationDelayMillis.toLong())
-            if (state.isAlwaysInterpretationActive && !sending && state.chatDraft == pendingText) {
+            if (
+                state.isAlwaysInterpretationActive &&
+                    !managedVoiceCapture &&
+                    !sending &&
+                    state.chatDraft == pendingText
+            ) {
                 sendMessage(pendingText, clearDraft = true)
             }
         }
@@ -517,7 +636,11 @@ fun ChatPage(state: AppState, strings: LocaleStrings) {
                     sendMessage(finalText, clearDraft = true)
                 }
             },
-            onToggleAlwaysInterpretation = state::toggleAlwaysInterpretationActive,
+            onToggleAlwaysInterpretation = {
+                val stopping = state.isAlwaysInterpretationActive
+                state.toggleAlwaysInterpretationActive()
+                if (stopping) stopManagedAlwaysCapture()
+            },
             onToggleVoiceInput = ::toggleVoiceInput,
         )
     }
