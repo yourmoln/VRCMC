@@ -23,12 +23,16 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalDrawerSheet
 import androidx.compose.material3.NavigationDrawerItem
+import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.scale
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
 import com.vrcmc.app.generated.resources.Res
 import com.vrcmc.app.generated.resources.logo
@@ -52,6 +56,7 @@ private data class NavigationItem(val screen: AppScreen, val label: String, val 
 @Composable
 internal fun VrcmcNavigationDrawer(
     selectedScreen: AppScreen,
+    state: AppState,
     strings: LocaleStrings,
     onSelect: (AppScreen) -> Unit,
 ) {
@@ -95,6 +100,24 @@ internal fun VrcmcNavigationDrawer(
             )
             Spacer(Modifier.width(12.dp))
             Text("VRCMC", style = MaterialTheme.typography.titleMedium)
+            if (state.isTranslationApiConfigured) {
+                Spacer(Modifier.weight(1f))
+                Icon(
+                    imageVector = Icons.Default.Translate,
+                    contentDescription = null,
+                    modifier = Modifier.size(20.dp),
+                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+                Spacer(Modifier.width(2.dp))
+                Switch(
+                    checked = state.translate,
+                    onCheckedChange = state::updateTranslationEnabled,
+                    modifier =
+                        Modifier.scale(0.75f).semantics {
+                            contentDescription = strings.translateBeforeSending
+                        },
+                )
+            }
         }
         primaryItems.forEach { item -> NavigationItemRow(item, selectedScreen, onSelect) }
         HorizontalDivider(Modifier.padding(vertical = 10.dp))

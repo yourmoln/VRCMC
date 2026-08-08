@@ -24,10 +24,7 @@ internal fun ApiTranslationToggleSection(state: AppState, strings: LocaleStrings
             }
             Switch(
                 checked = state.translate,
-                onCheckedChange = {
-                    state.translate = it
-                    state.persistTranslation()
-                },
+                onCheckedChange = state::updateTranslationEnabled,
             )
         }
     }

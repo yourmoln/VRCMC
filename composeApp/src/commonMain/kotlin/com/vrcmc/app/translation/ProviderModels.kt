@@ -43,3 +43,8 @@ data class ProviderConfig(
     val fallbackRetryCount: Int = 3,
     val fallbackEnabled: Boolean = false,
 )
+
+internal fun TranslationProvider.isConfigured(config: ProviderConfig): Boolean =
+    config.baseUrl.isNotBlank() &&
+        config.model.isNotBlank() &&
+        (!keyRequired || config.apiKey.isNotBlank())

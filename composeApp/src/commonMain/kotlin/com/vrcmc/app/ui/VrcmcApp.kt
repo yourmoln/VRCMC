@@ -63,7 +63,7 @@ fun VrcmcApp() {
         ModalNavigationDrawer(
             drawerState = drawerState,
             drawerContent = {
-                VrcmcNavigationDrawer(screen, strings) { selectedScreen ->
+                VrcmcNavigationDrawer(screen, state, strings) { selectedScreen ->
                     screen = selectedScreen
                     scope.launch { drawerState.close() }
                 }

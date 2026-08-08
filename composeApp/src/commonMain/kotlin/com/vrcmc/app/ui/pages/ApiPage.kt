@@ -75,9 +75,7 @@ fun ApiPage(state: AppState, strings: LocaleStrings) {
                 },
                 enabled =
                     !testing &&
-                        config.baseUrl.isNotBlank() &&
-                        config.model.isNotBlank() &&
-                        (!provider.keyRequired || config.apiKey.isNotBlank()),
+                        provider.isConfigured(config),
                 modifier = Modifier.fillMaxWidth().heightIn(min = 52.dp),
                 shape = MaterialTheme.shapes.large,
             ) {

@@ -86,6 +86,14 @@ class AppState {
     val providerConfig
         get() = providerConfigs[providerId] ?: defaultProviderConfig(provider)
 
+    val isTranslationApiConfigured
+        get() = provider.isConfigured(providerConfig)
+
+    fun updateTranslationEnabled(enabled: Boolean) {
+        translate = enabled
+        persistTranslation()
+    }
+
     fun updateProviderConfig(transform: (ProviderConfig) -> ProviderConfig) {
         providerConfigs[providerId] = transform(providerConfig)
         persistTranslation()

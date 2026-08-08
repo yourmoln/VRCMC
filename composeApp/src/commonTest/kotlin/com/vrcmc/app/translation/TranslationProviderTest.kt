@@ -161,4 +161,23 @@ class TranslationProviderTest {
         assertEquals(3, config.fallbackRetryCount)
         assertFalse(config.fallbackEnabled)
     }
+
+    @Test
+    fun requiredKeyProviderIsConfiguredOnlyWhenKeyIsPresent() {
+        val provider = providerById("deepseek")
+        val config = defaultProviderConfig(provider)
+
+        assertFalse(provider.isConfigured(config))
+        assertTrue(provider.isConfigured(config.copy(apiKey = "secret")))
+    }
+
+    @Test
+    fun keylessProviderIsConfiguredWithEndpointAndModel() {
+        val provider = providerById("local_ai")
+        val config = defaultProviderConfig(provider)
+
+        assertTrue(provider.isConfigured(config))
+        assertFalse(provider.isConfigured(config.copy(baseUrl = "")))
+        assertFalse(provider.isConfigured(config.copy(model = "")))
+    }
 }
