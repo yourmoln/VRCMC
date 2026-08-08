@@ -118,7 +118,11 @@ object LocaleStringsZhHans : LocaleStrings {
     override val selectLanIp = "选择此设备的局域网 IP"
     override val currentLanIp = "此设备的局域网 IP：%s"
     override val lanIpUnavailable = "未找到可用的局域网 IPv4 地址。请先让此设备与运行 VRChat 的电脑连接到同一局域网，然后刷新。"
-    override val localhostOscNote = "如果本软件与 VRChat 在同一台电脑上运行，也可以使用 localhost 或 127.0.0.1 代替检测到的地址。"
+    override val localhostOscNote = "如果本软件与 VRChat 在同一台电脑上运行，请使用 127.0.0.1 代替检测到的地址。"
+    override val oscMenuNote = "请在 VRChat 圆盘菜单中启用 OSC 功能。"
+    override val apiNotConfiguredTranslation = "未配置翻译 API，无法使用翻译。"
+    override val apiNotConfiguredVoiceInput = "未配置语音输入 API，无法使用语音输入。"
+    override val voiceInputServiceRequired = "请先启用语音输入服务。"
     override val remoteOscNote =
         "如果要让 VRChat 向网络上的另一台设备发送数据，中间一项必须填写那台设备的 IP，例如：--osc=9000:192.168.1.42:9001"
     override val clearHistory = "清空聊天记录"

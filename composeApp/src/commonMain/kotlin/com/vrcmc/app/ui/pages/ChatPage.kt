@@ -159,7 +159,7 @@ fun ChatPage(state: AppState, strings: LocaleStrings) {
     fun startVoiceInput(stopOnSilence: Boolean = true, managed: Boolean = false) {
         val config = state.voiceInputConfig
         if (config.apiKey.isBlank()) {
-            error = "请先在 API 配置中填写 Qwen API Key"
+            error = strings.apiNotConfiguredVoiceInput
             return
         }
         val generation = ++voiceGeneration
@@ -332,6 +332,10 @@ fun ChatPage(state: AppState, strings: LocaleStrings) {
             return
         }
         val shouldTranslate = state.translate && !shouldSkipTranslation(original)
+        if (shouldTranslate && !state.isTranslationApiConfigured) {
+            error = strings.apiNotConfiguredTranslation
+            return
+        }
         val targetLanguages = state.languages.toList()
         val outputOrder = state.outputOrder.toList()
         val lineBreakOutput = state.lineBreakOutput

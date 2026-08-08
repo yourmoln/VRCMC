@@ -71,7 +71,11 @@ object LocaleStringsEn : LocaleStrings {
     override val lanIpUnavailable =
         "No usable LAN IPv4 address was found. Connect this device to the same local network as the computer running VRChat, then refresh."
     override val localhostOscNote =
-        "When this app and VRChat run on the same computer, you may use localhost or 127.0.0.1 instead of the detected address."
+        "When this app and VRChat run on the same computer, use 127.0.0.1 instead of the detected address."
+    override val oscMenuNote = "Enable OSC in VRChat's radial menu."
+    override val apiNotConfiguredTranslation = "Translation API is not configured, so translation cannot be used."
+    override val apiNotConfiguredVoiceInput = "Voice input API is not configured, so voice input cannot be used."
+    override val voiceInputServiceRequired = "Enable the voice input service first."
     override val remoteOscNote =
         "For another device on your network, the middle value must be that device's IP, for example: --osc=9000:192.168.1.42:9001"
     override val yesterday = "Yesterday"

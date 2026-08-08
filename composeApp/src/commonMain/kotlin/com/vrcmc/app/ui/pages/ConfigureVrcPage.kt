@@ -204,6 +204,7 @@ fun ConfigureVrcPage(strings: LocaleStrings, modifier: Modifier = Modifier) {
                     Spacer(Modifier.width(10.dp))
                     Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                         Text(strings.localhostOscNote, style = MaterialTheme.typography.bodyMedium)
+                        Text(strings.oscMenuNote, style = MaterialTheme.typography.bodyMedium)
                         Text(strings.remoteOscNote, style = MaterialTheme.typography.bodyMedium)
                     }
                 }

@@ -84,6 +84,7 @@ interface LocaleStrings {
     val lanIpUnavailable: String
     val localhostOscNote: String
     val remoteOscNote: String
+    val oscMenuNote: String get() = "请在 VRChat 圆盘菜单中启用 OSC 功能。"
     val yesterday: String
     val dayBeforeYesterday: String
     val clearHistory: String
@@ -91,6 +92,9 @@ interface LocaleStrings {
     val clearHistoryMessage: String
     val delete: String
     val messageTooLong: String
+    val apiNotConfiguredTranslation: String get() = "未配置翻译 API，无法使用翻译。"
+    val apiNotConfiguredVoiceInput: String get() = "未配置语音输入 API，无法使用语音输入。"
+    val voiceInputServiceRequired: String get() = "请先启用语音输入服务。"
     val translationLlm: String
     val provider: String
     val customCompatible: String

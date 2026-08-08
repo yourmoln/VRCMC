@@ -18,6 +18,7 @@ import kotlin.math.roundToInt
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 internal fun SimultaneousInterpretationPage(state: AppState, strings: LocaleStrings) {
+    var voiceInputNotice by remember { mutableStateOf<String?>(null) }
     val device = state.activeDevice()
     val endpoint = device?.let { "${it.address}:${it.sendPort}" } ?: "-:$defaultVrchatSendPort"
     LazyColumn(
@@ -91,11 +92,30 @@ internal fun SimultaneousInterpretationPage(state: AppState, strings: LocaleStri
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
+                    voiceInputNotice?.let { notice ->
+                        Text(
+                            notice,
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.error,
+                        )
+                    }
                 }
                 Spacer(Modifier.width(12.dp))
                 Switch(
-                    checked = state.interpretationVoiceInputEnabled,
-                    onCheckedChange = state::updateInterpretationVoiceInputEnabled,
+                    checked =
+                        state.interpretationVoiceInputEnabled &&
+                            state.voiceInputConfig.enabled &&
+                            state.voiceInputConfig.apiKey.isNotBlank(),
+                    onCheckedChange = { enabled ->
+                        voiceInputNotice = null
+                        if (enabled && !state.voiceInputConfig.enabled) {
+                            voiceInputNotice = strings.voiceInputServiceRequired
+                        } else if (enabled && state.voiceInputConfig.apiKey.isBlank()) {
+                            voiceInputNotice = strings.apiNotConfiguredVoiceInput
+                        } else {
+                            state.updateInterpretationVoiceInputEnabled(enabled)
+                        }
+                    },
                 )
             }
         }

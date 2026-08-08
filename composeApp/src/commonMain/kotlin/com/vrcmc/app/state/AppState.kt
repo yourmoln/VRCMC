@@ -18,7 +18,10 @@ class AppState {
     var chatDraft by mutableStateOf("")
     var voiceInputConfig by mutableStateOf(storedVoiceInput)
         private set
-    var interpretationVoiceInputEnabled by mutableStateOf(storedTranslation.interpretationVoiceInputEnabled)
+    var interpretationVoiceInputEnabled by mutableStateOf(
+        storedTranslation.interpretationVoiceInputEnabled &&
+            storedVoiceInput.enabled && storedVoiceInput.apiKey.isNotBlank()
+    )
         private set
     var simultaneousInterpretationEnabled by
         mutableStateOf(loadStoredSimultaneousInterpretationEnabled())
@@ -101,6 +104,9 @@ class AppState {
 
     fun updateVoiceInputConfig(transform: (VoiceInputConfig) -> VoiceInputConfig) {
         voiceInputConfig = transform(voiceInputConfig)
+        if (!voiceInputConfig.enabled || voiceInputConfig.apiKey.isBlank()) {
+            interpretationVoiceInputEnabled = false
+        }
         persistTranslation()
     }
 
@@ -197,7 +203,8 @@ class AppState {
     }
 
     fun updateInterpretationVoiceInputEnabled(enabled: Boolean) {
-        interpretationVoiceInputEnabled = enabled
+        interpretationVoiceInputEnabled =
+            enabled && voiceInputConfig.enabled && voiceInputConfig.apiKey.isNotBlank()
         persistTranslation()
     }
 
