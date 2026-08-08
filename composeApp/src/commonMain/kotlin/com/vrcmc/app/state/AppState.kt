@@ -8,7 +8,10 @@ class AppState {
     private val storedSecrets = storedProviderSecretsFromJson(loadStoredTranslationSecrets())
     private val storedVoiceInput =
         storedTranslation.voiceInput.copy(apiKey = storedSecrets["qwen3_asr"]?.apiKey.orEmpty())
-    val devices = mutableStateListOf<Device>().apply { addAll(loadStoredDevices()) }
+    val devices = mutableStateListOf<Device>().apply {
+        addAll(loadStoredDevices())
+        if (isDesktopAudioPlatform() && isEmpty()) add(Device(address = "127.0.0.1"))
+    }
     val messages =
         mutableStateListOf<ChatMessage>().apply {
             addAll(chatHistoryFromJson(loadStoredChatHistory()))

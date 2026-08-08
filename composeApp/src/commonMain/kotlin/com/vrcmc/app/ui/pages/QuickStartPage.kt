@@ -26,6 +26,7 @@ internal fun QuickStartPage(
     strings: LocaleStrings,
     onFinish: () -> Unit,
 ) {
+    val desktop = isDesktopAudioPlatform()
     var currentStep by remember { mutableIntStateOf(1) }
     var qwenConfigured by remember { mutableStateOf(false) }
 
@@ -39,9 +40,9 @@ internal fun QuickStartPage(
                     strings = strings,
                     onConfigured = {
                         qwenConfigured = true
-                        currentStep = 2
+                        if (desktop) onFinish() else currentStep = 2
                     },
-                    onSkip = { currentStep = 2 },
+                    onSkip = { if (desktop) onFinish() else currentStep = 2 },
                 )
             2 -> {
                 if (qwenConfigured) {
@@ -77,7 +78,9 @@ internal fun QuickStartPage(
 
 @Composable
 private fun QuickStartProgress(currentStep: Int, strings: LocaleStrings) {
-    val labels = listOf(strings.quickStartQwen, strings.quickStartVrc, strings.quickStartDevice)
+    val labels =
+        if (isDesktopAudioPlatform()) listOf(strings.quickStartQwen)
+        else listOf(strings.quickStartQwen, strings.quickStartVrc, strings.quickStartDevice)
     Column(
         Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 12.dp),
         verticalArrangement = Arrangement.spacedBy(10.dp),
@@ -85,14 +88,16 @@ private fun QuickStartProgress(currentStep: Int, strings: LocaleStrings) {
         Row(verticalAlignment = Alignment.CenterVertically) {
             Text(strings.quickStart, style = MaterialTheme.typography.titleLarge)
             Spacer(Modifier.weight(1f))
-            Text(
-                strings.stepProgress.replace("%d", currentStep.toString()),
-                style = MaterialTheme.typography.labelLarge,
-                color = MaterialTheme.colorScheme.primary,
-            )
+            if (!isDesktopAudioPlatform()) {
+                Text(
+                    strings.stepProgress.replace("%d", currentStep.toString()),
+                    style = MaterialTheme.typography.labelLarge,
+                    color = MaterialTheme.colorScheme.primary,
+                )
+            }
         }
         LinearProgressIndicator(
-            progress = { currentStep / 3f },
+            progress = { currentStep / labels.size.toFloat() },
             modifier = Modifier.fillMaxWidth(),
         )
         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
