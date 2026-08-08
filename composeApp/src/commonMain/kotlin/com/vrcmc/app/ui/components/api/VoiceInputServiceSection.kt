@@ -165,13 +165,13 @@ internal fun VoiceInputServiceSection(
                 ) {
                     Icon(Icons.Default.Mic, null)
                     Spacer(Modifier.width(8.dp))
-                    Text("麦克风", Modifier.weight(1f))
-                    Text(microphones.firstOrNull { it.id == config.microphoneId }?.name ?: "系统默认麦克风")
+                    Text(strings.microphone, Modifier.weight(1f))
+                    Text(microphones.firstOrNull { it.id == config.microphoneId }?.name ?: strings.systemDefaultMicrophone)
                     Icon(Icons.Default.ArrowDropDown, null)
                 }
                 DropdownMenu(microphoneMenu, { microphoneMenu = false }) {
                     DropdownMenuItem(
-                        text = { Text("系统默认麦克风") },
+                        text = { Text(strings.systemDefaultMicrophone) },
                         leadingIcon = { if (config.microphoneId.isBlank()) Icon(Icons.Default.Check, null) },
                         onClick = { onUpdate { it.copy(microphoneId = "") }; microphoneMenu = false },
                     )

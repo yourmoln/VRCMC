@@ -213,6 +213,9 @@ interface LocaleStrings {
     val voiceWaitingForSpeech: String get() = "正在等待说话…"
     val voiceSpeechDetected: String get() = "检测到语音，正在实时识别…"
 
+    val microphone: String get() = "Microphone"
+    val systemDefaultMicrophone: String get() = "System default microphone"
+
     fun providerHint(provider: TranslationProvider): String
 
     fun providerRegionLabel(providerId: String, region: ProviderRegion): String

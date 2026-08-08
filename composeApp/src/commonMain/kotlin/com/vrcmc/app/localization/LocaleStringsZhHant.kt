@@ -171,6 +171,8 @@ object LocaleStringsZhHant : LocaleStrings {
     override val clearErrorLogs = "清除錯誤記錄"
     override val clearErrorLogsMessage = "要刪除所有已儲存的錯誤記錄嗎？"
     override val voiceInputService = "語音輸入服務"
+    override val microphone = "麥克風"
+    override val systemDefaultMicrophone = "系統預設麥克風"
     override val enableVoiceInput = "啟用語音輸入"
     override val voiceInputHint = "使用 Qwen3-ASR 將錄音轉換為聊天文字"
     override val qwenApiKey = "Qwen API Key"

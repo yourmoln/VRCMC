@@ -175,6 +175,8 @@ object LocaleStringsJa : LocaleStrings {
     override val clearErrorLogs = "エラーログを消去"
     override val clearErrorLogsMessage = "保存されているエラーログをすべて削除しますか？"
     override val voiceInputService = "音声入力サービス"
+    override val microphone = "マイク"
+    override val systemDefaultMicrophone = "システムの既定のマイク"
     override val enableVoiceInput = "音声入力を有効にする"
     override val voiceInputHint = "Qwen3-ASR でマイク録音をチャット文字列に変換します"
     override val qwenApiKey = "Qwen API Key"

@@ -194,6 +194,8 @@ object LocaleStringsEn : LocaleStrings {
     override val clearErrorLogs = "Clear error logs"
     override val clearErrorLogsMessage = "Delete all saved error logs?"
     override val voiceInputService = "Voice input service"
+    override val microphone = "Microphone"
+    override val systemDefaultMicrophone = "System default microphone"
     override val enableVoiceInput = "Enable voice input"
     override val voiceInputHint = "Use Qwen3-ASR to turn microphone recordings into chat text"
     override val qwenApiKey = "Qwen API Key"

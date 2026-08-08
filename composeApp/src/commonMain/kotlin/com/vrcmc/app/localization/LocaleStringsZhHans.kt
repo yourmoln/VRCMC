@@ -37,6 +37,8 @@ object LocaleStringsZhHans : LocaleStrings {
     override val clearErrorLogs = "清空错误日志"
     override val clearErrorLogsMessage = "确认删除全部错误日志吗？"
     override val voiceInputService = "语音输入服务"
+    override val microphone = "麦克风"
+    override val systemDefaultMicrophone = "系统默认麦克风"
     override val enableVoiceInput = "启用语音输入"
     override val voiceInputHint = "使用 Qwen3-ASR 将录音转换为聊天文字"
     override val qwenApiKey = "Qwen API Key"
