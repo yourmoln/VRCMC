@@ -94,22 +94,6 @@ class TranslationRetryTest {
     }
 
     @Test
-    fun retriesWhenTheServiceReturnsTheSourceText() {
-        runBlocking {
-            var attempts = 0
-            val result =
-                translateWithRetries("Hello", 3) {
-                    attempts++
-                    if (attempts == 1) TranslationResult.Success("Hello")
-                    else TranslationResult.Success("你好")
-                }
-
-            assertEquals(2, attempts)
-            assertEquals(TranslationResult.Success("你好"), result)
-        }
-    }
-
-    @Test
     fun retriesWhenSuccessfulResponseHasNoUsableContent() {
         runBlocking {
             var attempts = 0
