@@ -37,3 +37,7 @@ expect fun saveStoredInterpretationKeepScreenOn(value: Boolean)
 expect fun loadStoredErrorLogs(): String
 
 expect fun saveStoredErrorLogs(value: String)
+
+expect fun loadIgnoredUpdateVersion(): String
+
+expect fun saveIgnoredUpdateVersion(value: String)

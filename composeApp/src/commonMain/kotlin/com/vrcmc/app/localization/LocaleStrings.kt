@@ -175,6 +175,15 @@ interface LocaleStrings {
 
     val aboutApp: String
     val version: String
+    val repository: String
+    val checkForUpdates: String
+    val checkingForUpdates: String
+    val alreadyLatestVersion: String
+    val updateCheckFailed: String
+    val updateAvailable: String
+    val updateNow: String
+    val later: String
+    val ignoreThisVersion: String
     val errorLogs: String
     val noErrorLogs: String
     val clearErrorLogs: String

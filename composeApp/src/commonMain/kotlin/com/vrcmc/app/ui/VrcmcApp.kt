@@ -11,6 +11,7 @@ import androidx.compose.ui.ExperimentalComposeUiApi
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.backhandler.BackHandler
 import androidx.compose.ui.platform.LocalFocusManager
+import androidx.compose.ui.platform.LocalUriHandler
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.launch
 
@@ -29,9 +30,11 @@ fun VrcmcApp() {
     var language by remember { mutableStateOf(AppLanguage.ZH_HANS) }
     var showAddDevice by remember { mutableStateOf(false) }
     var showClearHistory by remember { mutableStateOf(false) }
+    var availableUpdate by remember { mutableStateOf<AppRelease?>(null) }
     val drawerState = rememberDrawerState(DrawerValue.Closed)
     val scope = rememberCoroutineScope()
     val focusManager = LocalFocusManager.current
+    val uriHandler = LocalUriHandler.current
     val strings = localeStrings(language)
     val dark =
         when (theme) {
@@ -55,6 +58,17 @@ fun VrcmcApp() {
                 onRetry = { state.simultaneousListenerError = null },
             )
             .collect(state::handleVrchatMuteSelf)
+    }
+
+    LaunchedEffect(Unit) {
+        checkForAppUpdate().onSuccess { result ->
+            if (
+                result.updateAvailable &&
+                    loadIgnoredUpdateVersion() != result.release.tagName
+            ) {
+                availableUpdate = result.release
+            }
+        }
     }
 
     BackHandler(enabled = screen != AppScreen.CHAT) { screen = AppScreen.CHAT }
@@ -129,7 +143,12 @@ fun VrcmcApp() {
                                         state::updateDisableDynamicInputLimit,
                                     )
                                 AppScreen.ABOUT ->
-                                    AboutPage(state, strings) { screen = AppScreen.ERROR_LOGS }
+                                    AboutPage(
+                                        state = state,
+                                        strings = strings,
+                                        onOpenLogs = { screen = AppScreen.ERROR_LOGS },
+                                        onUpdateAvailable = { availableUpdate = it },
+                                    )
                                 AppScreen.ERROR_LOGS -> ErrorLogsPage(state, strings)
                             }
                         }
@@ -159,6 +178,20 @@ fun VrcmcApp() {
                 },
                 dismissButton = {
                     TextButton({ showClearHistory = false }) { Text(strings.cancel) }
+                },
+            )
+        }
+        availableUpdate?.let { release ->
+            AppUpdateDialog(
+                release = release,
+                strings = strings,
+                onUpdate = {
+                    uriHandler.openUri(release.htmlUrl)
+                    availableUpdate = null
+                },
+                onDismiss = { ignoreVersion ->
+                    if (ignoreVersion) saveIgnoredUpdateVersion(release.tagName)
+                    availableUpdate = null
                 },
             )
         }

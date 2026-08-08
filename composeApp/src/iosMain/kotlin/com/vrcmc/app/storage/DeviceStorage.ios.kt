@@ -156,6 +156,19 @@ actual fun saveStoredChatHistory(value: String) {
     defaults.setObject(value, forKey = "chatHistory")
 }
 
+actual fun loadStoredErrorLogs(): String = defaults.stringForKey("errorLogs") ?: ""
+
+actual fun saveStoredErrorLogs(value: String) {
+    defaults.setObject(value, forKey = "errorLogs")
+}
+
+actual fun loadIgnoredUpdateVersion(): String =
+    defaults.stringForKey("ignoredUpdateVersion") ?: ""
+
+actual fun saveIgnoredUpdateVersion(value: String) {
+    defaults.setObject(value, forKey = "ignoredUpdateVersion")
+}
+
 actual fun loadStoredSimultaneousInterpretationEnabled(): Boolean =
     defaults.boolForKey("simultaneousInterpretation")
 

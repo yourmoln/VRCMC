@@ -96,6 +96,12 @@ actual fun saveStoredErrorLogs(value: String) {
     prefs.remove("errorLogs")
 }
 
+actual fun loadIgnoredUpdateVersion(): String = prefs.get("ignoredUpdateVersion", "")
+
+actual fun saveIgnoredUpdateVersion(value: String) {
+    prefs.put("ignoredUpdateVersion", value)
+}
+
 actual fun loadStoredSimultaneousInterpretationEnabled(): Boolean =
     prefs.getBoolean("simultaneousInterpretation", false)
 

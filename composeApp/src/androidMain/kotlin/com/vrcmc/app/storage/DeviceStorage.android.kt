@@ -89,6 +89,12 @@ actual fun saveStoredErrorLogs(value: String) {
     prefs()?.edit { putString("errorLogs", value) }
 }
 
+actual fun loadIgnoredUpdateVersion(): String = prefs()?.getString("ignoredUpdateVersion", "") ?: ""
+
+actual fun saveIgnoredUpdateVersion(value: String) {
+    prefs()?.edit { putString("ignoredUpdateVersion", value) }
+}
+
 actual fun loadStoredSimultaneousInterpretationEnabled(): Boolean =
     prefs()?.getBoolean("simultaneousInterpretation", false) ?: false
 
