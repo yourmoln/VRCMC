@@ -9,9 +9,11 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.ExperimentalComposeUiApi
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.backhandler.BackHandler
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.platform.LocalUriHandler
+import androidx.compose.ui.unit.dp
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.launch
 
@@ -23,7 +25,7 @@ internal enum class ThemeMode {
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalComposeUiApi::class)
 @Composable
-fun VrcmcApp() {
+fun VrcmcApp(onDarkThemeChanged: (Boolean) -> Unit = {}) {
     val state = remember { AppState() }
     var screen by remember { mutableStateOf(AppScreen.CHAT) }
     var theme by remember { mutableStateOf(ThemeMode.SYSTEM) }
@@ -71,87 +73,113 @@ fun VrcmcApp() {
         }
     }
 
+    LaunchedEffect(dark) { onDarkThemeChanged(dark) }
+
     BackHandler(enabled = screen != AppScreen.CHAT) { screen = AppScreen.CHAT }
 
     MaterialTheme(if (dark) darkColorScheme() else lightColorScheme()) {
-        ModalNavigationDrawer(
-            drawerState = drawerState,
-            drawerContent = {
-                VrcmcNavigationDrawer(screen, state, strings) { selectedScreen ->
-                    screen = selectedScreen
-                    scope.launch { drawerState.close() }
-                }
-            },
+        Surface(
+            modifier = Modifier.fillMaxSize(),
+            color = MaterialTheme.colorScheme.background,
         ) {
-            Scaffold(
-                topBar = {
-                    TopAppBar(
-                        navigationIcon = {
-                            IconButton(
-                                onClick = {
-                                    focusManager.clearFocus()
-                                    scope.launch { drawerState.open() }
-                                }
+            BoxWithConstraints(Modifier.fillMaxSize()) {
+                // Keep the drawer on compact layouts; tablets and desktop get persistent navigation.
+                val expanded = maxWidth >= 720.dp
+                Row(Modifier.fillMaxSize()) {
+                    if (expanded) {
+                        VrcmcNavigationDrawer(
+                            selectedScreen = screen,
+                            state = state,
+                            strings = strings,
+                            onSelect = { screen = it },
+                        )
+                    }
+                    Box(Modifier.weight(1f).fillMaxHeight()) {
+                    ModalNavigationDrawer(
+                        drawerState = drawerState,
+                        gesturesEnabled = !expanded,
+                        drawerContent = {
+                            if (!expanded) {
+                                VrcmcNavigationDrawer(
+                                    selectedScreen = screen,
+                                    state = state,
+                                    strings = strings,
+                                    onSelect = { selectedScreen ->
+                                        screen = selectedScreen
+                                        scope.launch { drawerState.close() }
+                                    },
+                                )
+                            }
+                        },
+                    ) {
+                        Scaffold(
+                            topBar = {
+                                TopAppBar(
+                                    colors =
+                                        TopAppBarDefaults.topAppBarColors(
+                                            titleContentColor = MaterialTheme.colorScheme.onSurface,
+                                            navigationIconContentColor = MaterialTheme.colorScheme.onSurface,
+                                            actionIconContentColor = MaterialTheme.colorScheme.onSurface,
+                                        ),
+                                    navigationIcon = {
+                                        if (!expanded) {
+                                            IconButton(
+                                                onClick = {
+                                                    focusManager.clearFocus()
+                                                    scope.launch { drawerState.open() }
+                                                }
+                                            ) {
+                                                Icon(Icons.Default.Menu, strings.openMenu)
+                                            }
+                                        }
+                                    },
+                                    title = {
+                                        DeviceSelector(
+                                            state = state,
+                                            strings = strings,
+                                            onAddDevice = { showAddDevice = true },
+                                        )
+                                    },
+                                    actions = {
+                                        if (screen == AppScreen.CHAT && state.messages.isNotEmpty()) {
+                                            IconButton({ showClearHistory = true }) {
+                                                Icon(Icons.Default.DeleteSweep, strings.clearHistory)
+                                            }
+                                        }
+                                    },
+                                )
+                            }
+                        ) { padding ->
+                            Box(
+                                Modifier.padding(padding)
+                                    .consumeWindowInsets(padding)
+                                    .fillMaxSize()
+                                    .widthIn(max = 1200.dp)
+                                    .align(Alignment.Center),
                             ) {
-                                Icon(Icons.Default.Menu, strings.openMenu)
-                            }
-                        },
-                        title = {
-                            DeviceSelector(
-                                state = state,
-                                strings = strings,
-                                onAddDevice = { showAddDevice = true },
-                            )
-                        },
-                        actions = {
-                            if (screen == AppScreen.CHAT && state.messages.isNotEmpty()) {
-                                IconButton({ showClearHistory = true }) {
-                                    Icon(Icons.Default.DeleteSweep, strings.clearHistory)
+                                ChatPage(state, strings)
+                                if (screen != AppScreen.CHAT) {
+                                    Surface(
+                                        modifier = Modifier.fillMaxSize(),
+                                        color = MaterialTheme.colorScheme.background,
+                                    ) {
+                                        when (screen) {
+                                            AppScreen.CHAT -> Unit
+                                            AppScreen.DEVICES -> DeviceManagementPage(state, strings) { showAddDevice = true }
+                                            AppScreen.API -> ApiPage(state, strings)
+                                            AppScreen.TRANSLATION_LANGUAGE -> TranslationLanguagePage(state, strings)
+                                            AppScreen.SIMULTANEOUS_INTERPRETATION -> SimultaneousInterpretationPage(state, strings)
+                                            AppScreen.QUICK_START -> QuickStartPage(state, strings) { screen = AppScreen.CHAT }
+                                            AppScreen.CONFIGURE_VRC -> ConfigureVrcPage(strings)
+                                            AppScreen.PREFERENCES -> PreferencesPage(theme, language, strings, { theme = it }, { language = it }, state.disableDynamicInputLimit, state::updateDisableDynamicInputLimit)
+                                            AppScreen.ABOUT -> AboutPage(state = state, strings = strings, onOpenLogs = { screen = AppScreen.ERROR_LOGS }, onUpdateAvailable = { availableUpdate = it })
+                                            AppScreen.ERROR_LOGS -> ErrorLogsPage(state, strings)
+                                        }
+                                    }
                                 }
-                            }
-                        },
-                    )
-                }
-            ) { padding ->
-                Box(Modifier.padding(padding).consumeWindowInsets(padding).fillMaxSize()) {
-                    ChatPage(state, strings)
-                    if (screen != AppScreen.CHAT) {
-                        Surface(
-                            modifier = Modifier.fillMaxSize(),
-                            color = MaterialTheme.colorScheme.background,
-                        ) {
-                            when (screen) {
-                                AppScreen.CHAT -> Unit
-                                AppScreen.DEVICES ->
-                                    DeviceManagementPage(state, strings) { showAddDevice = true }
-                                AppScreen.API -> ApiPage(state, strings)
-                                AppScreen.TRANSLATION_LANGUAGE ->
-                                    TranslationLanguagePage(state, strings)
-                                AppScreen.SIMULTANEOUS_INTERPRETATION ->
-                                    SimultaneousInterpretationPage(state, strings)
-                                AppScreen.QUICK_START ->
-                                    QuickStartPage(state, strings) { screen = AppScreen.CHAT }
-                                AppScreen.CONFIGURE_VRC -> ConfigureVrcPage(strings)
-                                AppScreen.PREFERENCES ->
-                                    PreferencesPage(
-                                        theme,
-                                        language,
-                                        strings,
-                                        { theme = it },
-                                        { language = it },
-                                        state.disableDynamicInputLimit,
-                                        state::updateDisableDynamicInputLimit,
-                                    )
-                                AppScreen.ABOUT ->
-                                    AboutPage(
-                                        state = state,
-                                        strings = strings,
-                                        onOpenLogs = { screen = AppScreen.ERROR_LOGS },
-                                        onUpdateAvailable = { availableUpdate = it },
-                                    )
-                                AppScreen.ERROR_LOGS -> ErrorLogsPage(state, strings)
                             }
                         }
+                    }
                     }
                 }
             }

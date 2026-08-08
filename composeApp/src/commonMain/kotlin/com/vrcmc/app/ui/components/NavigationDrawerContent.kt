@@ -59,6 +59,7 @@ internal fun VrcmcNavigationDrawer(
     state: AppState,
     strings: LocaleStrings,
     onSelect: (AppScreen) -> Unit,
+    modifier: Modifier = Modifier,
 ) {
     val primaryItems =
         listOf(
@@ -88,7 +89,7 @@ internal fun VrcmcNavigationDrawer(
             NavigationItem(AppScreen.ABOUT, strings.aboutApp, Icons.Default.Info),
         )
 
-    ModalDrawerSheet(Modifier.width(260.dp)) {
+    ModalDrawerSheet(modifier.width(260.dp)) {
         Row(
             Modifier.fillMaxWidth().padding(horizontal = 20.dp, vertical = 18.dp),
             verticalAlignment = Alignment.CenterVertically,
