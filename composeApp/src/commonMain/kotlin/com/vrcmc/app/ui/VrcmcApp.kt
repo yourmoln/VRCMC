@@ -10,6 +10,7 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.ExperimentalComposeUiApi
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.backhandler.BackHandler
+import androidx.compose.ui.platform.LocalFocusManager
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.launch
 
@@ -30,6 +31,7 @@ fun VrcmcApp() {
     var showClearHistory by remember { mutableStateOf(false) }
     val drawerState = rememberDrawerState(DrawerValue.Closed)
     val scope = rememberCoroutineScope()
+    val focusManager = LocalFocusManager.current
     val strings = localeStrings(language)
     val dark =
         when (theme) {
@@ -71,7 +73,12 @@ fun VrcmcApp() {
                 topBar = {
                     TopAppBar(
                         navigationIcon = {
-                            IconButton({ scope.launch { drawerState.open() } }) {
+                            IconButton(
+                                onClick = {
+                                    focusManager.clearFocus()
+                                    scope.launch { drawerState.open() }
+                                }
+                            ) {
                                 Icon(Icons.Default.Menu, strings.openMenu)
                             }
                         },
