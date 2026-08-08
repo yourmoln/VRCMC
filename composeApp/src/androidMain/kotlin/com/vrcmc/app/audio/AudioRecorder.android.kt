@@ -11,7 +11,7 @@ private class AndroidAudioRecorder : AudioRecorder {
     private var worker: Thread? = null
 
     @Synchronized
-    override fun start(sampleRate: Int, maxDurationSeconds: Int, onPcmData: (ByteArray) -> Unit, onStopped: () -> Unit, onError: (String) -> Unit) {
+    override fun start(sampleRate: Int, maxDurationSeconds: Int, microphoneId: String, onPcmData: (ByteArray) -> Unit, onStopped: () -> Unit, onError: (String) -> Unit) {
         if (worker != null) return
         val context = audioApplicationContext()
         if (context == null || ContextCompat.checkSelfPermission(context, "android.permission.RECORD_AUDIO") != PackageManager.PERMISSION_GRANTED) {
@@ -57,3 +57,7 @@ private class AndroidAudioRecorder : AudioRecorder {
 }
 
 actual fun createAudioRecorder(): AudioRecorder = AndroidAudioRecorder()
+
+actual fun availableAudioInputDevices(): List<AudioInputDevice> = emptyList()
+
+actual fun isDesktopAudioPlatform(): Boolean = false

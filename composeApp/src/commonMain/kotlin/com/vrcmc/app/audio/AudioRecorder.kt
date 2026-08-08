@@ -4,6 +4,7 @@ interface AudioRecorder {
     fun start(
         sampleRate: Int,
         maxDurationSeconds: Int,
+        microphoneId: String = "",
         onPcmData: (ByteArray) -> Unit,
         onStopped: () -> Unit,
         onError: (String) -> Unit,

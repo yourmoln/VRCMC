@@ -220,6 +220,7 @@ fun ChatPage(state: AppState, strings: LocaleStrings) {
         audioRecorder.start(
             sampleRate = config.sampleRate,
             maxDurationSeconds = (config.maxSegmentSeconds + 30).coerceAtMost(60),
+            microphoneId = config.microphoneId,
             onPcmData = processor::accept,
             onStopped = {
                 processor.finish()

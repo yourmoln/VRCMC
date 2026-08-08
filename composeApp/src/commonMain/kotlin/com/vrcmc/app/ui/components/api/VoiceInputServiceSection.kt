@@ -32,7 +32,9 @@ internal fun VoiceInputServiceSection(
     var regionMenu by remember { mutableStateOf(false) }
     var modelMenu by remember { mutableStateOf(false) }
     var languageMenu by remember { mutableStateOf(false) }
+    var microphoneMenu by remember { mutableStateOf(false) }
     var advanced by remember { mutableStateOf(false) }
+    val microphones = remember { availableAudioInputDevices() }
 
     SettingsCard(strings.voiceInputService, Icons.Default.RecordVoiceOver) {
         Row(verticalAlignment = Alignment.CenterVertically) {
@@ -151,6 +153,35 @@ internal fun VoiceInputServiceSection(
                         leadingIcon = { if (language == config.language) Icon(Icons.Default.Check, null) },
                         onClick = { onUpdate { it.copy(language = language) }; languageMenu = false },
                     )
+                }
+            }
+        }
+        if (isDesktopAudioPlatform()) {
+            Box {
+                OutlinedButton(
+                    onClick = { microphoneMenu = true },
+                    modifier = Modifier.fillMaxWidth().heightIn(min = 52.dp),
+                    shape = MaterialTheme.shapes.large,
+                ) {
+                    Icon(Icons.Default.Mic, null)
+                    Spacer(Modifier.width(8.dp))
+                    Text("麦克风", Modifier.weight(1f))
+                    Text(microphones.firstOrNull { it.id == config.microphoneId }?.name ?: "系统默认麦克风")
+                    Icon(Icons.Default.ArrowDropDown, null)
+                }
+                DropdownMenu(microphoneMenu, { microphoneMenu = false }) {
+                    DropdownMenuItem(
+                        text = { Text("系统默认麦克风") },
+                        leadingIcon = { if (config.microphoneId.isBlank()) Icon(Icons.Default.Check, null) },
+                        onClick = { onUpdate { it.copy(microphoneId = "") }; microphoneMenu = false },
+                    )
+                    microphones.forEach { microphone ->
+                        DropdownMenuItem(
+                            text = { Text(microphone.name) },
+                            leadingIcon = { if (microphone.id == config.microphoneId) Icon(Icons.Default.Check, null) },
+                            onClick = { onUpdate { it.copy(microphoneId = microphone.id) }; microphoneMenu = false },
+                        )
+                    }
                 }
             }
         }

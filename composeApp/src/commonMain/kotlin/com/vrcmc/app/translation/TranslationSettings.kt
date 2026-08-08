@@ -23,6 +23,7 @@ data class VoiceInputConfig(
     val baseUrl: String = "https://dashscope-intl.aliyuncs.com/compatible-mode/v1",
     val model: String = "qwen3-asr-flash-2026-02-10",
     val language: String = "ja",
+    val microphoneId: String = "",
     val sampleRate: Int = 16_000,
     val maxSegmentSeconds: Int = 6,
     val tailSilenceMillis: Int = 700,
@@ -67,6 +68,7 @@ fun StoredTranslationSettings.toJson(): String =
                 put("baseUrl", voiceInput.baseUrl)
                 put("model", voiceInput.model)
                 put("language", voiceInput.language)
+                put("microphoneId", voiceInput.microphoneId)
                 put("sampleRate", voiceInput.sampleRate)
                 put("maxSegmentSeconds", voiceInput.maxSegmentSeconds)
                 put("tailSilenceMillis", voiceInput.tailSilenceMillis)
@@ -172,6 +174,7 @@ fun storedTranslationSettingsFromJson(value: String): StoredTranslationSettings 
                             model = obj["model"]?.jsonPrimitive?.contentOrNull
                                 ?: "qwen3-asr-flash-2026-02-10",
                             language = obj["language"]?.jsonPrimitive?.contentOrNull ?: "ja",
+                            microphoneId = obj["microphoneId"]?.jsonPrimitive?.contentOrNull.orEmpty(),
                             sampleRate = (obj["sampleRate"]?.jsonPrimitive?.intOrNull ?: 16_000)
                                 .coerceIn(8_000, 48_000),
                             maxSegmentSeconds =
