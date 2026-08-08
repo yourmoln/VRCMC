@@ -1,5 +1,6 @@
 # JNA resolves native entry points, structures and platform APIs through reflection/JNI.
 -keep class com.sun.jna.** { *; }
+-keep interface com.vrcmc.app.DwmApi { *; }
 -keepclassmembers class * extends com.sun.jna.Structure { <fields>; }
 -keepclasseswithmembernames,includedescriptorclasses class * {
     native <methods>;

@@ -1,4 +1,5 @@
 import java.util.Properties
+import org.jetbrains.compose.desktop.application.dsl.TargetFormat
 
 plugins { alias(libs.plugins.kotlin.multiplatform); alias(libs.plugins.android.application); alias(libs.plugins.compose); alias(libs.plugins.kotlin.compose) }
 kotlin { jvm("desktop"); androidTarget(); iosX64(); iosArm64(); iosSimulatorArm64(); sourceSets {
@@ -70,6 +71,18 @@ compose.desktop {
         mainClass = "com.vrcmc.app.DesktopMainKt"
         buildTypes.release.proguard {
             configurationFiles.from(project.file("proguard-rules.pro"))
+        }
+        nativeDistributions {
+            targetFormats(TargetFormat.Exe)
+            packageName = "VRCMC"
+            packageVersion = libs.versions.app.version.get()
+            description = "VRChat Chatbox assistant"
+            vendor = "VRCM Team"
+            windows {
+                iconFile.set(project.file("src/desktopMain/resources/VRCMC.ico"))
+                menuGroup = "VRCMC"
+                upgradeUuid = "6fe18fbc-6e62-4d4e-8f4f-3b44cedf45ed"
+            }
         }
     }
 }
