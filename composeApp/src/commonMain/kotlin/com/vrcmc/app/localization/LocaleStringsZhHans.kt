@@ -200,6 +200,8 @@ object LocaleStringsZhHans : LocaleStrings {
     override val interpretationVoiceInputHint = "解释模式会自动使用应用内语音识别，不会改变输入法的语音输入。"
     override val simultaneousInterpretationHint =
         "监听当前设备 IP 和发送端口。游戏内开麦后会开始采集，闭麦时完成识别并发送；关闭同步语音输入时仍可继续配合输入法使用。"
+    override val simultaneousInterpretationSendDelay = "闭麦发送等待时间"
+    override val simultaneousInterpretationSendDelayHint = "检测到麦克风关闭后等待多久发送"
     override val listeningPort = "监听端点"
     override val listenerReady = "正在等待 VRChat 麦克风事件"
     override val listenerStopped = "监听已关闭"

@@ -594,20 +594,31 @@ fun ChatPage(state: AppState, strings: LocaleStrings) {
         }
     }
 
-    LaunchedEffect(state.simultaneousFinalPending) {
+    LaunchedEffect(
+        state.simultaneousFinalPending,
+        state.interpretationVoiceInputEnabled,
+        state.simultaneousInterpretationSendDelayMillis,
+    ) {
         if (state.simultaneousFinalPending) {
-            state.consumeSimultaneousFinalRequest()
             cancelActiveTranslation()
-            if (managedVoiceCapture) {
+            if (state.interpretationVoiceInputEnabled && managedVoiceCapture) {
+                state.consumeSimultaneousFinalRequest()
                 pendingSimultaneousVoiceSend = true
                 audioRecorder.stop()
                 return@LaunchedEffect
             }
+            delay(state.simultaneousInterpretationSendDelayMillis.toLong())
+            if (
+                !state.simultaneousFinalPending ||
+                    state.isSimultaneousInterpretationActive ||
+                    state.interpretationVoiceInputEnabled
+            ) return@LaunchedEffect
             val finalText = state.chatDraft
             val barrier = CompletableDeferred<Unit>()
             liveOriginalUpdates.send(LiveOscBarrier(barrier))
             barrier.await()
             if (finalText.isNotBlank()) sendMessage(finalText, clearDraft = true)
+            state.consumeSimultaneousFinalRequest()
         }
     }
 

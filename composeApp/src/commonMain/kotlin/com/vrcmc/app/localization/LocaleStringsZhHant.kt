@@ -143,6 +143,8 @@ object LocaleStringsZhHant : LocaleStrings {
     override val simultaneousInterpretationInputHint = "此功能必須配合鍵盤的語音輸入功能使用。"
     override val simultaneousInterpretationHint =
         "監聽目前裝置位址與傳送連接埠上的 VRChat MuteSelf。開啟麥克風時會即時傳送原文；靜音或按下傳送時則執行一般傳送流程。"
+    override val simultaneousInterpretationSendDelay = "關閉麥克風後的傳送等待時間"
+    override val simultaneousInterpretationSendDelayHint = "偵測到麥克風關閉後等待多久再傳送"
     override val listeningPort = "監聽端點"
     override val listenerReady = "正在等待 VRChat 麥克風事件"
     override val listenerStopped = "監聽器已關閉"

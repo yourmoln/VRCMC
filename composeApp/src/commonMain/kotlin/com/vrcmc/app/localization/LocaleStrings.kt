@@ -162,6 +162,8 @@ interface LocaleStrings {
     val interpretationVoiceInput: String get() = "同步开启语音输入"
     val interpretationVoiceInputHint: String get() = "解释模式会自动使用应用内语音识别，不会改变输入法的语音输入。"
     val simultaneousInterpretationHint: String
+    val simultaneousInterpretationSendDelay: String
+    val simultaneousInterpretationSendDelayHint: String
     val listeningPort: String
     val listenerReady: String
     val listenerStopped: String

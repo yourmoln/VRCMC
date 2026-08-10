@@ -30,6 +30,13 @@ class AppState {
         mutableStateOf(loadStoredSimultaneousInterpretationEnabled())
         private set
 
+    var simultaneousInterpretationSendDelayMillis by
+        mutableIntStateOf(
+            loadStoredSimultaneousInterpretationSendDelayMillis().takeIf { it in 0..5_000 }
+                ?: 2_000
+        )
+        private set
+
     var isSimultaneousInterpretationActive by mutableStateOf(false)
         private set
 
@@ -258,6 +265,13 @@ class AppState {
         saveStoredSimultaneousInterpretationEnabled(enabled)
     }
 
+    fun updateSimultaneousInterpretationSendDelayMillis(value: Int) {
+        simultaneousInterpretationSendDelayMillis = value.coerceIn(0, 5_000)
+        saveStoredSimultaneousInterpretationSendDelayMillis(
+            simultaneousInterpretationSendDelayMillis
+        )
+    }
+
     fun updateAlwaysInterpretationEnabled(enabled: Boolean) {
         if (enabled && simultaneousInterpretationEnabled) {
             simultaneousInterpretationEnabled = false
@@ -285,6 +299,7 @@ class AppState {
     fun handleVrchatMuteSelf(muted: Boolean) {
         if (!simultaneousInterpretationEnabled) return
         if (!muted && !isSimultaneousInterpretationActive) {
+            simultaneousFinalPending = false
             chatDraft = ""
             isSimultaneousInterpretationActive = true
         } else if (muted && isSimultaneousInterpretationActive) {

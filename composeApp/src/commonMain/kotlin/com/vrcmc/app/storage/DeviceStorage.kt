@@ -22,6 +22,10 @@ expect fun loadStoredSimultaneousInterpretationEnabled(): Boolean
 
 expect fun saveStoredSimultaneousInterpretationEnabled(value: Boolean)
 
+expect fun loadStoredSimultaneousInterpretationSendDelayMillis(): Int
+
+expect fun saveStoredSimultaneousInterpretationSendDelayMillis(value: Int)
+
 expect fun loadStoredAlwaysInterpretationEnabled(): Boolean
 
 expect fun saveStoredAlwaysInterpretationEnabled(value: Boolean)

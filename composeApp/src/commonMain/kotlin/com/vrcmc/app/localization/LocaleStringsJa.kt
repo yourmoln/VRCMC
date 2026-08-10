@@ -147,6 +147,8 @@ object LocaleStringsJa : LocaleStrings {
     override val simultaneousInterpretationInputHint = "この機能はキーボードの音声入力機能と併用してください。"
     override val simultaneousInterpretationHint =
         "使用中デバイスのアドレスと送信ポートで VRChat の MuteSelf を監視します。マイクを開くと原文をリアルタイム送信し、ミュートまたは送信操作で通常の送信処理を行います。"
+    override val simultaneousInterpretationSendDelay = "マイク停止後の送信待機時間"
+    override val simultaneousInterpretationSendDelayHint = "マイク停止を検出してから送信するまでの待機時間"
     override val listeningPort = "待受エンドポイント"
     override val listenerReady = "VRChat のマイクイベントを待機中"
     override val listenerStopped = "リスナーは停止しています"

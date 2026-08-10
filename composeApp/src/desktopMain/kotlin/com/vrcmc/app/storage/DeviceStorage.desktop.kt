@@ -109,6 +109,13 @@ actual fun saveStoredSimultaneousInterpretationEnabled(value: Boolean) {
     prefs.putBoolean("simultaneousInterpretation", value)
 }
 
+actual fun loadStoredSimultaneousInterpretationSendDelayMillis(): Int =
+    prefs.getInt("simultaneousInterpretationSendDelayMillis", 2_000)
+
+actual fun saveStoredSimultaneousInterpretationSendDelayMillis(value: Int) {
+    prefs.putInt("simultaneousInterpretationSendDelayMillis", value)
+}
+
 actual fun loadStoredAlwaysInterpretationEnabled(): Boolean =
     prefs.getBoolean("alwaysInterpretation", false)
 

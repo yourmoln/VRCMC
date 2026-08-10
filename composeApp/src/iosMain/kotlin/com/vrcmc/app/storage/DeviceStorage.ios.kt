@@ -176,6 +176,14 @@ actual fun saveStoredSimultaneousInterpretationEnabled(value: Boolean) {
     defaults.setBool(value, forKey = "simultaneousInterpretation")
 }
 
+actual fun loadStoredSimultaneousInterpretationSendDelayMillis(): Int =
+    if (defaults.objectForKey("simultaneousInterpretationSendDelayMillis") == null) 2_000
+    else defaults.integerForKey("simultaneousInterpretationSendDelayMillis").toInt()
+
+actual fun saveStoredSimultaneousInterpretationSendDelayMillis(value: Int) {
+    defaults.setInteger(value.toLong(), forKey = "simultaneousInterpretationSendDelayMillis")
+}
+
 actual fun loadStoredAlwaysInterpretationEnabled(): Boolean =
     defaults.boolForKey("alwaysInterpretation")
 

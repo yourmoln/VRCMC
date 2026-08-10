@@ -150,6 +150,55 @@ internal fun SimultaneousInterpretationPage(state: AppState, strings: LocaleStri
                             onCheckedChange = state::updateSimultaneousInterpretationEnabled,
                         )
                     }
+                    if (!state.interpretationVoiceInputEnabled) {
+                        HorizontalDivider()
+                        Row(
+                            Modifier.fillMaxWidth(),
+                            verticalAlignment = Alignment.CenterVertically,
+                        ) {
+                            Column(Modifier.weight(1f)) {
+                                Text(
+                                    strings.simultaneousInterpretationSendDelay,
+                                    style = MaterialTheme.typography.labelLarge,
+                                )
+                                Text(
+                                    strings.simultaneousInterpretationSendDelayHint,
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                )
+                            }
+                            Spacer(Modifier.width(12.dp))
+                            Text(
+                                strings.seconds(
+                                    formatDelaySeconds(
+                                        state.simultaneousInterpretationSendDelayMillis
+                                    )
+                                )
+                            )
+                        }
+                        Slider(
+                            value = state.simultaneousInterpretationSendDelayMillis / 1_000f,
+                            onValueChange = {
+                                val halfSeconds = (it * 2).roundToInt()
+                                state.updateSimultaneousInterpretationSendDelayMillis(
+                                    halfSeconds * 500
+                                )
+                            },
+                            valueRange = 0f..5f,
+                            thumb = {
+                                Box(
+                                    Modifier.size(16.dp)
+                                        .background(MaterialTheme.colorScheme.primary, CircleShape)
+                                )
+                            },
+                            track = { sliderState ->
+                                SliderDefaults.Track(
+                                    sliderState = sliderState,
+                                    thumbTrackGapSize = 0.dp,
+                                )
+                            },
+                        )
+                    }
                     HorizontalDivider()
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         Icon(

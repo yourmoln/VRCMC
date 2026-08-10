@@ -162,6 +162,9 @@ object LocaleStringsEn : LocaleStrings {
         "Automatically use in-app voice recognition in interpretation modes without changing keyboard voice input."
     override val simultaneousInterpretationHint =
         "Listen for VRChat MuteSelf at the active device address and send port. Opening the microphone starts capture; muting completes recognition and sends it. Keyboard voice input remains available when synchronized voice input is off."
+    override val simultaneousInterpretationSendDelay = "Send delay after muting"
+    override val simultaneousInterpretationSendDelayHint =
+        "Wait this long after the microphone closes before sending"
     override val listeningPort = "Listening endpoint"
     override val listenerReady = "Waiting for VRChat microphone events"
     override val listenerStopped = "Listener is off"
