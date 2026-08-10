@@ -171,7 +171,7 @@ fun VrcmcApp(onDarkThemeChanged: (Boolean) -> Unit = {}) {
                                             AppScreen.SIMULTANEOUS_INTERPRETATION -> SimultaneousInterpretationPage(state, strings)
                                             AppScreen.QUICK_START -> QuickStartPage(state, strings) { screen = AppScreen.CHAT }
                                             AppScreen.CONFIGURE_VRC -> ConfigureVrcPage(strings)
-                                            AppScreen.PREFERENCES -> PreferencesPage(theme, language, strings, { theme = it }, { language = it }, state.disableDynamicInputLimit, state::updateDisableDynamicInputLimit, state.showTypingStatus, state::updateShowTypingStatus)
+                                            AppScreen.PREFERENCES -> PreferencesPage(theme, language, strings, { theme = it }, { language = it }, state.disableDynamicInputLimit, state::updateDisableDynamicInputLimit, state.showTypingStatus, state::updateShowTypingStatus, state.liveInputPreview, state::updateLiveInputPreview, state.liveInputPreviewDelaySeconds, state::updateLiveInputPreviewDelaySeconds)
                                             AppScreen.ABOUT -> AboutPage(state = state, strings = strings, onOpenLogs = { screen = AppScreen.ERROR_LOGS }, onUpdateAvailable = { availableUpdate = it })
                                             AppScreen.ERROR_LOGS -> ErrorLogsPage(state, strings)
                                         }

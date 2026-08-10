@@ -72,6 +72,13 @@ class AppState {
     var translate by mutableStateOf(storedTranslation.translate)
     var disableDynamicInputLimit by mutableStateOf(storedTranslation.disableDynamicInputLimit)
     var showTypingStatus by mutableStateOf(storedTranslation.showTypingStatus)
+    var liveInputPreview by mutableStateOf(storedTranslation.liveInputPreview)
+        private set
+    var liveInputPreviewDelaySeconds by
+        mutableIntStateOf(storedTranslation.liveInputPreviewDelaySeconds.coerceIn(0, 30))
+        private set
+    var lastNonLiveChatboxSendMillis by mutableStateOf<Long?>(null)
+        private set
     var sendOriginalBeforeTranslation by
         mutableStateOf(storedTranslation.sendOriginalBeforeTranslation)
         private set
@@ -170,6 +177,20 @@ class AppState {
         persistTranslation()
     }
 
+    fun updateLiveInputPreview(enabled: Boolean) {
+        liveInputPreview = enabled
+        persistTranslation()
+    }
+
+    fun updateLiveInputPreviewDelaySeconds(value: Int) {
+        liveInputPreviewDelaySeconds = value.coerceIn(0, 30)
+        persistTranslation()
+    }
+
+    fun recordNonLiveChatboxSend(timestamp: Long = currentTimeMillis()) {
+        lastNonLiveChatboxSendMillis = timestamp
+    }
+
     fun updateSendOriginalBeforeTranslation(enabled: Boolean) {
         sendOriginalBeforeTranslation = enabled
         persistTranslation()
@@ -207,6 +228,8 @@ class AppState {
                     interpretationVoiceInputEnabled = interpretationVoiceInputEnabled,
                     disableDynamicInputLimit = disableDynamicInputLimit,
                     showTypingStatus = showTypingStatus,
+                    liveInputPreview = liveInputPreview,
+                    liveInputPreviewDelaySeconds = liveInputPreviewDelaySeconds,
                 )
                 .toJson()
         )

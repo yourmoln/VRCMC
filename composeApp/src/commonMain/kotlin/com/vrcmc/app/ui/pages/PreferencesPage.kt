@@ -4,6 +4,8 @@ import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.background
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
@@ -11,6 +13,7 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
+import kotlin.math.roundToInt
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -24,6 +27,10 @@ internal fun PreferencesPage(
     setDisableDynamicInputLimit: (Boolean) -> Unit,
     showTypingStatus: Boolean,
     setShowTypingStatus: (Boolean) -> Unit,
+    liveInputPreview: Boolean,
+    setLiveInputPreview: (Boolean) -> Unit,
+    liveInputPreviewDelaySeconds: Int,
+    setLiveInputPreviewDelaySeconds: (Int) -> Unit,
 ) {
     var expanded by remember { mutableStateOf(false) }
     val modes = ThemeMode.values()
@@ -131,6 +138,48 @@ internal fun PreferencesPage(
                         Switch(
                             checked = showTypingStatus,
                             onCheckedChange = setShowTypingStatus,
+                        )
+                    }
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        verticalAlignment = Alignment.CenterVertically,
+                    ) {
+                        Text(
+                            strings.liveInputPreview,
+                            modifier = Modifier.weight(1f),
+                            style = MaterialTheme.typography.labelLarge,
+                        )
+                        Switch(
+                            checked = liveInputPreview,
+                            onCheckedChange = setLiveInputPreview,
+                        )
+                    }
+                    Column(
+                        modifier = Modifier.fillMaxWidth(),
+                        verticalArrangement = Arrangement.spacedBy(4.dp),
+                    ) {
+                        Text(
+                            "${strings.liveInputPreviewDelay}: ${strings.seconds(liveInputPreviewDelaySeconds.toString())}",
+                            style = MaterialTheme.typography.labelLarge,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
+                        Slider(
+                            value = liveInputPreviewDelaySeconds.toFloat(),
+                            onValueChange = { setLiveInputPreviewDelaySeconds(it.roundToInt()) },
+                            valueRange = 0f..30f,
+                            enabled = liveInputPreview,
+                            thumb = {
+                                Box(
+                                    Modifier.size(16.dp)
+                                        .background(MaterialTheme.colorScheme.primary, CircleShape)
+                                )
+                            },
+                            track = { sliderState ->
+                                SliderDefaults.Track(
+                                    sliderState = sliderState,
+                                    thumbTrackGapSize = 0.dp,
+                                )
+                            },
                         )
                     }
                 }

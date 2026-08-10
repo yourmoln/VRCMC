@@ -15,6 +15,8 @@ data class StoredTranslationSettings(
     val interpretationVoiceInputEnabled: Boolean = false,
     val disableDynamicInputLimit: Boolean = false,
     val showTypingStatus: Boolean = true,
+    val liveInputPreview: Boolean = false,
+    val liveInputPreviewDelaySeconds: Int = 8,
 )
 
 data class VoiceInputConfig(
@@ -83,6 +85,8 @@ fun StoredTranslationSettings.toJson(): String =
             put("interpretationVoiceInputEnabled", interpretationVoiceInputEnabled)
             put("disableDynamicInputLimit", disableDynamicInputLimit)
             put("showTypingStatus", showTypingStatus)
+            put("liveInputPreview", liveInputPreview)
+            put("liveInputPreviewDelaySeconds", liveInputPreviewDelaySeconds)
         }
         .toString()
 
@@ -209,6 +213,11 @@ fun storedTranslationSettingsFromJson(value: String): StoredTranslationSettings 
                 disableDynamicInputLimit =
                     root["disableDynamicInputLimit"]?.jsonPrimitive?.booleanOrNull ?: false,
                 showTypingStatus = root["showTypingStatus"]?.jsonPrimitive?.booleanOrNull ?: true,
+                liveInputPreview =
+                    root["liveInputPreview"]?.jsonPrimitive?.booleanOrNull ?: false,
+                liveInputPreviewDelaySeconds =
+                    (root["liveInputPreviewDelaySeconds"]?.jsonPrimitive?.intOrNull ?: 8)
+                        .coerceIn(0, 30),
             )
         }
         .getOrDefault(StoredTranslationSettings())

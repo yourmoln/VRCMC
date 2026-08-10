@@ -27,6 +27,13 @@ class OscValidationTest {
     }
 
     @Test
+    fun livePreviewWaitIgnoresItsOwnUpdates() {
+        assertEquals(0, liveInputPreviewDelayRemainingMillis(5_000, null, 10))
+        assertEquals(6_000, liveInputPreviewDelayRemainingMillis(5_000, 1_000, 10))
+        assertEquals(0, liveInputPreviewDelayRemainingMillis(11_000, 1_000, 10))
+    }
+
+    @Test
     fun typingPacketUsesVrchatTypingAddressAndTrueTag() {
         val packet = chatboxTypingPacket()
         val addressEnd = packet.indexOf(0)
@@ -40,5 +47,12 @@ class OscValidationTest {
         val packet = chatboxTypingPacket(false)
         val tagStart = packet.indexOf(0) + 1
         assertEquals(",F", packet.copyOfRange(tagStart, tagStart + 2).decodeToString())
+    }
+
+    @Test
+    fun oscUpdatesHaveOneSecondCooldown() {
+        assertEquals(0, oscCooldownRemainingMillis(1_000, null))
+        assertEquals(1_000, oscCooldownRemainingMillis(1_000, 1_000))
+        assertEquals(0, oscCooldownRemainingMillis(2_000, 1_000))
     }
 }

@@ -26,9 +26,15 @@ import kotlinx.coroutines.launch
 
 private sealed interface LiveOscAction
 
-private data class LiveOriginalUpdate(val device: Device, val text: String) : LiveOscAction
+private data class LiveOriginalUpdate(
+    val device: Device,
+    val text: String,
+    val requiresTranslationIdle: Boolean = false,
+) : LiveOscAction
 
 private data class LiveOscBarrier(val completed: CompletableDeferred<Unit>) : LiveOscAction
+
+private data class TypingOscUpdate(val device: Device, val typing: Boolean)
 
 @Composable
 fun ChatPage(state: AppState, strings: LocaleStrings) {
@@ -48,6 +54,7 @@ fun ChatPage(state: AppState, strings: LocaleStrings) {
     var activeVoiceRequestJob by remember { mutableStateOf<Job?>(null) }
     var pendingPartialAudio by remember { mutableStateOf<ByteArray?>(null) }
     var managedVoiceCapture by remember { mutableStateOf(false) }
+    var livePreviewReady by remember { mutableStateOf(false) }
     var pendingSimultaneousVoiceSend by remember { mutableStateOf(false) }
     var pendingManagedSendText by remember { mutableStateOf<String?>(null) }
     var managedVoiceRestartToken by remember { mutableIntStateOf(0) }
@@ -65,6 +72,7 @@ fun ChatPage(state: AppState, strings: LocaleStrings) {
     val imeBottom = WindowInsets.ime.getBottom(LocalDensity.current)
     val clipboard = LocalClipboard.current
     val liveOriginalUpdates = remember { Channel<LiveOscAction>(Channel.UNLIMITED) }
+    val typingUpdates = remember { Channel<TypingOscUpdate>(Channel.CONFLATED) }
     val timestampVisibility = chatTimestampVisibility(messages.map(ChatMessage::timestamp))
     LaunchedEffect(maxInputCharacters) {
         if (state.chatDraft.length > maxInputCharacters) {
@@ -382,7 +390,14 @@ fun ChatPage(state: AppState, strings: LocaleStrings) {
                     if (
                         shouldTranslate &&
                             sendOriginalBeforeTranslation &&
-                            !sendChatboxOsc(target.address, translatingText, target.receivePort)
+                            run {
+                                state.recordNonLiveChatboxSend()
+                                !sendChatboxOsc(
+                                    target.address,
+                                    translatingText,
+                                    target.receivePort,
+                                )
+                            }
                     ) {
                         error = strings.sendFailed
                     }
@@ -451,8 +466,11 @@ fun ChatPage(state: AppState, strings: LocaleStrings) {
                             lineBreakOutput,
                         )
                     if (!isValidChatboxText(outgoing)) error = strings.messageTooLong
-                    else if (!sendChatboxOsc(target.address, outgoing, target.receivePort)) {
-                        error = strings.sendFailed
+                    else {
+                        state.recordNonLiveChatboxSend()
+                        if (!sendChatboxOsc(target.address, outgoing, target.receivePort)) {
+                            error = strings.sendFailed
+                        }
                     }
                 } finally {
                     if (translationGeneration == requestGeneration) {
@@ -482,24 +500,99 @@ fun ChatPage(state: AppState, strings: LocaleStrings) {
     }
 
     LaunchedEffect(liveOriginalUpdates) {
+        var lastLiveUpdateMillis: Long? = null
         for (action in liveOriginalUpdates) {
             when (action) {
-                is LiveOriginalUpdate ->
-                    if (
-                        !sendChatboxOsc(
-                            action.device.address,
-                            action.text,
-                            action.device.receivePort,
-                        )
-                    ) {
-                        error = strings.sendFailed
+                is LiveOriginalUpdate -> {
+                    val cooldown =
+                        oscCooldownRemainingMillis(currentTimeMillis(), lastLiveUpdateMillis)
+                    if (cooldown > 0) delay(cooldown)
+                    var latest = action
+                    var barrier: LiveOscBarrier? = null
+                    while (true) {
+                        when (val next = liveOriginalUpdates.tryReceive().getOrNull()) {
+                            null -> break
+                            is LiveOriginalUpdate -> latest = next
+                            is LiveOscBarrier -> {
+                                barrier = next
+                                break
+                            }
+                        }
                     }
+                    if (!latest.requiresTranslationIdle || !sending) {
+                        val sent =
+                            sendChatboxOsc(
+                                latest.device.address,
+                                latest.text,
+                                latest.device.receivePort,
+                            )
+                        if (!sent) error = strings.sendFailed
+                        if (sent) lastLiveUpdateMillis = currentTimeMillis()
+                    }
+                    barrier?.completed?.complete(Unit)
+                }
                 is LiveOscBarrier -> action.completed.complete(Unit)
             }
         }
     }
 
-    DisposableEffect(liveOriginalUpdates) { onDispose { liveOriginalUpdates.close() } }
+    LaunchedEffect(typingUpdates) {
+        var lastTypingUpdateMillis: Long? = null
+        for (update in typingUpdates) {
+            val cooldown =
+                oscCooldownRemainingMillis(currentTimeMillis(), lastTypingUpdateMillis)
+            if (cooldown > 0) delay(cooldown)
+            var latest = update
+            while (true) {
+                latest = typingUpdates.tryReceive().getOrNull() ?: break
+            }
+            if (sendChatboxTypingOsc(latest.device.address, latest.typing, latest.device.receivePort)) {
+                lastTypingUpdateMillis = currentTimeMillis()
+            } else {
+                error = strings.sendFailed
+            }
+        }
+    }
+
+    DisposableEffect(liveOriginalUpdates, typingUpdates) {
+        onDispose {
+            liveOriginalUpdates.close()
+            typingUpdates.close()
+        }
+    }
+
+    LaunchedEffect(
+        state.liveInputPreview,
+        state.liveInputPreviewDelaySeconds,
+        state.lastNonLiveChatboxSendMillis,
+        state.isSimultaneousInterpretationActive,
+        sending,
+        active,
+    ) {
+        livePreviewReady = false
+        val target = active ?: return@LaunchedEffect
+        if (
+            !state.liveInputPreview ||
+                sending ||
+                state.isSimultaneousInterpretationActive
+        ) return@LaunchedEffect
+        delay(
+            liveInputPreviewDelayRemainingMillis(
+                currentTimeMillis(),
+                state.lastNonLiveChatboxSendMillis,
+                state.liveInputPreviewDelaySeconds,
+            )
+        )
+        if (!sending && !state.isSimultaneousInterpretationActive) {
+            livePreviewReady = true
+            val previewText = state.chatDraft.trim()
+            if (isValidChatboxText(previewText, maxInputCharacters)) {
+            liveOriginalUpdates.send(
+                LiveOriginalUpdate(target, previewText, requiresTranslationIdle = true)
+            )
+            }
+        }
+    }
 
     LaunchedEffect(state.simultaneousFinalPending) {
         if (state.simultaneousFinalPending) {
@@ -644,13 +737,7 @@ fun ChatPage(state: AppState, strings: LocaleStrings) {
                 state.chatDraft = it.take(maxInputCharacters)
                 error = null
                 if (state.showTypingStatus && active != null) {
-                    scope.launch {
-                        sendChatboxTypingOsc(
-                            active.address,
-                            state.chatDraft.isNotEmpty(),
-                            active.receivePort,
-                        )
-                    }
+                    typingUpdates.trySend(TypingOscUpdate(active, state.chatDraft.isNotEmpty()))
                 }
                 val original = it.trim()
                 if (
@@ -659,6 +746,17 @@ fun ChatPage(state: AppState, strings: LocaleStrings) {
                         isValidChatboxText(original, maxInputCharacters)
                 ) {
                     liveOriginalUpdates.trySend(LiveOriginalUpdate(active, original))
+                }
+                if (
+                    livePreviewReady &&
+                        state.liveInputPreview &&
+                        !sending &&
+                        !state.isSimultaneousInterpretationActive &&
+                        active != null
+                ) {
+                    liveOriginalUpdates.trySend(
+                        LiveOriginalUpdate(active, state.chatDraft.trim(), true)
+                    )
                 }
             },
             onSend = {

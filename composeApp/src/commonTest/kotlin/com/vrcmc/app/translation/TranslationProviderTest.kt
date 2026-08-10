@@ -100,6 +100,30 @@ class TranslationProviderTest {
     }
 
     @Test
+    fun liveInputPreviewDefaultsOffAndDelayRoundTrips() {
+        val defaults = storedTranslationSettingsFromJson("{}")
+        assertFalse(defaults.liveInputPreview)
+        assertEquals(8, defaults.liveInputPreviewDelaySeconds)
+
+        val configured =
+            StoredTranslationSettings(liveInputPreview = true, liveInputPreviewDelaySeconds = 25)
+        val restored = storedTranslationSettingsFromJson(configured.toJson())
+        assertTrue(restored.liveInputPreview)
+        assertEquals(25, restored.liveInputPreviewDelaySeconds)
+    }
+
+    @Test
+    fun liveInputPreviewDelayIsClampedWhenLoaded() {
+        assertEquals(
+            30,
+            storedTranslationSettingsFromJson(
+                    """{"liveInputPreviewDelaySeconds":1000}"""
+                )
+                .liveInputPreviewDelaySeconds,
+        )
+    }
+
+    @Test
     fun legacySingleLanguageMigratesToLanguageList() {
         val restored =
             storedTranslationSettingsFromJson(

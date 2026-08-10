@@ -30,6 +30,8 @@ interface LocaleStrings {
     val preferences: String
     val disableDynamicInputLimit: String get() = "Disable dynamic input limit"
     val showTypingStatus: String get() = "Show typing status in VRChat"
+    val liveInputPreview: String get() = "Show input text live in VRChat"
+    val liveInputPreviewDelay: String get() = "Refresh after the last send"
     val chatbox: String
     val addDevice: String
     val activeDevice: String

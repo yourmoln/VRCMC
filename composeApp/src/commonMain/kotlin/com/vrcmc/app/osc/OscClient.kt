@@ -13,6 +13,21 @@ internal fun isValidChatboxText(text: String, maxCharacters: Int = maxChatboxCha
         text.length <= maxCharacters &&
         text.lineSequence().count() <= maxChatboxLines
 
+internal fun liveInputPreviewDelayRemainingMillis(
+    nowMillis: Long,
+    lastNonLiveSendMillis: Long?,
+    delaySeconds: Int,
+): Long {
+    if (lastNonLiveSendMillis == null) return 0
+    val elapsed = (nowMillis - lastNonLiveSendMillis).coerceAtLeast(0)
+    return (delaySeconds.coerceIn(0, 30) * 1_000L - elapsed).coerceAtLeast(0)
+}
+
+internal fun oscCooldownRemainingMillis(nowMillis: Long, lastSentMillis: Long?): Long {
+    if (lastSentMillis == null) return 0
+    return (1_000L - (nowMillis - lastSentMillis).coerceAtLeast(0)).coerceAtLeast(0)
+}
+
 internal fun chatboxPacket(text: String): ByteArray {
     fun padded(value: String): ByteArray {
         val raw = value.encodeToByteArray() + byteArrayOf(0)
