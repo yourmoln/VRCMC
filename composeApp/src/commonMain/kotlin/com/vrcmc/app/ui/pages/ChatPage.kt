@@ -644,7 +644,13 @@ fun ChatPage(state: AppState, strings: LocaleStrings) {
                 state.chatDraft = it.take(maxInputCharacters)
                 error = null
                 if (state.showTypingStatus && active != null) {
-                    scope.launch { sendChatboxTypingOsc(active.address, true, active.receivePort) }
+                    scope.launch {
+                        sendChatboxTypingOsc(
+                            active.address,
+                            state.chatDraft.isNotEmpty(),
+                            active.receivePort,
+                        )
+                    }
                 }
                 val original = it.trim()
                 if (
