@@ -25,4 +25,20 @@ class OscValidationTest {
         assertEquals(72, chatboxInputCharacterLimit(true, 1))
         assertEquals(48, chatboxInputCharacterLimit(true, 2))
     }
+
+    @Test
+    fun typingPacketUsesVrchatTypingAddressAndTrueTag() {
+        val packet = chatboxTypingPacket()
+        val addressEnd = packet.indexOf(0)
+        assertEquals("/chatbox/typing", packet.copyOf(addressEnd).decodeToString())
+        val tagStart = addressEnd + 1
+        assertEquals(",T", packet.copyOfRange(tagStart, tagStart + 2).decodeToString())
+    }
+
+    @Test
+    fun typingPacketUsesFalseTagWhenTypingStops() {
+        val packet = chatboxTypingPacket(false)
+        val tagStart = packet.indexOf(0) + 1
+        assertEquals(",F", packet.copyOfRange(tagStart, tagStart + 2).decodeToString())
+    }
 }

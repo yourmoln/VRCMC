@@ -17,3 +17,14 @@ actual suspend fun sendChatboxOsc(address: String, text: String, port: Int): Boo
             }
             .getOrDefault(false)
     }
+
+actual suspend fun sendChatboxTypingOsc(address: String, typing: Boolean, port: Int): Boolean =
+    withContext(Dispatchers.IO) {
+        runCatching {
+                val data = chatboxTypingPacket(typing)
+                val target = InetAddress.getByName(address.trim())
+                DatagramSocket().use { it.send(DatagramPacket(data, data.size, target, port)) }
+                true
+            }
+            .getOrDefault(false)
+    }

@@ -71,6 +71,7 @@ class AppState {
         )
     var translate by mutableStateOf(storedTranslation.translate)
     var disableDynamicInputLimit by mutableStateOf(storedTranslation.disableDynamicInputLimit)
+    var showTypingStatus by mutableStateOf(storedTranslation.showTypingStatus)
     var sendOriginalBeforeTranslation by
         mutableStateOf(storedTranslation.sendOriginalBeforeTranslation)
         private set
@@ -164,6 +165,11 @@ class AppState {
         persistTranslation()
     }
 
+    fun updateShowTypingStatus(enabled: Boolean) {
+        showTypingStatus = enabled
+        persistTranslation()
+    }
+
     fun updateSendOriginalBeforeTranslation(enabled: Boolean) {
         sendOriginalBeforeTranslation = enabled
         persistTranslation()
@@ -200,6 +206,7 @@ class AppState {
                     voiceInput = voiceInputConfig.copy(apiKey = ""),
                     interpretationVoiceInputEnabled = interpretationVoiceInputEnabled,
                     disableDynamicInputLimit = disableDynamicInputLimit,
+                    showTypingStatus = showTypingStatus,
                 )
                 .toJson()
         )

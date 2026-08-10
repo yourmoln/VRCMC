@@ -93,6 +93,13 @@ class TranslationProviderTest {
     }
 
     @Test
+    fun typingStatusDefaultsOnAndRoundTrips() {
+        assertTrue(storedTranslationSettingsFromJson("{}").showTypingStatus)
+        val disabled = StoredTranslationSettings(showTypingStatus = false)
+        assertFalse(storedTranslationSettingsFromJson(disabled.toJson()).showTypingStatus)
+    }
+
+    @Test
     fun legacySingleLanguageMigratesToLanguageList() {
         val restored =
             storedTranslationSettingsFromJson(

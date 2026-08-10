@@ -371,10 +371,14 @@ fun ChatPage(state: AppState, strings: LocaleStrings) {
             } else emptyList()
         val provider = state.provider
         val providerConfig = state.providerConfig
+        val showTypingStatus = state.showTypingStatus
         val requestGeneration = ++translationGeneration
         val job =
             scope.launch(start = CoroutineStart.LAZY) {
                 try {
+                    if (showTypingStatus) {
+                        sendChatboxTypingOsc(target.address, false, target.receivePort)
+                    }
                     if (
                         shouldTranslate &&
                             sendOriginalBeforeTranslation &&
@@ -639,6 +643,9 @@ fun ChatPage(state: AppState, strings: LocaleStrings) {
             onInputChange = {
                 state.chatDraft = it.take(maxInputCharacters)
                 error = null
+                if (state.showTypingStatus && active != null) {
+                    scope.launch { sendChatboxTypingOsc(active.address, true, active.receivePort) }
+                }
                 val original = it.trim()
                 if (
                     state.isSimultaneousInterpretationActive &&

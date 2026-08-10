@@ -22,6 +22,8 @@ internal fun PreferencesPage(
     setLanguage: (AppLanguage) -> Unit,
     disableDynamicInputLimit: Boolean,
     setDisableDynamicInputLimit: (Boolean) -> Unit,
+    showTypingStatus: Boolean,
+    setShowTypingStatus: (Boolean) -> Unit,
 ) {
     var expanded by remember { mutableStateOf(false) }
     val modes = ThemeMode.values()
@@ -115,6 +117,20 @@ internal fun PreferencesPage(
                         Switch(
                             checked = disableDynamicInputLimit,
                             onCheckedChange = setDisableDynamicInputLimit,
+                        )
+                    }
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        verticalAlignment = Alignment.CenterVertically,
+                    ) {
+                        Text(
+                            strings.showTypingStatus,
+                            modifier = Modifier.weight(1f),
+                            style = MaterialTheme.typography.labelLarge,
+                        )
+                        Switch(
+                            checked = showTypingStatus,
+                            onCheckedChange = setShowTypingStatus,
                         )
                     }
                 }

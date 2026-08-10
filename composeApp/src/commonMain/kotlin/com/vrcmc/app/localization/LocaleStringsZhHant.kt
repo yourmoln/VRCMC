@@ -14,6 +14,7 @@ object LocaleStringsZhHant : LocaleStrings {
     override val theme = "主題"
     override val preferences = "偏好設定"
     override val disableDynamicInputLimit = "關閉輸入框動態上限"
+    override val showTypingStatus = "在 VRChat 中顯示打字狀態"
     override val chatbox = "Chatbox 訊息"
     override val addDevice = "新增裝置"
     override val activeDevice = "目前裝置"

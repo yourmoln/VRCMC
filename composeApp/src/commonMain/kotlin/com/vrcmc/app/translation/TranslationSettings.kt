@@ -14,6 +14,7 @@ data class StoredTranslationSettings(
     val voiceInput: VoiceInputConfig = VoiceInputConfig(),
     val interpretationVoiceInputEnabled: Boolean = false,
     val disableDynamicInputLimit: Boolean = false,
+    val showTypingStatus: Boolean = true,
 )
 
 data class VoiceInputConfig(
@@ -81,6 +82,7 @@ fun StoredTranslationSettings.toJson(): String =
             }
             put("interpretationVoiceInputEnabled", interpretationVoiceInputEnabled)
             put("disableDynamicInputLimit", disableDynamicInputLimit)
+            put("showTypingStatus", showTypingStatus)
         }
         .toString()
 
@@ -206,6 +208,7 @@ fun storedTranslationSettingsFromJson(value: String): StoredTranslationSettings 
                     root["interpretationVoiceInputEnabled"]?.jsonPrimitive?.booleanOrNull ?: false,
                 disableDynamicInputLimit =
                     root["disableDynamicInputLimit"]?.jsonPrimitive?.booleanOrNull ?: false,
+                showTypingStatus = root["showTypingStatus"]?.jsonPrimitive?.booleanOrNull ?: true,
             )
         }
         .getOrDefault(StoredTranslationSettings())
