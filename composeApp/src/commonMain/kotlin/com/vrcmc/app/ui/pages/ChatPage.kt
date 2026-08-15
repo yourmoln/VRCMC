@@ -642,7 +642,7 @@ fun ChatPage(state: AppState, strings: LocaleStrings) {
         }
     }
 
-    LaunchedEffect(messages.lastIndex) {
+    LaunchedEffect(messages) {
         if (messages.isNotEmpty()) listState.requestScrollToItem(messages.lastIndex)
     }
 
