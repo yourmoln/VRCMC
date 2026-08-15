@@ -466,11 +466,9 @@ fun ChatPage(state: AppState, strings: LocaleStrings) {
                             lineBreakOutput,
                         )
                     if (!isValidChatboxText(outgoing)) error = strings.messageTooLong
-                    else {
-                        state.recordNonLiveChatboxSend()
-                        if (!sendChatboxOsc(target.address, outgoing, target.receivePort)) {
-                            error = strings.sendFailed
-                        }
+                    state.recordNonLiveChatboxSend()
+                    if (!sendChatboxOsc(target.address, outgoing, target.receivePort)) {
+                        error = strings.sendFailed
                     }
                 } finally {
                     if (translationGeneration == requestGeneration) {

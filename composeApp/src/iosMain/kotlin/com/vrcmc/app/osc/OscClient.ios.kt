@@ -22,7 +22,6 @@ import platform.posix.socket
 
 @OptIn(ExperimentalForeignApi::class)
 actual suspend fun sendChatboxOsc(address: String, text: String, port: Int): Boolean = memScoped {
-    if (text.isNotEmpty() && !isValidChatboxText(text)) return@memScoped false
     val hints =
         alloc<addrinfo>().apply {
             ai_flags = 0

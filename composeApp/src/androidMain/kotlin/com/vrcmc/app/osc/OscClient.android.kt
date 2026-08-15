@@ -8,7 +8,6 @@ import kotlinx.coroutines.withContext
 
 actual suspend fun sendChatboxOsc(address: String, text: String, port: Int): Boolean =
     withContext(Dispatchers.IO) {
-        if (text.isNotEmpty() && !isValidChatboxText(text)) return@withContext false
         runCatching {
                 val data = chatboxPacket(text)
                 val target = InetAddress.getByName(address.trim())
