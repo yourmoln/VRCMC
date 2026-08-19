@@ -100,6 +100,8 @@ class AppState {
         }
     var lineBreakOutput by mutableStateOf(storedTranslation.lineBreakOutput)
         private set
+    var showOriginalText by mutableStateOf(storedTranslation.showOriginalText)
+        private set
     val providerConfigs = initialProviderConfigs(storedTranslation.configs, storedSecrets)
     val provider
         get() = providerById(providerId)
@@ -174,6 +176,11 @@ class AppState {
         persistTranslation()
     }
 
+    fun updateShowOriginalText(enabled: Boolean) {
+        showOriginalText = enabled
+        persistTranslation()
+    }
+
     fun updateDisableDynamicInputLimit(enabled: Boolean) {
         disableDynamicInputLimit = enabled
         persistTranslation()
@@ -230,6 +237,7 @@ class AppState {
                     targetLanguages = languages.toList(),
                     outputOrder = outputOrder.toList(),
                     lineBreakOutput = lineBreakOutput,
+                    showOriginalText = showOriginalText,
                     configs = providerConfigs.toMap(),
                     voiceInput = voiceInputConfig.copy(apiKey = ""),
                     interpretationVoiceInputEnabled = interpretationVoiceInputEnabled,

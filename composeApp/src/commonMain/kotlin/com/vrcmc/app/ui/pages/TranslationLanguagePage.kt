@@ -13,6 +13,7 @@ import androidx.compose.material.icons.filled.ArrowUpward
 import androidx.compose.material.icons.filled.DragHandle
 import androidx.compose.material.icons.filled.Language
 import androidx.compose.material.icons.filled.Translate
+import androidx.compose.material.icons.filled.Visibility
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
@@ -24,12 +25,15 @@ import androidx.compose.ui.unit.dp
 fun TranslationLanguagePage(state: AppState, strings: LocaleStrings) {
     val previewOriginal = "今晚一起玩吗？"
     val previewTranslations = state.languages.associateWith(::previewForLanguage)
+    val visibleOutputOrder =
+        state.outputOrder.filter { state.showOriginalText || it != originalOutputKey }
     val preview =
         buildTranslationOutput(
             previewOriginal,
             previewTranslations,
             state.outputOrder,
             state.lineBreakOutput,
+            state.showOriginalText,
         )
 
     LazyColumn(
@@ -109,8 +113,31 @@ fun TranslationLanguagePage(state: AppState, strings: LocaleStrings) {
         }
 
         item {
+            LanguageSettingsSection(strings.originalTextOutput, Icons.Default.Visibility) {
+                Row(
+                    modifier = Modifier.fillMaxWidth().heightIn(min = 48.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    Column(Modifier.weight(1f)) {
+                        Text(strings.showOriginalText)
+                        Text(
+                            strings.showOriginalTextHint,
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
+                    }
+                    Spacer(Modifier.width(12.dp))
+                    Switch(
+                        checked = state.showOriginalText,
+                        onCheckedChange = state::updateShowOriginalText,
+                    )
+                }
+            }
+        }
+
+        item {
             LanguageSettingsSection(strings.displayOrder, Icons.Default.DragHandle) {
-                state.outputOrder.forEachIndexed { index, key ->
+                visibleOutputOrder.forEachIndexed { index, key ->
                     val label = if (key == originalOutputKey) strings.originalText else key
                     Surface(
                         modifier = Modifier.fillMaxWidth(),
@@ -147,15 +174,23 @@ fun TranslationLanguagePage(state: AppState, strings: LocaleStrings) {
                             IconButton(
                                 enabled = index > 0,
                                 onClick = {
-                                    state.setOutputOrder(state.outputOrder.moved(index, index - 1))
+                                    state.setOutputOrder(
+                                        state.outputOrder.reorderedVisibleItems(
+                                            visibleOutputOrder.moved(index, index - 1)
+                                        )
+                                    )
                                 },
                             ) {
                                 Icon(Icons.Default.ArrowUpward, strings.moveUp)
                             }
                             IconButton(
-                                enabled = index < state.outputOrder.lastIndex,
+                                enabled = index < visibleOutputOrder.lastIndex,
                                 onClick = {
-                                    state.setOutputOrder(state.outputOrder.moved(index, index + 1))
+                                    state.setOutputOrder(
+                                        state.outputOrder.reorderedVisibleItems(
+                                            visibleOutputOrder.moved(index, index + 1)
+                                        )
+                                    )
                                 },
                             ) {
                                 Icon(Icons.Default.ArrowDownward, strings.moveDown)
@@ -206,4 +241,10 @@ fun TranslationLanguagePage(state: AppState, strings: LocaleStrings) {
             }
         }
     }
+}
+
+private fun List<String>.reorderedVisibleItems(visibleItems: List<String>): List<String> {
+    val visibleSet = visibleItems.toSet()
+    val reordered = visibleItems.iterator()
+    return map { item -> if (item in visibleSet) reordered.next() else item }
 }

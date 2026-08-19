@@ -56,4 +56,31 @@ class TranslationOutputTest {
             ),
         )
     }
+
+    @Test
+    fun hidesOriginalTextAfterTranslationWhenDisabled() {
+        assertEquals(
+            "Hello\nKonnichiwa",
+            buildTranslationOutput(
+                original = "Original",
+                translations = mapOf("English" to "Hello", "Japanese" to "Konnichiwa"),
+                outputOrder = listOf("English", originalOutputKey, "Japanese"),
+                showOriginalText = false,
+            ),
+        )
+    }
+
+    @Test
+    fun inlineOutputAppliesParenthesesAfterHiddenOriginalIsFiltered() {
+        assertEquals(
+            "Hello(Konnichiwa)",
+            buildTranslationOutput(
+                original = "Original",
+                translations = mapOf("English" to "Hello", "Japanese" to "Konnichiwa"),
+                outputOrder = listOf("English", originalOutputKey, "Japanese"),
+                lineBreakOutput = false,
+                showOriginalText = false,
+            ),
+        )
+    }
 }
