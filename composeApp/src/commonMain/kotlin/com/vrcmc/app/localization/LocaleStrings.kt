@@ -21,6 +21,9 @@ interface LocaleStrings {
     val lineBreakOutput: String get() = "Line breaks"
     val enableLineBreakOutput: String get() = "Put each language on a new line"
     val lineBreakOutputHint: String get() = "When disabled, the second item in the display order is enclosed in parentheses."
+    val originalTextOutput: String get() = "Original text"
+    val showOriginalText: String get() = "Show original text"
+    val showOriginalTextHint: String get() = "When disabled, the original text is hidden after the translation is ready."
     val chat: String
     val devices: String
     val api: String

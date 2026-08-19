@@ -27,12 +27,13 @@ internal fun buildTranslationOutput(
     translations: Map<String, String>,
     outputOrder: List<String>,
     lineBreakOutput: Boolean = true,
+    showOriginalText: Boolean = true,
 ): String {
     val values =
         outputOrder
         .mapNotNull { key ->
             when (key) {
-                originalOutputKey -> original.takeIf(String::isNotBlank)
+                originalOutputKey -> original.takeIf { showOriginalText && it.isNotBlank() }
                 else -> translations[key]?.takeIf(String::isNotBlank)
             }
         }
