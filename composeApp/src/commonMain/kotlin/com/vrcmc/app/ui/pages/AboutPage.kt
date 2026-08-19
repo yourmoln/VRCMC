@@ -73,7 +73,10 @@ fun AboutPage(
                                     updateStatus = strings.alreadyLatestVersion
                                 }
                             }
-                            .onFailure { updateStatus = strings.updateCheckFailed }
+                            .onFailure {
+                                updateStatus = it.message?.takeIf(String::isNotBlank)
+                                    ?: strings.updateCheckFailed
+                            }
                         isCheckingForUpdates = false
                     }
                 },

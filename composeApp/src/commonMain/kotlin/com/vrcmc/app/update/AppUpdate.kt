@@ -4,6 +4,7 @@ import io.ktor.client.HttpClient
 import io.ktor.client.request.get
 import io.ktor.client.request.header
 import io.ktor.client.statement.bodyAsText
+import io.ktor.client.plugins.HttpTimeout
 import io.ktor.http.HttpHeaders
 import io.ktor.http.isSuccess
 import kotlinx.serialization.json.Json
@@ -32,8 +33,21 @@ data class UpdateCheckResult(
     val updateAvailable: Boolean,
 )
 
-private val updateHttpClient = HttpClient { expectSuccess = false }
+private val updateHttpClient = HttpClient {
+    expectSuccess = false
+    install(HttpTimeout) {
+        requestTimeoutMillis = 15_000
+        connectTimeoutMillis = 8_000
+        socketTimeoutMillis = 15_000
+    }
+}
 private val updateJson = Json { ignoreUnknownKeys = true }
+
+private val releaseApiUrls = listOf(
+    AppInfo.LATEST_RELEASE_API_URL,
+    "https://ghfast.top/${AppInfo.LATEST_RELEASE_API_URL}",
+    "https://gh-proxy.com/${AppInfo.LATEST_RELEASE_API_URL}",
+)
 
 expect fun isAndroidApp(): Boolean
 
@@ -44,13 +58,21 @@ expect suspend fun installAppUpdate(
 
 suspend fun checkForAppUpdate(): Result<UpdateCheckResult> =
     runCatching {
-        val response =
-            updateHttpClient.get(AppInfo.LATEST_RELEASE_API_URL) {
-                header(HttpHeaders.Accept, "application/vnd.github+json")
-                header(HttpHeaders.UserAgent, "VRCMC/${AppInfo.VERSION}")
-                header("X-GitHub-Api-Version", "2022-11-28")
-            }
-        check(response.status.isSuccess()) { "GitHub returned HTTP ${response.status.value}" }
+        var lastError: Throwable? = null
+        val response = releaseApiUrls.firstNotNullOfOrNull { url ->
+            runCatching {
+                updateHttpClient.get(url) {
+                    header(HttpHeaders.Accept, "application/vnd.github+json")
+                    header(HttpHeaders.UserAgent, "VRCMC/${AppInfo.VERSION}")
+                    header("X-GitHub-Api-Version", "2022-11-28")
+                }.also { response ->
+                    if (!response.status.isSuccess()) {
+                        lastError = IllegalStateException("GitHub returned HTTP ${response.status.value}")
+                        return@runCatching null
+                    }
+                }
+            }.onFailure { lastError = it }.getOrNull()
+        } ?: throw (lastError ?: IllegalStateException("Unable to reach GitHub release service"))
 
         val releaseJson = updateJson.parseToJsonElement(response.bodyAsText()).jsonObject
         val tagName = releaseJson.getValue("tag_name").jsonPrimitive.content
