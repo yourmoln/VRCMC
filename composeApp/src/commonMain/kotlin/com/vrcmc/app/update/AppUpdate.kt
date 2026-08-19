@@ -14,7 +14,7 @@ import kotlinx.serialization.json.jsonPrimitive
 import kotlinx.serialization.json.jsonArray
 
 object AppInfo {
-    const val VERSION = "1.1.1"
+    const val VERSION = "1.1.2"
     const val REPOSITORY_URL = "https://github.com/yourmoln/VRCMC"
     const val LATEST_RELEASE_API_URL =
         "https://api.github.com/repos/yourmoln/VRCMC/releases/latest"
