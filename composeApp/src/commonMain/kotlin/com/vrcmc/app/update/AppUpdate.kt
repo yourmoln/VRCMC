@@ -10,6 +10,7 @@ import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.contentOrNull
 import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.jsonPrimitive
+import kotlinx.serialization.json.jsonArray
 
 object AppInfo {
     const val VERSION = "1.1.1"
@@ -23,6 +24,7 @@ data class AppRelease(
     val name: String,
     val body: String,
     val htmlUrl: String,
+    val apkUrl: String?,
 )
 
 data class UpdateCheckResult(
@@ -32,6 +34,10 @@ data class UpdateCheckResult(
 
 private val updateHttpClient = HttpClient { expectSuccess = false }
 private val updateJson = Json { ignoreUnknownKeys = true }
+
+expect fun isAndroidApp(): Boolean
+
+expect suspend fun installAppUpdate(release: AppRelease): Result<Unit>
 
 suspend fun checkForAppUpdate(): Result<UpdateCheckResult> =
     runCatching {
@@ -51,6 +57,9 @@ suspend fun checkForAppUpdate(): Result<UpdateCheckResult> =
                 name = releaseJson["name"]?.jsonPrimitive?.contentOrNull.orEmpty(),
                 body = releaseJson["body"]?.jsonPrimitive?.contentOrNull.orEmpty(),
                 htmlUrl = releaseJson.getValue("html_url").jsonPrimitive.content,
+                apkUrl = releaseJson["assets"]?.jsonArray
+                    ?.mapNotNull { asset -> asset.jsonObject["browser_download_url"]?.jsonPrimitive?.contentOrNull }
+                    ?.firstOrNull { it.endsWith(".apk", ignoreCase = true) },
             )
         UpdateCheckResult(release, isNewerVersion(tagName, AppInfo.VERSION))
     }

@@ -214,7 +214,15 @@ fun VrcmcApp(onDarkThemeChanged: (Boolean) -> Unit = {}) {
                 release = release,
                 strings = strings,
                 onUpdate = {
-                    uriHandler.openUri(release.htmlUrl)
+                    if (isAndroidApp() && release.apkUrl != null) {
+                        scope.launch {
+                            installAppUpdate(release).onFailure {
+                                uriHandler.openUri(release.htmlUrl)
+                            }
+                        }
+                    } else {
+                        uriHandler.openUri(release.htmlUrl)
+                    }
                     availableUpdate = null
                 },
                 onDismiss = { ignoreVersion ->
