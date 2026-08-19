@@ -173,6 +173,7 @@ object LocaleStringsJa : LocaleStrings {
     override val updateCheckFailed = "アップデートを確認できませんでした。後でもう一度お試しください。"
     override val updateAvailable = "新しいバージョンがあります"
     override val updateNow = "アップデート"
+    override val updateAndroid = "更新"
     override val later = "後で"
     override val ignoreThisVersion = "このバージョンを今後通知しない"
     override val errorLogs = "エラーログ"

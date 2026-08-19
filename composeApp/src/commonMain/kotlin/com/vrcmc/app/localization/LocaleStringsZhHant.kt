@@ -169,6 +169,7 @@ object LocaleStringsZhHant : LocaleStrings {
     override val updateCheckFailed = "檢查更新失敗，請稍後重試"
     override val updateAvailable = "發現新版本"
     override val updateNow = "前往更新"
+    override val updateAndroid = "更新"
     override val later = "稍後"
     override val ignoreThisVersion = "忽略此次版本更新"
     override val errorLogs = "錯誤記錄"

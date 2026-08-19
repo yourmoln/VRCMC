@@ -193,6 +193,7 @@ object LocaleStringsEn : LocaleStrings {
     override val updateCheckFailed = "Couldn't check for updates. Try again later."
     override val updateAvailable = "New version available"
     override val updateNow = "Update"
+    override val updateAndroid = "Update"
     override val later = "Later"
     override val ignoreThisVersion = "Don't remind me about this version"
     override val errorLogs = "Error logs"

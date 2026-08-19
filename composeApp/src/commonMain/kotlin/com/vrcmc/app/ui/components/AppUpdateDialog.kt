@@ -14,6 +14,7 @@ import androidx.compose.material.icons.filled.SystemUpdate
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Checkbox
 import androidx.compose.material3.Icon
+import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
@@ -31,10 +32,13 @@ internal fun AppUpdateDialog(
     strings: LocaleStrings,
     onUpdate: () -> Unit,
     onDismiss: (ignoreVersion: Boolean) -> Unit,
+    isAndroid: Boolean,
+    updating: Boolean,
+    progress: Float?,
 ) {
     var ignoreVersion by remember(release.tagName) { mutableStateOf(false) }
     AlertDialog(
-        onDismissRequest = { onDismiss(ignoreVersion) },
+        onDismissRequest = { if (!updating) onDismiss(ignoreVersion) },
         icon = { Icon(Icons.Default.SystemUpdate, null) },
         title = { Text(strings.updateAvailable) },
         text = {
@@ -43,13 +47,23 @@ internal fun AppUpdateDialog(
                 verticalArrangement = Arrangement.spacedBy(12.dp),
             ) {
                 Text(release.name.ifBlank { "VRCMC ${release.tagName}" })
+                if (updating) {
+                    if (progress == null) {
+                        LinearProgressIndicator(Modifier.fillMaxWidth())
+                    } else {
+                        LinearProgressIndicator(
+                            progress = { progress },
+                            modifier = Modifier.fillMaxWidth(),
+                        )
+                    }
+                }
                 if (release.body.isNotBlank()) {
                     Text(
                         release.body,
                         Modifier.heightIn(max = 320.dp).verticalScroll(rememberScrollState()),
                     )
                 }
-                Row(
+                if (!updating) Row(
                     modifier =
                         Modifier.fillMaxWidth().clickable { ignoreVersion = !ignoreVersion }
                             .padding(vertical = 4.dp),
@@ -63,9 +77,15 @@ internal fun AppUpdateDialog(
                 }
             }
         },
-        confirmButton = { TextButton(onUpdate) { Text(strings.updateNow) } },
+        confirmButton = {
+            TextButton(onUpdate, enabled = !updating) {
+                Text(if (isAndroid) strings.updateAndroid else strings.updateNow)
+            }
+        },
         dismissButton = {
-            TextButton(onClick = { onDismiss(ignoreVersion) }) { Text(strings.later) }
+            if (!updating) {
+                TextButton(onClick = { onDismiss(ignoreVersion) }) { Text(strings.later) }
+            }
         },
     )
 }

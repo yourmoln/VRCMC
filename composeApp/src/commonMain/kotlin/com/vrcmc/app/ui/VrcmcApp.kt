@@ -33,6 +33,8 @@ fun VrcmcApp(onDarkThemeChanged: (Boolean) -> Unit = {}) {
     var showAddDevice by remember { mutableStateOf(false) }
     var showClearHistory by remember { mutableStateOf(false) }
     var availableUpdate by remember { mutableStateOf<AppRelease?>(null) }
+    var updateInProgress by remember { mutableStateOf(false) }
+    var updateProgress by remember { mutableStateOf<Float?>(null) }
     val drawerState = rememberDrawerState(DrawerValue.Closed)
     val scope = rememberCoroutineScope()
     val focusManager = LocalFocusManager.current
@@ -215,20 +217,30 @@ fun VrcmcApp(onDarkThemeChanged: (Boolean) -> Unit = {}) {
                 strings = strings,
                 onUpdate = {
                     if (isAndroidApp() && release.apkUrl != null) {
+                        updateInProgress = true
+                        updateProgress = null
                         scope.launch {
-                            installAppUpdate(release).onFailure {
-                                uriHandler.openUri(release.htmlUrl)
-                            }
+                            installAppUpdate(release) { updateProgress = it }
+                                .onSuccess { availableUpdate = null }
+                                .onFailure {
+                                    uriHandler.openUri(release.htmlUrl)
+                                    availableUpdate = null
+                                }
+                            updateInProgress = false
+                            updateProgress = null
                         }
                     } else {
                         uriHandler.openUri(release.htmlUrl)
+                        availableUpdate = null
                     }
-                    availableUpdate = null
                 },
                 onDismiss = { ignoreVersion ->
                     if (ignoreVersion) saveIgnoredUpdateVersion(release.tagName)
                     availableUpdate = null
                 },
+                isAndroid = isAndroidApp(),
+                updating = updateInProgress,
+                progress = updateProgress,
             )
         }
     }

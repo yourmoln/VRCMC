@@ -30,6 +30,7 @@ object LocaleStringsZhHans : LocaleStrings {
     override val updateCheckFailed = "检查更新失败，请稍后重试"
     override val updateAvailable = "发现新版本"
     override val updateNow = "前往更新"
+    override val updateAndroid = "更新"
     override val later = "稍后"
     override val ignoreThisVersion = "忽略此次版本更新"
     override val errorLogs = "错误日志"

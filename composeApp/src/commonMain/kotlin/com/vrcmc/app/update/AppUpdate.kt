@@ -37,7 +37,10 @@ private val updateJson = Json { ignoreUnknownKeys = true }
 
 expect fun isAndroidApp(): Boolean
 
-expect suspend fun installAppUpdate(release: AppRelease): Result<Unit>
+expect suspend fun installAppUpdate(
+    release: AppRelease,
+    onProgress: (Float?) -> Unit,
+): Result<Unit>
 
 suspend fun checkForAppUpdate(): Result<UpdateCheckResult> =
     runCatching {
