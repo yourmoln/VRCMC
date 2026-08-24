@@ -49,7 +49,7 @@ internal val regionalProviders =
             "qianwen",
             "Qwen",
             ProviderProtocol.OPENAI,
-            "https://dashscope-intl.aliyuncs.com/compatible-mode/v1",
+            "https://dashscope.aliyuncs.com/compatible-mode/v1",
             "qwen-mt-plus",
             listOf("qwen-mt-plus", "qwen-mt-flash"),
             editableBaseUrl = true,

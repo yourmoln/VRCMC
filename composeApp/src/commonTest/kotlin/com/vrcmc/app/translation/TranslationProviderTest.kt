@@ -16,6 +16,17 @@ class TranslationProviderTest {
     }
 
     @Test
+    fun regionalProviderDefaultsMatchTheirFirstRegion() {
+        translationProviders.filter { it.regions.isNotEmpty() }.forEach { provider ->
+            val config = defaultProviderConfig(provider)
+            val defaultRegion = provider.regions.first()
+
+            assertEquals(defaultRegion.id, config.region, provider.id)
+            assertEquals(defaultRegion.baseUrl, config.baseUrl, provider.id)
+        }
+    }
+
+    @Test
     fun publicSettingsNeverPersistProviderSecrets() {
         val original =
             StoredTranslationSettings(
