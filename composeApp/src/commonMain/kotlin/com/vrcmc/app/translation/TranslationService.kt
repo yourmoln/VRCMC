@@ -19,7 +19,7 @@ sealed interface TranslationResult {
     ) : TranslationResult
 }
 
-internal val translationHttpClient = HttpClient { expectSuccess = false }
+internal val translationHttpClient = createVrcmcHttpClient { expectSuccess = false }
 internal val translationJson = Json { ignoreUnknownKeys = true }
 
 internal fun isArabicDigitsOnly(text: String): Boolean =

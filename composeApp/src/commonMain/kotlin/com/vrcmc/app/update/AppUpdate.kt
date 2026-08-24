@@ -1,6 +1,5 @@
 package com.vrcmc.app
 
-import io.ktor.client.HttpClient
 import io.ktor.client.request.get
 import io.ktor.client.request.header
 import io.ktor.client.statement.bodyAsText
@@ -33,7 +32,7 @@ data class UpdateCheckResult(
     val updateAvailable: Boolean,
 )
 
-private val updateHttpClient = HttpClient {
+private val updateHttpClient = createVrcmcHttpClient {
     expectSuccess = false
     install(HttpTimeout) {
         requestTimeoutMillis = 15_000

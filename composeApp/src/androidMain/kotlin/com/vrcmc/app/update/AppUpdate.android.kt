@@ -9,7 +9,6 @@ import android.net.Uri
 import android.os.Build
 import android.os.Environment
 import androidx.core.content.FileProvider
-import io.ktor.client.HttpClient
 import io.ktor.client.plugins.HttpTimeout
 import io.ktor.client.request.head
 import io.ktor.client.request.header
@@ -41,7 +40,7 @@ actual suspend fun installAppUpdate(
 ): Result<Unit> = runCatching {
     val source = requireNotNull(release.apkUrl) { "This release has no Android APK" }
     onProgress(null)
-    val client = HttpClient {
+    val client = createVrcmcHttpClient {
         expectSuccess = false
         install(HttpTimeout) {
             requestTimeoutMillis = 8_000
