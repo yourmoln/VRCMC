@@ -107,10 +107,18 @@ internal fun VoiceInputServiceSection(
             onValueChange = { value -> onUpdate { it.copy(baseUrl = value) } },
             modifier = Modifier.fillMaxWidth(),
             singleLine = true,
-            readOnly = config.region !in setOf("japan", "custom"),
             label = { Text("Base URL") },
-            leadingIcon = { Icon(Icons.Default.Lock, null) },
-            isError = !config.baseUrl.startsWith("https://"),
+            leadingIcon = {
+                Icon(
+                    if (config.baseUrl.startsWith("https://")) Icons.Default.Lock
+                    else Icons.Default.Language,
+                    null,
+                )
+            },
+            isError =
+                config.baseUrl.isBlank() ||
+                    (!config.baseUrl.startsWith("https://") &&
+                        !config.baseUrl.startsWith("http://")),
             shape = MaterialTheme.shapes.large,
         )
         Box {

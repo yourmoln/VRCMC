@@ -88,7 +88,6 @@ internal fun ApiCredentialsSection(
             onValueChange = { onUpdate { old -> old.copy(baseUrl = it) } },
             modifier = Modifier.fillMaxWidth(),
             singleLine = true,
-            readOnly = !provider.editableBaseUrl,
             label = { Text("Base URL") },
             leadingIcon = {
                 Icon(
@@ -98,10 +97,7 @@ internal fun ApiCredentialsSection(
                 )
             },
             supportingText = {
-                Text(
-                    if (provider.editableBaseUrl) strings.baseUrlHint
-                    else strings.officialEndpointLocked
-                )
+                Text(strings.baseUrlHint)
             },
             isError =
                 config.baseUrl.isBlank() ||

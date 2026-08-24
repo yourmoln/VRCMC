@@ -22,7 +22,6 @@ data class TranslationProvider(
     val models: List<String>,
     val keyRequired: Boolean = true,
     val keyPlaceholder: String = "sk-...",
-    val editableBaseUrl: Boolean = false,
     val editableModel: Boolean = false,
     val supportsHeaders: Boolean = false,
     val supportsStreaming: Boolean = false,

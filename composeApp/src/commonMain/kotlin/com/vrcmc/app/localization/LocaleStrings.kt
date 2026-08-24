@@ -122,7 +122,6 @@ interface LocaleStrings {
     val apiKeyRequired: String
     val customEndpoint: String
     val baseUrlHint: String
-    val officialEndpointLocked: String
     val model: String
     val chooseModel: String
     val customModelPreserved: String

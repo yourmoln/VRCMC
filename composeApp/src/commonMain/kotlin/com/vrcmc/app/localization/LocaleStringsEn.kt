@@ -114,8 +114,6 @@ object LocaleStringsEn : LocaleStrings {
     override val apiKeyRequired = "API Key is required for this provider"
     override val customEndpoint = "Custom endpoint"
     override val baseUrlHint = "Enter the endpoint supplied by the provider or relay"
-    override val officialEndpointLocked =
-        "Official endpoint is locked to prevent accidental changes"
     override val model = "Model"
     override val chooseModel = "Choose model"
     override val customModelPreserved = "Custom model IDs are preserved exactly as entered"
@@ -228,7 +226,7 @@ object LocaleStringsEn : LocaleStrings {
     override fun providerHint(provider: TranslationProvider): String =
         when (provider.id) {
             "openai" ->
-                "Official OpenAI API. Base URL is fixed; select a model ID from the presets."
+                "Official OpenAI API. The Base URL can be changed; select a model ID from the presets."
             "openai_compatible" ->
                 "For OpenAI-compatible proxies, relays, and self-hosted APIs. Custom model IDs are preserved exactly."
             "anthropic" -> "Official Anthropic Messages API."

@@ -31,7 +31,6 @@ internal val regionalProviders =
             "https://api-free.deepl.com/v2",
             "deepl-api",
             listOf("deepl-api"),
-            editableBaseUrl = true,
             hint = "默认使用 DeepL API Free；付费账户请改为 https://api.deepl.com/v2。",
         ),
         TranslationProvider(
@@ -42,7 +41,6 @@ internal val regionalProviders =
             "libretranslate",
             listOf("libretranslate"),
             keyRequired = false,
-            editableBaseUrl = true,
             hint = "自托管 LibreTranslate 通常无需 Key，公共实例可能需要。",
         ),
         TranslationProvider(
@@ -52,7 +50,6 @@ internal val regionalProviders =
             "https://dashscope.aliyuncs.com/compatible-mode/v1",
             "qwen-mt-plus",
             listOf("qwen-mt-plus", "qwen-mt-flash"),
-            editableBaseUrl = true,
             hint = "按 API Key 所属地域选择端点。日本区域需填写工作空间专属 URL。",
             regions =
                 listOf(
@@ -76,7 +73,6 @@ internal val regionalProviders =
             "https://api.hunyuan.cloud.tencent.com/v1",
             "hunyuan-turbos-latest",
             listOf("hunyuan-turbos-latest", "hunyuan-turbo-latest"),
-            editableBaseUrl = true,
             hint = "腾讯混元 OpenAI-compatible 接口。",
         ),
         TranslationProvider(
@@ -86,7 +82,6 @@ internal val regionalProviders =
             "https://api.xiaomimimo.com/v1",
             "mimo-v2.5-pro",
             listOf("mimo-v2.5-pro", "mimo-v2.5", "mimo-v2-flash"),
-            editableBaseUrl = true,
             hint = "按 Key 类型选择全球按量或 Token Plan 集群。",
             regions =
                 listOf(

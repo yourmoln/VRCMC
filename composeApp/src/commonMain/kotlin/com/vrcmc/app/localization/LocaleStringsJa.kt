@@ -107,7 +107,6 @@ object LocaleStringsJa : LocaleStrings {
     override val apiKeyRequired = "このプロバイダーには API キーが必要です"
     override val customEndpoint = "カスタムエンドポイント"
     override val baseUrlHint = "プロバイダーまたは中継サービスから提供されたエンドポイントを入力してください"
-    override val officialEndpointLocked = "誤変更を防ぐため公式エンドポイントは固定されています"
     override val model = "モデル"
     override val chooseModel = "モデルを選択"
     override val customModelPreserved = "カスタムモデル ID は入力どおりに保存されます"
@@ -207,7 +206,7 @@ object LocaleStringsJa : LocaleStrings {
 
     override fun providerHint(provider: TranslationProvider): String =
         when (provider.id) {
-            "openai" -> "OpenAI 公式 API。Base URL は固定され、モデル ID はプリセットから選択できます。"
+            "openai" -> "OpenAI 公式 API。Base URL は変更でき、モデル ID はプリセットから選択できます。"
             "openai_compatible" -> "OpenAI 互換プロキシ、中継サービス、セルフホスト API 向けです。カスタムモデル ID は入力どおりに保持されます。"
             "anthropic" -> "Anthropic 公式 Messages API。"
             "anthropic_compatible" -> "Anthropic Messages API 互換のプロキシまたは中継サービス向けです。"

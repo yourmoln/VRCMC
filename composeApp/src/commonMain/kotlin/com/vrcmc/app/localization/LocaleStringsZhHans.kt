@@ -160,7 +160,6 @@ object LocaleStringsZhHans : LocaleStrings {
     override val apiKeyRequired = "该服务商需要 API Key"
     override val customEndpoint = "自定义端点"
     override val baseUrlHint = "填写服务商或中转站提供的接口地址"
-    override val officialEndpointLocked = "官方端点已锁定，避免意外修改"
     override val model = "模型"
     override val chooseModel = "选择模型"
     override val customModelPreserved = "自定义模型 ID 将按输入内容原样保存"

@@ -104,7 +104,6 @@ object LocaleStringsZhHant : LocaleStrings {
     override val apiKeyRequired = "此服務供應商需要 API 金鑰"
     override val customEndpoint = "自訂端點"
     override val baseUrlHint = "輸入服務供應商或轉送服務提供的端點"
-    override val officialEndpointLocked = "官方端點已鎖定，以免意外變更"
     override val model = "模型"
     override val chooseModel = "選擇模型"
     override val customModelPreserved = "自訂模型 ID 會依輸入內容原樣儲存"
@@ -203,7 +202,7 @@ object LocaleStringsZhHant : LocaleStrings {
 
     override fun providerHint(provider: TranslationProvider): String =
         when (provider.id) {
-            "openai" -> "OpenAI 官方 API。Base URL 固定，可從預設項目選擇模型 ID。"
+            "openai" -> "OpenAI 官方 API。Base URL 可修改，並可從預設項目選擇模型 ID。"
             "openai_compatible" -> "適用於 OpenAI 相容代理、轉送服務及自架 API。自訂模型 ID 會原樣保留。"
             "anthropic" -> "Anthropic 官方 Messages API。"
             "anthropic_compatible" -> "適用於 Anthropic Messages API 相容代理或轉送服務。"

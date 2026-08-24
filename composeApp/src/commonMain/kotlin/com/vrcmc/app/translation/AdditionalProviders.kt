@@ -11,7 +11,6 @@ internal val additionalProviders =
             "https://api.deepseek.com",
             "deepseek-v4-flash",
             listOf("deepseek-v4-flash", "deepseek-v4-pro"),
-            editableBaseUrl = true,
             hint = "DeepSeek 官方接口；使用中转 Key 时请填写对应 Base URL。",
         ),
         TranslationProvider(
@@ -73,7 +72,6 @@ internal val additionalProviders =
             "https://integrate.api.nvidia.com/v1",
             "nvidia/nemotron-3-nano-30b-a3b",
             listOf("nvidia/nemotron-3-nano-30b-a3b"),
-            editableBaseUrl = true,
             editableModel = true,
             hint = "支持 NVIDIA API Catalog、NIM 自部署或兼容代理。",
         ),

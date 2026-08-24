@@ -15,34 +15,22 @@ class TranslationSecurityTest {
     }
 
     @Test
-    fun acceptsCredentialFreeLocalHttp() {
-        assertNull(endpointSecurityError(ProviderConfig(baseUrl = "http://127.0.0.1:11434/v1")))
-    }
-
-    @Test
-    fun rejectsCredentialsAndHeadersOverHttp() {
-        assertEquals(
-            "HTTP 端点不能携带 API Key 或自定义请求头，请改用 HTTPS",
-            endpointSecurityError(ProviderConfig(apiKey = "secret", baseUrl = "http://example.com")),
-        )
-        assertEquals(
-            "HTTP 端点不能携带 API Key 或自定义请求头，请改用 HTTPS",
-            endpointSecurityError(
-                ProviderConfig(
-                    baseUrl = "http://example.com",
-                    customHeaders = "Authorization: secret",
-                )
+    fun acceptsHttpEndpointsWithCredentialsAndHeaders() {
+        listOf(
+            ProviderConfig(baseUrl = "http://127.0.0.1:11434/v1"),
+            ProviderConfig(apiKey = "secret", baseUrl = "http://example.com"),
+            ProviderConfig(
+                baseUrl = "http://example.com",
+                customHeaders = "Authorization: secret",
             ),
-        )
+        ).forEach { config -> assertNull(endpointSecurityError(config)) }
     }
 
     @Test
-    fun rejectsPublicCleartextEndpoints() {
+    fun rejectsUnsupportedUrlSchemes() {
         assertEquals(
-            "HTTP 仅允许用于本机或局域网端点，公网端点必须使用 HTTPS",
-            endpointSecurityError(ProviderConfig(baseUrl = "http://example.com")),
+            "Base URL 必须以 http:// 或 https:// 开头",
+            endpointSecurityError(ProviderConfig(baseUrl = "ftp://example.com")),
         )
-        assertNull(endpointSecurityError(ProviderConfig(baseUrl = "http://192.168.1.20:11434/v1")))
-        assertNull(endpointSecurityError(ProviderConfig(baseUrl = "http://[::1]:11434/v1")))
     }
 }

@@ -129,45 +129,8 @@ internal fun endpointSecurityError(config: ProviderConfig): String? {
     val endpoint = config.baseUrl.trim().lowercase()
     if (!endpoint.startsWith("https://") && !endpoint.startsWith("http://"))
         return "Base URL 必须以 http:// 或 https:// 开头"
-    if (
-        endpoint.startsWith("http://") &&
-            (config.apiKey.isNotBlank() || config.customHeaders.isNotBlank())
-    ) {
-        return "HTTP 端点不能携带 API Key 或自定义请求头，请改用 HTTPS"
-    }
-    if (endpoint.startsWith("http://") && !isLocalNetworkEndpoint(config.baseUrl)) {
-        return "HTTP 仅允许用于本机或局域网端点，公网端点必须使用 HTTPS"
-    }
     return null
 }
-
-private fun isLocalNetworkEndpoint(value: String): Boolean =
-    runCatching {
-            val host = Url(value.trim()).host.lowercase().trim('[', ']')
-            if (
-                host == "localhost" ||
-                    host.endsWith(".local") ||
-                    host == "::1" ||
-                    host.startsWith("127.")
-            )
-                return@runCatching true
-            val ipv4 = host.split('.').map { it.toIntOrNull() }
-            if (ipv4.size == 4 && ipv4.all { it != null && it in 0..255 }) {
-                val first = ipv4[0]!!
-                val second = ipv4[1]!!
-                return@runCatching first == 10 ||
-                    (first == 172 && second in 16..31) ||
-                    (first == 192 && second == 168) ||
-                    (first == 169 && second == 254)
-            }
-            host.startsWith("fc") ||
-                host.startsWith("fd") ||
-                host.startsWith("fe8") ||
-                host.startsWith("fe9") ||
-                host.startsWith("fea") ||
-                host.startsWith("feb")
-        }
-        .getOrDefault(false)
 
 internal suspend fun translateWithRetries(
     sourceText: String,
