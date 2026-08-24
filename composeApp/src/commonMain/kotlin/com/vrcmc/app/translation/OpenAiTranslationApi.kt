@@ -41,16 +41,22 @@ internal suspend fun requestOpenAi(
     if (parsed == null) {
         onApiFailure(raw)
         return TranslationResult.Failure(
-            "API response could not be parsed",
-            response.status.value,
+            status = response.status.value,
             retryable = true,
+            reason = TranslationFailureReason.RESPONSE_PARSE_FAILED,
+            provider = provider.label,
         )
     }
     val translated = parsed.content
     return translated?.trim()?.takeIf { it.isNotEmpty() }?.let(TranslationResult::Success)
         ?: run {
             onApiFailure(raw)
-            TranslationResult.Failure("服务返回成功，但没有可用的翻译内容", response.status.value, retryable = true)
+            TranslationResult.Failure(
+                status = response.status.value,
+                retryable = true,
+                reason = TranslationFailureReason.EMPTY_RESPONSE,
+                provider = provider.label,
+            )
         }
 }
 

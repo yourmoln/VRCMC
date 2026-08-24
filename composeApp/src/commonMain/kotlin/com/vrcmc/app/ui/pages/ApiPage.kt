@@ -112,7 +112,8 @@ fun ApiPage(state: AppState, strings: LocaleStrings) {
                             Text(
                                 when (outcome) {
                                     is TranslationResult.Success -> outcome.text
-                                    is TranslationResult.Failure -> outcome.message
+                                    is TranslationResult.Failure ->
+                                        strings.translationFailureMessage(outcome)
                                 }
                             )
                         }

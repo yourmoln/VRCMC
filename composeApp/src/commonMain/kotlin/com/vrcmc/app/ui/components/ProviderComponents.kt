@@ -201,6 +201,7 @@ internal fun ProviderProtocol.displayName() =
         ProviderProtocol.OPENAI -> "OpenAI-compatible"
         ProviderProtocol.ANTHROPIC -> "Anthropic Messages"
         ProviderProtocol.GOOGLE_WEB -> "Public Web API"
+        ProviderProtocol.MICROSOFT_EDGE_WEB -> "Microsoft Edge Web API"
         ProviderProtocol.MYMEMORY -> "Translation Memory API"
         ProviderProtocol.DEEPL -> "DeepL REST API"
         ProviderProtocol.LIBRE -> "LibreTranslate REST API"

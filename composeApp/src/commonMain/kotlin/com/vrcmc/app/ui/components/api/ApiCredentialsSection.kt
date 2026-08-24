@@ -20,7 +20,7 @@ internal fun ApiCredentialsSection(
     var regionMenu by remember(provider.id) { mutableStateOf(false) }
     var showKey by remember(provider.id) { mutableStateOf(false) }
     SettingsCard(strings.credentialsAndEndpoint, Icons.Default.Key) {
-        if (provider.id !in setOf("google_web", "mymemory")) {
+        if (provider.id !in setOf("google_web", "microsoft_edge_web", "mymemory")) {
             OutlinedTextField(
                 value = config.apiKey,
                 onValueChange = { onUpdate { old -> old.copy(apiKey = it) } },

@@ -1,36 +1,24 @@
 package com.vrcmc.app
 
 import kotlin.test.Test
-import kotlin.test.assertEquals
-import kotlin.test.assertNull
+import kotlin.test.assertFalse
+import kotlin.test.assertTrue
 
 class TranslationSecurityTest {
     @Test
     fun acceptsHttpsCredentials() {
-        assertNull(
-            endpointSecurityError(
-                ProviderConfig(apiKey = "secret", baseUrl = "https://example.com")
-            )
-        )
+        assertTrue(isSupportedHttpEndpoint("https://example.com"))
     }
 
     @Test
     fun acceptsHttpEndpointsWithCredentialsAndHeaders() {
-        listOf(
-            ProviderConfig(baseUrl = "http://127.0.0.1:11434/v1"),
-            ProviderConfig(apiKey = "secret", baseUrl = "http://example.com"),
-            ProviderConfig(
-                baseUrl = "http://example.com",
-                customHeaders = "Authorization: secret",
-            ),
-        ).forEach { config -> assertNull(endpointSecurityError(config)) }
+        listOf("http://127.0.0.1:11434/v1", "http://example.com").forEach {
+            assertTrue(isSupportedHttpEndpoint(it))
+        }
     }
 
     @Test
     fun rejectsUnsupportedUrlSchemes() {
-        assertEquals(
-            "Base URL 必须以 http:// 或 https:// 开头",
-            endpointSecurityError(ProviderConfig(baseUrl = "ftp://example.com")),
-        )
+        assertFalse(isSupportedHttpEndpoint("ftp://example.com"))
     }
 }

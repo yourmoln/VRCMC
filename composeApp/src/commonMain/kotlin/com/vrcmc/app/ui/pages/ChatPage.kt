@@ -149,7 +149,7 @@ fun ChatPage(state: AppState, strings: LocaleStrings) {
                     }
                 is VoiceTranscriptionResult.Failure ->
                     if (generation == voiceGeneration) {
-                        error = result.message
+                        error = strings.voiceTranscriptionFailureMessage(result)
                         if (
                             managedVoiceCapture &&
                                 (state.isAlwaysInterpretationActive ||
@@ -430,7 +430,7 @@ fun ChatPage(state: AppState, strings: LocaleStrings) {
                         }
                     if (failure != null) {
                         removeLoadingMessages(loadingMessages)
-                        error = failure.message
+                        error = strings.translationFailureMessage(failure)
                         return@launch
                     }
                     val successful =

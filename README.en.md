@@ -26,7 +26,7 @@ VRCMC is a VRChat Chatbox companion built with Kotlin Multiplatform and Compose 
 
 - **OSC Chatbox**: Send text to VRChat while respecting the Chatbox limit of 144 characters and 9 lines.
 - **Multiple devices**: Save multiple IP and port configurations, and scan for devices on the same local network.
-- **Multiple translation services**: Supports OpenAI-compatible, Anthropic, DeepL, Google Web, MyMemory, LibreTranslate, and other protocols and services.
+- **Multiple translation services**: Supports OpenAI-compatible, Anthropic, DeepL, Google Web, Microsoft Edge Web, MyMemory, LibreTranslate, and other protocols and services.
 - **Bilingual output**: Select one or two target languages and customize the display order of the original text and translations.
 - **Resilient requests**: Configure timeouts, automatic retries, fallback models, custom headers, and streaming responses.
 - **Interpretation modes**: Use voice input from your system keyboard and send content based on the VRChat microphone state.
@@ -34,9 +34,11 @@ VRCMC is a VRChat Chatbox companion built with Kotlin Multiplatform and Compose 
 
 ## Translation Services
 
-VRCMC includes configurations for OpenAI, Anthropic / Claude, xAI / Grok, DeepSeek, Gemini, Qwen, GLM, Kimi, DeepL, Ollama, LibreTranslate, and more. Custom OpenAI-compatible and Anthropic-compatible endpoints are also supported.
+VRCMC includes configurations for OpenAI, Anthropic / Claude, xAI / Grok, DeepSeek, Gemini, Qwen, GLM, Kimi, DeepL, Microsoft Edge Web, Ollama, LibreTranslate, and more. Custom OpenAI-compatible and Anthropic-compatible endpoints are also supported.
 
 Some public translation APIs do not require an API key. Their availability, rate limits, and privacy policies are controlled by the corresponding providers. When you use a third-party translation service, the text to be translated is sent to your selected provider. Review its terms as appropriate.
+
+Microsoft Edge Web uses an undocumented Edge browser endpoint, not the supported Azure AI Translator API. It may be rate-limited, changed, or discontinued without notice.
 
 ## Data and Security
 

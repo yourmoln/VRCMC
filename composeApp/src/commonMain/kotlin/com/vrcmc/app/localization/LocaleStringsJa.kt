@@ -204,6 +204,42 @@ object LocaleStringsJa : LocaleStrings {
     override val voiceWaitingForSpeech = "発話を待っています…"
     override val voiceSpeechDetected = "音声を検出 · リアルタイム認識中…"
 
+    override fun translationFailureMessage(failure: TranslationResult.Failure): String =
+        when (failure.reason) {
+            TranslationFailureReason.CUSTOM -> failure.message.ifBlank { "翻訳に失敗しました" }
+            TranslationFailureReason.EMPTY_INPUT -> "翻訳する内容が空です"
+            TranslationFailureReason.BASE_URL_REQUIRED -> "Base URL を入力してください"
+            TranslationFailureReason.MODEL_REQUIRED -> "モデル ID を入力してください"
+            TranslationFailureReason.API_KEY_REQUIRED ->
+                "${failure.provider.ifBlank { "このサービス" }}には API Key が必要です"
+            TranslationFailureReason.INVALID_BASE_URL ->
+                "Base URL は http:// または https:// で始める必要があります"
+            TranslationFailureReason.RESPONSE_PARSE_FAILED ->
+                "${failure.provider.ifBlank { "翻訳サービス" }}の応答を解析できませんでした"
+            TranslationFailureReason.EMPTY_RESPONSE ->
+                "${failure.provider.ifBlank { "翻訳サービス" }}から利用可能な翻訳が返されませんでした"
+            TranslationFailureReason.NETWORK_REQUEST_FAILED ->
+                "ネットワーク要求に失敗しました${failure.message.takeIf(String::isNotBlank)?.let { "：$it" }.orEmpty()}"
+        }
+
+    override fun voiceTranscriptionFailureMessage(
+        failure: VoiceTranscriptionResult.Failure,
+    ): String =
+        when (failure.reason) {
+            VoiceTranscriptionFailureReason.CUSTOM ->
+                failure.message.ifBlank { "音声認識に失敗しました" }
+            VoiceTranscriptionFailureReason.NO_AUDIO -> "認識可能な音声が録音されませんでした"
+            VoiceTranscriptionFailureReason.API_KEY_REQUIRED -> "Qwen API Key を入力してください"
+            VoiceTranscriptionFailureReason.BASE_URL_REQUIRED -> "Base URL を入力してください"
+            VoiceTranscriptionFailureReason.MODEL_REQUIRED -> "モデル ID を入力してください"
+            VoiceTranscriptionFailureReason.INVALID_BASE_URL ->
+                "Base URL は http:// または https:// で始める必要があります"
+            VoiceTranscriptionFailureReason.EMPTY_RESPONSE ->
+                "サービスから利用可能な認識テキストが返されませんでした"
+            VoiceTranscriptionFailureReason.NETWORK_REQUEST_FAILED ->
+                "音声認識要求に失敗しました${failure.message.takeIf(String::isNotBlank)?.let { "：$it" }.orEmpty()}"
+        }
+
     override fun providerHint(provider: TranslationProvider): String =
         when (provider.id) {
             "openai" -> "OpenAI 公式 API。Base URL は変更でき、モデル ID はプリセットから選択できます。"
@@ -214,6 +250,7 @@ object LocaleStringsJa : LocaleStrings {
             "grok_compatible" -> "Grok 互換中継サービス向けです。カスタムリクエストヘッダーを追加できます。"
             "local_ai" -> "このパソコンまたは LAN 上の OpenAI-compatible サービスです。API Key は空欄にできます。"
             "google_web" -> "API Key 不要の公開ウェブ翻訳 API です。一部のネットワークでは利用できない場合があります。"
+            "microsoft_edge_web" -> "API Key 不要の Microsoft Edge（Bing）ウェブ翻訳エンドポイントです。正式な Azure API ではなく、予告なく制限・変更される場合があります。"
             "mymemory" -> "API Key 不要の翻訳メモリで、設定なしのフォールバックに適しています。"
             "deepl" -> "既定では DeepL API Free を使用します。有料アカウントでは https://api.deepl.com/v2 を使用してください。"
             "libretranslate" -> "セルフホストの LibreTranslate は通常 API Key が不要ですが、公開インスタンスでは必要な場合があります。"

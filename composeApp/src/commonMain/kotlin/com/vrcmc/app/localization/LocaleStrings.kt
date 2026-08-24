@@ -224,6 +224,10 @@ interface LocaleStrings {
     val microphone: String get() = "Microphone"
     val systemDefaultMicrophone: String get() = "System default microphone"
 
+    fun translationFailureMessage(failure: TranslationResult.Failure): String
+
+    fun voiceTranscriptionFailureMessage(failure: VoiceTranscriptionResult.Failure): String
+
     fun providerHint(provider: TranslationProvider): String
 
     fun providerRegionLabel(providerId: String, region: ProviderRegion): String

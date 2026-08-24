@@ -9,6 +9,7 @@ import io.ktor.http.*
 import kotlinx.serialization.json.*
 
 internal suspend fun requestAnthropic(
+    provider: TranslationProvider,
     config: ProviderConfig,
     targetLanguage: String,
     text: String,
@@ -63,6 +64,11 @@ internal suspend fun requestAnthropic(
     return translated?.trim()?.takeIf { it.isNotEmpty() }?.let(TranslationResult::Success)
         ?: run {
             onApiFailure(raw)
-            TranslationResult.Failure("Claude 未返回可用文本", response.status.value, retryable = true)
+            TranslationResult.Failure(
+                status = response.status.value,
+                retryable = true,
+                reason = TranslationFailureReason.EMPTY_RESPONSE,
+                provider = provider.label,
+            )
         }
 }

@@ -220,6 +220,42 @@ object LocaleStringsZhHans : LocaleStrings {
 
     override fun seconds(value: String) = "$value 秒"
 
+    override fun translationFailureMessage(failure: TranslationResult.Failure): String =
+        when (failure.reason) {
+            TranslationFailureReason.CUSTOM -> failure.message.ifBlank { "翻译失败" }
+            TranslationFailureReason.EMPTY_INPUT -> "翻译内容为空"
+            TranslationFailureReason.BASE_URL_REQUIRED -> "Base URL 不能为空"
+            TranslationFailureReason.MODEL_REQUIRED -> "模型 ID 不能为空"
+            TranslationFailureReason.API_KEY_REQUIRED ->
+                "${failure.provider.ifBlank { "该服务" }} 需要 API Key"
+            TranslationFailureReason.INVALID_BASE_URL ->
+                "Base URL 必须以 http:// 或 https:// 开头"
+            TranslationFailureReason.RESPONSE_PARSE_FAILED ->
+                failure.provider.takeIf(String::isNotBlank)?.let { "无法解析 $it 的响应" }
+                    ?: "无法解析翻译服务响应"
+            TranslationFailureReason.EMPTY_RESPONSE ->
+                "${failure.provider.ifBlank { "翻译服务" }} 未返回可用翻译"
+            TranslationFailureReason.NETWORK_REQUEST_FAILED ->
+                "网络请求失败${failure.message.takeIf(String::isNotBlank)?.let { "：$it" }.orEmpty()}"
+        }
+
+    override fun voiceTranscriptionFailureMessage(
+        failure: VoiceTranscriptionResult.Failure,
+    ): String =
+        when (failure.reason) {
+            VoiceTranscriptionFailureReason.CUSTOM -> failure.message.ifBlank { "语音识别失败" }
+            VoiceTranscriptionFailureReason.NO_AUDIO -> "没有录到可识别的声音"
+            VoiceTranscriptionFailureReason.API_KEY_REQUIRED -> "Qwen API Key 不能为空"
+            VoiceTranscriptionFailureReason.BASE_URL_REQUIRED -> "Base URL 不能为空"
+            VoiceTranscriptionFailureReason.MODEL_REQUIRED -> "模型 ID 不能为空"
+            VoiceTranscriptionFailureReason.INVALID_BASE_URL ->
+                "Base URL 必须以 http:// 或 https:// 开头"
+            VoiceTranscriptionFailureReason.EMPTY_RESPONSE ->
+                "服务返回成功，但没有可用的识别文字"
+            VoiceTranscriptionFailureReason.NETWORK_REQUEST_FAILED ->
+                "语音识别请求失败${failure.message.takeIf(String::isNotBlank)?.let { "：$it" }.orEmpty()}"
+        }
+
     override fun providerHint(provider: TranslationProvider) = provider.hint
 
     override fun providerRegionLabel(providerId: String, region: ProviderRegion) = region.label

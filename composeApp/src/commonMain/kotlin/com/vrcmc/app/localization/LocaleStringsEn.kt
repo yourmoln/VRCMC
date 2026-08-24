@@ -223,6 +223,42 @@ object LocaleStringsEn : LocaleStrings {
     override val voiceWaitingForSpeech = "Waiting for speech…"
     override val voiceSpeechDetected = "Speech detected · live transcription active…"
 
+    override fun translationFailureMessage(failure: TranslationResult.Failure): String =
+        when (failure.reason) {
+            TranslationFailureReason.CUSTOM -> failure.message.ifBlank { "Translation failed" }
+            TranslationFailureReason.EMPTY_INPUT -> "The translation input is empty"
+            TranslationFailureReason.BASE_URL_REQUIRED -> "Base URL is required"
+            TranslationFailureReason.MODEL_REQUIRED -> "Model ID is required"
+            TranslationFailureReason.API_KEY_REQUIRED ->
+                "${failure.provider.ifBlank { "This service" }} requires an API Key"
+            TranslationFailureReason.INVALID_BASE_URL ->
+                "Base URL must start with http:// or https://"
+            TranslationFailureReason.RESPONSE_PARSE_FAILED ->
+                "Could not parse the ${failure.provider.ifBlank { "translation service" }} response"
+            TranslationFailureReason.EMPTY_RESPONSE ->
+                "${failure.provider.ifBlank { "The translation service" }} did not return a usable translation"
+            TranslationFailureReason.NETWORK_REQUEST_FAILED ->
+                "Network request failed${failure.message.takeIf(String::isNotBlank)?.let { ": $it" }.orEmpty()}"
+        }
+
+    override fun voiceTranscriptionFailureMessage(
+        failure: VoiceTranscriptionResult.Failure,
+    ): String =
+        when (failure.reason) {
+            VoiceTranscriptionFailureReason.CUSTOM ->
+                failure.message.ifBlank { "Voice transcription failed" }
+            VoiceTranscriptionFailureReason.NO_AUDIO -> "No recognizable speech was recorded"
+            VoiceTranscriptionFailureReason.API_KEY_REQUIRED -> "Qwen API Key is required"
+            VoiceTranscriptionFailureReason.BASE_URL_REQUIRED -> "Base URL is required"
+            VoiceTranscriptionFailureReason.MODEL_REQUIRED -> "Model ID is required"
+            VoiceTranscriptionFailureReason.INVALID_BASE_URL ->
+                "Base URL must start with http:// or https://"
+            VoiceTranscriptionFailureReason.EMPTY_RESPONSE ->
+                "The service did not return usable transcription text"
+            VoiceTranscriptionFailureReason.NETWORK_REQUEST_FAILED ->
+                "Voice transcription request failed${failure.message.takeIf(String::isNotBlank)?.let { ": $it" }.orEmpty()}"
+        }
+
     override fun providerHint(provider: TranslationProvider): String =
         when (provider.id) {
             "openai" ->
@@ -238,6 +274,8 @@ object LocaleStringsEn : LocaleStrings {
                 "OpenAI-compatible service on this computer or LAN. API Key may be left blank."
             "google_web" ->
                 "Public web translation API with no API Key required; it may be unavailable on some networks."
+            "microsoft_edge_web" ->
+                "No-key Microsoft Edge (Bing) web translation endpoint. This is not the supported Azure API and may be rate-limited or changed without notice."
             "mymemory" ->
                 "Translation memory with no API Key required, suitable as a zero-configuration fallback."
             "deepl" ->

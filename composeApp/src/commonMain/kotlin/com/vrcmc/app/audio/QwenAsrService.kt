@@ -18,9 +18,23 @@ import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.jsonPrimitive
 import kotlinx.serialization.json.put
 
+enum class VoiceTranscriptionFailureReason {
+    CUSTOM,
+    NO_AUDIO,
+    API_KEY_REQUIRED,
+    BASE_URL_REQUIRED,
+    MODEL_REQUIRED,
+    INVALID_BASE_URL,
+    EMPTY_RESPONSE,
+    NETWORK_REQUEST_FAILED,
+}
+
 sealed interface VoiceTranscriptionResult {
     data class Success(val text: String) : VoiceTranscriptionResult
-    data class Failure(val message: String) : VoiceTranscriptionResult
+    data class Failure(
+        val message: String = "",
+        val reason: VoiceTranscriptionFailureReason = VoiceTranscriptionFailureReason.CUSTOM,
+    ) : VoiceTranscriptionResult
 }
 
 suspend fun transcribeQwenAudio(
@@ -28,13 +42,24 @@ suspend fun transcribeQwenAudio(
     wav: ByteArray,
     onApiFailure: (String) -> Unit = {},
 ): VoiceTranscriptionResult {
-    if (wav.size <= 44) return VoiceTranscriptionResult.Failure("没有录到可识别的声音")
-    if (config.apiKey.isBlank()) return VoiceTranscriptionResult.Failure("Qwen API Key 不能为空")
-    if (config.baseUrl.isBlank()) return VoiceTranscriptionResult.Failure("Base URL 不能为空")
-    if (config.model.isBlank()) return VoiceTranscriptionResult.Failure("模型 ID 不能为空")
-    endpointSecurityError(
-        ProviderConfig(apiKey = config.apiKey, baseUrl = config.baseUrl, model = config.model)
-    )?.let { return VoiceTranscriptionResult.Failure(it) }
+    if (wav.size <= 44)
+        return VoiceTranscriptionResult.Failure(reason = VoiceTranscriptionFailureReason.NO_AUDIO)
+    if (config.apiKey.isBlank())
+        return VoiceTranscriptionResult.Failure(
+            reason = VoiceTranscriptionFailureReason.API_KEY_REQUIRED,
+        )
+    if (config.baseUrl.isBlank())
+        return VoiceTranscriptionResult.Failure(
+            reason = VoiceTranscriptionFailureReason.BASE_URL_REQUIRED,
+        )
+    if (config.model.isBlank())
+        return VoiceTranscriptionResult.Failure(
+            reason = VoiceTranscriptionFailureReason.MODEL_REQUIRED,
+        )
+    if (!isSupportedHttpEndpoint(config.baseUrl))
+        return VoiceTranscriptionResult.Failure(
+            reason = VoiceTranscriptionFailureReason.INVALID_BASE_URL,
+        )
 
     val endpoint = config.baseUrl.trim().trimEnd('/').let {
         if (it.endsWith("/chat/completions")) it else "$it/chat/completions"
@@ -82,14 +107,18 @@ suspend fun transcribeQwenAudio(
             val text = parseQwenAsrResponse(raw)
             if (text.isNullOrBlank()) {
                 onApiFailure(raw)
-                VoiceTranscriptionResult.Failure("服务返回成功，但没有可用的识别文字")
+                VoiceTranscriptionResult.Failure(
+                    reason = VoiceTranscriptionFailureReason.EMPTY_RESPONSE,
+                )
             } else VoiceTranscriptionResult.Success(text.trim())
         }
     } catch (error: CancellationException) {
         throw error
     } catch (error: Throwable) {
         VoiceTranscriptionResult.Failure(
-            error.message?.takeIf(String::isNotBlank) ?: "语音识别请求失败"
+            message =
+                error.message?.takeIf(String::isNotBlank) ?: error::class.simpleName.orEmpty(),
+            reason = VoiceTranscriptionFailureReason.NETWORK_REQUEST_FAILED,
         )
     }
 }

@@ -15,6 +15,17 @@ internal val regionalProviders =
             hint = "免 Key 的公共网页翻译接口；部分网络环境可能无法访问。",
         ),
         TranslationProvider(
+            "microsoft_edge_web",
+            "Microsoft Edge Web (Bing)",
+            ProviderProtocol.MICROSOFT_EDGE_WEB,
+            "https://edge.microsoft.com/translate/translatetext",
+            "microsoft-edge-web",
+            listOf("microsoft-edge-web"),
+            keyRequired = false,
+            hint =
+                "免 Key 的 Microsoft Edge（Bing）网页翻译接口；非 Azure 官方 API，可能随时限流或变更。",
+        ),
+        TranslationProvider(
             "mymemory",
             "MyMemory",
             ProviderProtocol.MYMEMORY,

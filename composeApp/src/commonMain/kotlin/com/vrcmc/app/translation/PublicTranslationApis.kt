@@ -40,9 +40,74 @@ internal suspend fun requestGoogleWeb(
     return translated?.takeIf { it.isNotBlank() }?.let(TranslationResult::Success)
         ?: run {
             onApiFailure(raw)
-            TranslationResult.Failure("Google Web 未返回可用文本", retryable = true)
+            TranslationResult.Failure(
+                retryable = true,
+                reason = TranslationFailureReason.EMPTY_RESPONSE,
+                provider = "Google Web",
+            )
         }
 }
+
+internal suspend fun requestMicrosoftEdgeWeb(
+    config: ProviderConfig,
+    targetLanguage: String,
+    text: String,
+    onApiFailure: (String) -> Unit,
+): TranslationResult {
+    val response =
+        translationHttpClient.post(config.baseUrl.trim()) {
+            timeout { requestTimeoutMillis = config.timeoutMillis() }
+            parameter("to", microsoftEdgeLanguageCode(targetLanguage))
+            parameter("isEnterpriseClient", "false")
+            header(HttpHeaders.UserAgent, "VRCMC/${AppInfo.VERSION}")
+            contentType(ContentType.Application.Json)
+            setBody(buildJsonArray { add(text) }.toString())
+        }
+    val raw = response.body<String>()
+    if (!response.status.isSuccess()) {
+        onApiFailure(raw)
+        return responseFailure(response.status.value, raw)
+    }
+    return parseMicrosoftEdgeTranslation(raw)?.let(TranslationResult::Success)
+        ?: run {
+            onApiFailure(raw)
+            TranslationResult.Failure(
+                status = response.status.value,
+                retryable = true,
+                reason = TranslationFailureReason.EMPTY_RESPONSE,
+                provider = "Microsoft Edge Web",
+            )
+        }
+}
+
+internal fun microsoftEdgeLanguageCode(targetLanguage: String): String {
+    val code = languageCode(targetLanguage)
+    return when (code.lowercase()) {
+        "zh",
+        "zh-cn",
+        "zh-hans" -> "zh-Hans"
+        "zh-tw",
+        "zh-hant" -> "zh-Hant"
+        else -> code
+    }
+}
+
+internal fun parseMicrosoftEdgeTranslation(raw: String): String? =
+    runCatching {
+            translationJson
+                .parseToJsonElement(raw)
+                .jsonArray
+                .first()
+                .jsonObject["translations"]!!
+                .jsonArray
+                .first()
+                .jsonObject["text"]!!
+                .jsonPrimitive
+                .content
+                .trim()
+                .takeIf { it.isNotEmpty() }
+        }
+        .getOrNull()
 
 internal suspend fun requestMyMemory(
     config: ProviderConfig,
@@ -74,6 +139,10 @@ internal suspend fun requestMyMemory(
     return translated?.takeIf { it.isNotBlank() }?.let(TranslationResult::Success)
         ?: run {
             onApiFailure(raw)
-            TranslationResult.Failure("MyMemory 未返回可用文本", retryable = true)
+            TranslationResult.Failure(
+                retryable = true,
+                reason = TranslationFailureReason.EMPTY_RESPONSE,
+                provider = "MyMemory",
+            )
         }
 }

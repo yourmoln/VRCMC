@@ -26,7 +26,7 @@ VRCMC は、Kotlin Multiplatform と Compose Multiplatform で開発された VR
 
 - **OSC Chatbox**：Chatbox の上限である 144 文字・9 行を守りながら、VRChat にテキストを送信します。
 - **複数デバイス管理**：複数の IP アドレスと送受信ポートを保存し、同じローカルネットワーク上のデバイスを検索できます。
-- **複数の翻訳サービス**：OpenAI-compatible、Anthropic、DeepL、Google Web、MyMemory、LibreTranslate などのプロトコルやサービスに対応しています。
+- **複数の翻訳サービス**：OpenAI-compatible、Anthropic、DeepL、Google Web、Microsoft Edge Web、MyMemory、LibreTranslate などのプロトコルやサービスに対応しています。
 - **二言語出力**：1 つまたは 2 つの翻訳先言語を選択し、原文と訳文の表示順を自由に設定できます。
 - **安定したリクエスト処理**：タイムアウト、自動再試行、フォールバックモデル、カスタムヘッダー、ストリーミングレスポンスに対応しています。
 - **通訳モード**：システムキーボードの音声入力と連携し、VRChat のマイク状態に応じて内容を送信します。
@@ -34,9 +34,11 @@ VRCMC は、Kotlin Multiplatform と Compose Multiplatform で開発された VR
 
 ## 翻訳サービス
 
-OpenAI、Anthropic / Claude、xAI / Grok、DeepSeek、Gemini、Qwen、GLM、Kimi、DeepL、Ollama、LibreTranslate などの設定を内蔵しています。独自の OpenAI-compatible または Anthropic-compatible エンドポイントも利用できます。
+OpenAI、Anthropic / Claude、xAI / Grok、DeepSeek、Gemini、Qwen、GLM、Kimi、DeepL、Microsoft Edge Web、Ollama、LibreTranslate などの設定を内蔵しています。独自の OpenAI-compatible または Anthropic-compatible エンドポイントも利用できます。
 
 一部の公開翻訳 API は API Key なしで利用できますが、可用性、レート制限、プライバシーポリシーは各サービス提供者によって管理されています。サードパーティーの翻訳サービスを使用すると、翻訳対象のテキストが選択したサービスへ送信されます。必要に応じて各サービスの利用規約を確認してください。
+
+Microsoft Edge Web は、正式にサポートされている Azure AI Translator API ではなく、非公開の Edge ブラウザー用エンドポイントを使用します。予告なく制限、変更、または停止される場合があります。
 
 ## データとセキュリティ
 

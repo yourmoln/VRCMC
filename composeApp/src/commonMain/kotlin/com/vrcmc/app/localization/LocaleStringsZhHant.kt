@@ -200,6 +200,42 @@ object LocaleStringsZhHant : LocaleStrings {
     override val voiceWaitingForSpeech = "正在等待說話…"
     override val voiceSpeechDetected = "偵測到語音，正在即時辨識…"
 
+    override fun translationFailureMessage(failure: TranslationResult.Failure): String =
+        when (failure.reason) {
+            TranslationFailureReason.CUSTOM -> failure.message.ifBlank { "翻譯失敗" }
+            TranslationFailureReason.EMPTY_INPUT -> "翻譯內容為空"
+            TranslationFailureReason.BASE_URL_REQUIRED -> "Base URL 不可為空"
+            TranslationFailureReason.MODEL_REQUIRED -> "模型 ID 不可為空"
+            TranslationFailureReason.API_KEY_REQUIRED ->
+                "${failure.provider.ifBlank { "此服務" }} 需要 API Key"
+            TranslationFailureReason.INVALID_BASE_URL ->
+                "Base URL 必須以 http:// 或 https:// 開頭"
+            TranslationFailureReason.RESPONSE_PARSE_FAILED ->
+                failure.provider.takeIf(String::isNotBlank)?.let { "無法解析 $it 的回應" }
+                    ?: "無法解析翻譯服務回應"
+            TranslationFailureReason.EMPTY_RESPONSE ->
+                "${failure.provider.ifBlank { "翻譯服務" }} 未傳回可用翻譯"
+            TranslationFailureReason.NETWORK_REQUEST_FAILED ->
+                "網路要求失敗${failure.message.takeIf(String::isNotBlank)?.let { "：$it" }.orEmpty()}"
+        }
+
+    override fun voiceTranscriptionFailureMessage(
+        failure: VoiceTranscriptionResult.Failure,
+    ): String =
+        when (failure.reason) {
+            VoiceTranscriptionFailureReason.CUSTOM -> failure.message.ifBlank { "語音辨識失敗" }
+            VoiceTranscriptionFailureReason.NO_AUDIO -> "沒有錄到可辨識的聲音"
+            VoiceTranscriptionFailureReason.API_KEY_REQUIRED -> "Qwen API Key 不可為空"
+            VoiceTranscriptionFailureReason.BASE_URL_REQUIRED -> "Base URL 不可為空"
+            VoiceTranscriptionFailureReason.MODEL_REQUIRED -> "模型 ID 不可為空"
+            VoiceTranscriptionFailureReason.INVALID_BASE_URL ->
+                "Base URL 必須以 http:// 或 https:// 開頭"
+            VoiceTranscriptionFailureReason.EMPTY_RESPONSE ->
+                "服務已成功回應，但沒有可用的辨識文字"
+            VoiceTranscriptionFailureReason.NETWORK_REQUEST_FAILED ->
+                "語音辨識要求失敗${failure.message.takeIf(String::isNotBlank)?.let { "：$it" }.orEmpty()}"
+        }
+
     override fun providerHint(provider: TranslationProvider): String =
         when (provider.id) {
             "openai" -> "OpenAI 官方 API。Base URL 可修改，並可從預設項目選擇模型 ID。"
@@ -210,6 +246,7 @@ object LocaleStringsZhHant : LocaleStrings {
             "grok_compatible" -> "適用於 Grok 相容轉送服務，並支援自訂要求標頭。"
             "local_ai" -> "本機或區域網路上的 OpenAI-compatible 服務，API Key 可留空。"
             "google_web" -> "不需 API Key 的公共網頁翻譯 API；部分網路環境可能無法存取。"
+            "microsoft_edge_web" -> "不需 API Key 的 Microsoft Edge（Bing）網頁翻譯端點；並非正式 Azure API，可能隨時受到限流或變更。"
             "mymemory" -> "不需 API Key 的翻譯記憶庫，適合作為零設定備用服務。"
             "deepl" -> "預設使用 DeepL API Free；付費帳戶請改用 https://api.deepl.com/v2。"
             "libretranslate" -> "自架 LibreTranslate 通常不需 API Key；公共執行個體可能需要。"

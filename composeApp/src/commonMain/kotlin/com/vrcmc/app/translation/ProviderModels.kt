@@ -6,6 +6,7 @@ enum class ProviderProtocol {
     OPENAI,
     ANTHROPIC,
     GOOGLE_WEB,
+    MICROSOFT_EDGE_WEB,
     MYMEMORY,
     DEEPL,
     LIBRE,

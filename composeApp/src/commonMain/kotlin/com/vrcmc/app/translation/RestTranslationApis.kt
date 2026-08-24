@@ -49,7 +49,11 @@ internal suspend fun requestDeepL(
     return translated?.takeIf { it.isNotBlank() }?.let(TranslationResult::Success)
         ?: run {
             onApiFailure(raw)
-            TranslationResult.Failure("DeepL 未返回可用文本", retryable = true)
+            TranslationResult.Failure(
+                retryable = true,
+                reason = TranslationFailureReason.EMPTY_RESPONSE,
+                provider = "DeepL",
+            )
         }
 }
 
@@ -93,6 +97,10 @@ internal suspend fun requestLibre(
     return translated?.takeIf { it.isNotBlank() }?.let(TranslationResult::Success)
         ?: run {
             onApiFailure(raw)
-            TranslationResult.Failure("LibreTranslate 未返回可用文本", retryable = true)
+            TranslationResult.Failure(
+                retryable = true,
+                reason = TranslationFailureReason.EMPTY_RESPONSE,
+                provider = "LibreTranslate",
+            )
         }
 }

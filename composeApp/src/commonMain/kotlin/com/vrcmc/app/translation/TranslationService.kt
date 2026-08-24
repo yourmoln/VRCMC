@@ -9,13 +9,27 @@ import io.ktor.http.*
 import kotlinx.coroutines.CancellationException
 import kotlinx.serialization.json.*
 
+enum class TranslationFailureReason {
+    CUSTOM,
+    EMPTY_INPUT,
+    BASE_URL_REQUIRED,
+    MODEL_REQUIRED,
+    API_KEY_REQUIRED,
+    INVALID_BASE_URL,
+    RESPONSE_PARSE_FAILED,
+    EMPTY_RESPONSE,
+    NETWORK_REQUEST_FAILED,
+}
+
 sealed interface TranslationResult {
     data class Success(val text: String) : TranslationResult
 
     data class Failure(
-        val message: String,
+        val message: String = "",
         val status: Int? = null,
         val retryable: Boolean = false,
+        val reason: TranslationFailureReason = TranslationFailureReason.CUSTOM,
+        val provider: String = "",
     ) : TranslationResult
 }
 
@@ -36,14 +50,19 @@ suspend fun translateText(
     onRetry: (Int) -> Unit = {},
     onApiFailure: (String) -> Unit = {},
 ): TranslationResult {
-    if (text.isBlank()) return TranslationResult.Failure("翻译内容为空")
-    if (config.baseUrl.isBlank()) return TranslationResult.Failure("Base URL 不能为空")
-    if (config.model.isBlank()) return TranslationResult.Failure("模型 ID 不能为空")
+    if (text.isBlank())
+        return TranslationResult.Failure(reason = TranslationFailureReason.EMPTY_INPUT)
+    if (config.baseUrl.isBlank())
+        return TranslationResult.Failure(reason = TranslationFailureReason.BASE_URL_REQUIRED)
+    if (config.model.isBlank())
+        return TranslationResult.Failure(reason = TranslationFailureReason.MODEL_REQUIRED)
     if (provider.keyRequired && config.apiKey.isBlank())
-        return TranslationResult.Failure("${provider.label} 需要 API Key")
-    endpointSecurityError(config)?.let {
-        return TranslationResult.Failure(it)
-    }
+        return TranslationResult.Failure(
+            reason = TranslationFailureReason.API_KEY_REQUIRED,
+            provider = provider.label,
+        )
+    if (!isSupportedHttpEndpoint(config.baseUrl))
+        return TranslationResult.Failure(reason = TranslationFailureReason.INVALID_BASE_URL)
     return translateWithFallback(
         sourceText = text,
         primaryModel = config.model,
@@ -65,9 +84,11 @@ suspend fun translateText(
                         )
                 }
                 ProviderProtocol.ANTHROPIC ->
-                    requestAnthropic(requestConfig, targetLanguage, text, onApiFailure)
+                    requestAnthropic(provider, requestConfig, targetLanguage, text, onApiFailure)
                 ProviderProtocol.GOOGLE_WEB ->
                     requestGoogleWeb(requestConfig, targetLanguage, text, onApiFailure)
+                ProviderProtocol.MICROSOFT_EDGE_WEB ->
+                    requestMicrosoftEdgeWeb(requestConfig, targetLanguage, text, onApiFailure)
                 ProviderProtocol.MYMEMORY ->
                     requestMyMemory(requestConfig, targetLanguage, text, onApiFailure)
                 ProviderProtocol.DEEPL ->
@@ -79,8 +100,11 @@ suspend fun translateText(
             throw error
         } catch (error: Throwable) {
             TranslationResult.Failure(
-                error.message?.takeIf { it.isNotBlank() } ?: error::class.simpleName ?: "网络请求失败",
+                message =
+                    error.message?.takeIf { it.isNotBlank() }
+                        ?: error::class.simpleName.orEmpty(),
                 retryable = true,
+                reason = TranslationFailureReason.NETWORK_REQUEST_FAILED,
             )
         }
     }
@@ -125,12 +149,8 @@ internal suspend fun translateWithFallback(
     }
 }
 
-internal fun endpointSecurityError(config: ProviderConfig): String? {
-    val endpoint = config.baseUrl.trim().lowercase()
-    if (!endpoint.startsWith("https://") && !endpoint.startsWith("http://"))
-        return "Base URL 必须以 http:// 或 https:// 开头"
-    return null
-}
+internal fun isSupportedHttpEndpoint(value: String): Boolean =
+    value.trim().lowercase().let { it.startsWith("https://") || it.startsWith("http://") }
 
 internal suspend fun translateWithRetries(
     sourceText: String,
@@ -138,7 +158,11 @@ internal suspend fun translateWithRetries(
     onRetry: (Int) -> Unit = {},
     request: suspend () -> TranslationResult,
 ): TranslationResult {
-    var lastFailure = TranslationResult.Failure("翻译接口未返回可用翻译", retryable = true)
+    var lastFailure =
+        TranslationResult.Failure(
+            retryable = true,
+            reason = TranslationFailureReason.EMPTY_RESPONSE,
+        )
     repeat(retryCount.coerceIn(0, 10) + 1) { attempt ->
         if (attempt > 0) onRetry(attempt)
         when (val result = request()) {
@@ -146,7 +170,11 @@ internal suspend fun translateWithRetries(
                 val translated = result.text.trim()
                 if (translated.isNotEmpty())
                     return TranslationResult.Success(translated)
-                lastFailure = TranslationResult.Failure("翻译接口未返回可用翻译", retryable = true)
+                lastFailure =
+                    TranslationResult.Failure(
+                        retryable = true,
+                        reason = TranslationFailureReason.EMPTY_RESPONSE,
+                    )
             }
             is TranslationResult.Failure -> {
                 lastFailure = result

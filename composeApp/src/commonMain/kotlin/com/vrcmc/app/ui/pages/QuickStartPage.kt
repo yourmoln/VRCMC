@@ -262,7 +262,8 @@ private fun QwenQuickStartStep(
                                         state.configureQwenServices(apiKey, selectedRegion.id)
                                         onConfigured()
                                     }
-                                    is TranslationResult.Failure -> error = result.message
+                                    is TranslationResult.Failure ->
+                                        error = strings.translationFailureMessage(result)
                                 }
                                 testing = false
                             }

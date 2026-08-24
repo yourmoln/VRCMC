@@ -26,7 +26,7 @@ VRCMC 是一款使用 Kotlin Multiplatform 與 Compose Multiplatform 開發的 V
 
 - **OSC Chatbox**：向 VRChat 傳送文字，並遵守 Chatbox 的 144 字元與 9 行限制。
 - **多裝置管理**：儲存多組 IP 與收發連接埠，並可掃描相同區域網路內的裝置。
-- **多服務翻譯**：支援 OpenAI-compatible、Anthropic、DeepL、Google Web、MyMemory、LibreTranslate 等協定與服務。
+- **多服務翻譯**：支援 OpenAI-compatible、Anthropic、DeepL、Google Web、Microsoft Edge Web、MyMemory、LibreTranslate 等協定與服務。
 - **雙語輸出**：可同時選擇一至兩種目標語言，自訂原文與譯文的顯示順序。
 - **容錯能力**：支援請求逾時、自動重試、備用模型、自訂請求標頭與串流回應。
 - **口譯模式**：搭配系統輸入法的語音輸入，依照 VRChat 麥克風狀態傳送內容。
@@ -34,9 +34,11 @@ VRCMC 是一款使用 Kotlin Multiplatform 與 Compose Multiplatform 開發的 V
 
 ## 翻譯服務
 
-專案內建多種服務設定，包括 OpenAI、Anthropic / Claude、xAI / Grok、DeepSeek、Gemini、Qwen、GLM、Kimi、DeepL、Ollama、LibreTranslate 等，也支援自訂 OpenAI-compatible 或 Anthropic-compatible 端點。
+專案內建多種服務設定，包括 OpenAI、Anthropic / Claude、xAI / Grok、DeepSeek、Gemini、Qwen、GLM、Kimi、DeepL、Microsoft Edge Web、Ollama、LibreTranslate 等，也支援自訂 OpenAI-compatible 或 Anthropic-compatible 端點。
 
 部分公共翻譯 API 不需要 API Key，但可用性、速率限制與隱私權政策由對應的服務提供者決定。使用第三方翻譯服務時，待翻譯文字會傳送至你所選擇的服務，請視需要閱讀其條款。
+
+Microsoft Edge Web 使用未公開的 Edge 瀏覽器網頁端點，而非有服務保障的 Azure AI Translator API；該端點可能受到限流、變更或停止服務。
 
 ## 資料與安全性
 
