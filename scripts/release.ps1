@@ -298,7 +298,7 @@ try {
     $apk = Get-Item -LiteralPath (Join-Path $repoRoot "composeApp\build\outputs\apk\release\VRCMC-v$Version.apk")
 
     Write-Host 'Building Windows application and installer...' -ForegroundColor Cyan
-    Invoke-External $gradleWrapper @(':composeApp:createReleaseDistributable', '--rerun-tasks')
+    Invoke-External $gradleWrapper @(':composeApp:createReleaseDistributable')
     Invoke-External $iscc @((Join-Path $repoRoot 'installer\VRCMC.iss'))
     $installer = Get-Item -LiteralPath (Join-Path $repoRoot "composeApp\build\installer\VRCMC-v$Version-setup.exe")
 
@@ -309,7 +309,7 @@ try {
         $hash = (Get-FileHash -LiteralPath $_.FullName -Algorithm SHA256).Hash.ToLowerInvariant()
         "$hash  $($_.Name)"
     }
-    [System.IO.File]::WriteAllLines($checksumsPath, $checksumLines, $utf8NoBom)
+    [System.IO.File]::WriteAllLines($checksumsPath, [string[]]$checksumLines, $utf8NoBom)
     $checksums = Get-Item -LiteralPath $checksumsPath
 
     Write-Host 'Committing and tagging release metadata...' -ForegroundColor Cyan
