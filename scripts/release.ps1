@@ -8,8 +8,8 @@ Builds and publishes a VRCMC GitHub release.
 .\scripts\release.ps1 1.1.3 -Prerelease
 
 .DESCRIPTION
-The script updates all application version declarations, increments the Android
-version code, runs tests, builds the signed Android APK and Windows installer,
+The script updates all application version declarations, runs tests, builds
+the signed Android APK and Windows installer,
 commits and tags the release, pushes it, and uploads the artifacts to GitHub.
 
 Authentication is read from GH_TOKEN, GITHUB_TOKEN, or Git Credential Manager.
@@ -275,19 +275,15 @@ try {
 
     $catalogContent = [System.IO.File]::ReadAllText($versionCatalog)
     $currentVersionMatch = [regex]::Match($catalogContent, '(?m)^app-version\s*=\s*"(\d+\.\d+\.\d+)"\s*$')
-    $currentCodeMatch = [regex]::Match($catalogContent, '(?m)^app-code\s*=\s*"(\d+)"\s*$')
-    if (-not $currentVersionMatch.Success -or -not $currentCodeMatch.Success) {
-        throw 'Could not read the current application version and code from the Gradle version catalog.'
+    if (-not $currentVersionMatch.Success) {
+        throw 'Could not read the current application version from the Gradle version catalog.'
     }
     $currentVersion = $currentVersionMatch.Groups[1].Value
     if ([version]$Version -le [version]$currentVersion) {
         throw "Release version $Version must be newer than $currentVersion."
     }
-    $nextVersionCode = [int64]$currentCodeMatch.Groups[1].Value + 1
-
-    Write-Host "Updating version declarations ($currentVersion -> $Version, Android code $nextVersionCode)..." -ForegroundColor Cyan
+    Write-Host "Updating version declarations ($currentVersion -> $Version)..." -ForegroundColor Cyan
     Set-SingleMatch $versionCatalog '^app-version\s*=\s*"[^"]+"\s*$' "app-version = `"$Version`""
-    Set-SingleMatch $versionCatalog '^app-code\s*=\s*"\d+"\s*$' "app-code = `"$nextVersionCode`""
     Set-SingleMatch $appInfoFile '^\s*const val VERSION\s*=\s*"[^"]+"\s*$' "    const val VERSION = `"$Version`""
     Set-SingleMatch $installerScript '^#define AppVersion\s+"[^"]+"\s*$' "#define AppVersion `"$Version`""
     $metadataUpdated = $true
