@@ -22,6 +22,7 @@ ktor-client-cio = { module = "io.ktor:ktor-client-cio", version.ref = "ktor" }
 ktor-client-darwin = { module = "io.ktor:ktor-client-darwin", version.ref = "ktor" }
 jna-platform = { module = "net.java.dev.jna:jna-platform", version.ref = "jna" }
 kuromoji-ipadic = { module = "com.atilika.kuromoji:kuromoji-ipadic", version.ref = "kuromoji" }
+kuromoji-core = { module = "com.atilika.kuromoji:kuromoji-core", version.ref = "kuromoji" }
 wanakana-core = { module = "dev.esnault.wanakana:wanakana-core", version.ref = "wanakana" }
 
 [plugins]

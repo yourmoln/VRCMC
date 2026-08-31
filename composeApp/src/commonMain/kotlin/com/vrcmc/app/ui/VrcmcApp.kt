@@ -40,6 +40,7 @@ fun VrcmcApp(onDarkThemeChanged: (Boolean) -> Unit = {}) {
     val focusManager = LocalFocusManager.current
     val uriHandler = LocalUriHandler.current
     val strings = localeStrings(language)
+    val japaneseDictionaryStatus = JapaneseDictionaryManager.status
     val dark =
         when (theme) {
             ThemeMode.SYSTEM -> isSystemInDarkTheme()
@@ -49,6 +50,14 @@ fun VrcmcApp(onDarkThemeChanged: (Boolean) -> Unit = {}) {
 
     val listenPort = state.activeDevice()?.sendPort ?: defaultVrchatSendPort
     val listenAddress = state.activeDevice()?.address.orEmpty()
+
+    suspend fun ensureJapaneseDictionaryAvailable() {
+        if (!JapaneseDictionaryManager.ensureAvailable()) {
+            val failure = JapaneseDictionaryManager.status as? JapaneseDictionaryStatus.Failed
+            state.addErrorLog("Japanese dictionary download failed: ${failure?.detail.orEmpty()}")
+        }
+    }
+
     LaunchedEffect(state.simultaneousInterpretationEnabled, listenAddress, listenPort) {
         if (!state.simultaneousInterpretationEnabled) return@LaunchedEffect
         state.simultaneousListenerError = null
@@ -74,6 +83,10 @@ fun VrcmcApp(onDarkThemeChanged: (Boolean) -> Unit = {}) {
                 availableUpdate = result.release
             }
         }
+    }
+
+    LaunchedEffect(state.showJapaneseRomaji) {
+        if (state.showJapaneseRomaji) ensureJapaneseDictionaryAvailable()
     }
 
     LaunchedEffect(dark) { onDarkThemeChanged(dark) }
@@ -185,6 +198,13 @@ fun VrcmcApp(onDarkThemeChanged: (Boolean) -> Unit = {}) {
                                                         state.showJapaneseRomaji,
                                                     setShowJapaneseRomaji =
                                                         state::updateShowJapaneseRomaji,
+                                                    japaneseDictionaryStatus =
+                                                        japaneseDictionaryStatus,
+                                                    retryJapaneseDictionaryDownload = {
+                                                        scope.launch {
+                                                            ensureJapaneseDictionaryAvailable()
+                                                        }
+                                                    },
                                                     disableDynamicInputLimit = state.disableDynamicInputLimit,
                                                     setDisableDynamicInputLimit =
                                                         state::updateDisableDynamicInputLimit,

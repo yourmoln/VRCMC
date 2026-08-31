@@ -2,6 +2,7 @@
 
 package com.vrcmc.app
 
+import io.ktor.utils.io.ByteReadChannel
 import kotlinx.cinterop.useContents
 import platform.CoreFoundation.CFLocaleCreate
 import platform.CoreFoundation.CFRangeMake
@@ -18,6 +19,14 @@ import platform.CoreFoundation.kCFStringTokenizerAttributeLatinTranscription
 import platform.CoreFoundation.kCFStringTokenizerTokenNone
 import platform.CoreFoundation.kCFStringTokenizerUnitWord
 import platform.Foundation.CFBridgingRelease
+
+internal actual fun platformJapaneseDictionaryRequired(): Boolean = false
+
+internal actual suspend fun platformJapaneseDictionaryAvailable(): Boolean = true
+
+internal actual suspend fun platformCacheJapaneseDictionary(channel: ByteReadChannel) = Unit
+
+internal actual fun platformJapaneseDictionaryCachePath(): String? = null
 
 internal actual fun platformJapaneseRubySegments(text: String): List<JapaneseRubySegment> {
     if (text.isEmpty()) return emptyList()

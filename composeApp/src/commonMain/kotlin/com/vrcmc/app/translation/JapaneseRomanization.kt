@@ -145,6 +145,7 @@ internal object JapaneseRomanizer {
 
     suspend fun romanize(text: String): List<JapaneseRubySegment> {
         if (text.isEmpty()) return emptyList()
+        if (!JapaneseDictionaryManager.isReady) return listOf(JapaneseRubySegment(text))
         cacheMutex.withLock { cache[text] }?.let { return it }
 
         val computed =
@@ -163,6 +164,10 @@ internal object JapaneseRomanizer {
             while (cache.size > maxCacheEntries) cache.remove(cache.keys.first())
         }
         return computed
+    }
+
+    suspend fun clearCache() {
+        cacheMutex.withLock { cache.clear() }
     }
 }
 

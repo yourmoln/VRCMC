@@ -23,8 +23,14 @@ internal fun JapaneseMessageText(
         return
     }
 
+    val dictionaryReady = JapaneseDictionaryManager.isReady
+    if (!dictionaryReady) {
+        Text(message.text, style = MaterialTheme.typography.bodyLarge)
+        return
+    }
+
     var segments by remember(message.text) { mutableStateOf<List<JapaneseRubySegment>?>(null) }
-    LaunchedEffect(message.text) {
+    LaunchedEffect(message.text, dictionaryReady) {
         segments = JapaneseRomanizer.romanize(message.text)
     }
     val annotated = segments?.takeIf { it.any { segment -> segment.romaji != null } }
