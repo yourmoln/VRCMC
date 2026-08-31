@@ -111,6 +111,26 @@ class TranslationProviderTest {
     }
 
     @Test
+    fun japaneseRomajiDefaultsOffAndRoundTrips() {
+        assertFalse(storedTranslationSettingsFromJson("{}").showJapaneseRomaji)
+        assertFalse(storedTranslationSettingsFromJson("not-json").showJapaneseRomaji)
+        assertFalse(
+            storedTranslationSettingsFromJson(
+                    """{"showJapaneseRomaji":"invalid"}"""
+                )
+                .showJapaneseRomaji
+        )
+        val invalidObject =
+            storedTranslationSettingsFromJson(
+                """{"provider":"openai","showJapaneseRomaji":{}}"""
+            )
+        assertEquals("openai", invalidObject.providerId)
+        assertFalse(invalidObject.showJapaneseRomaji)
+        val enabled = StoredTranslationSettings(showJapaneseRomaji = true)
+        assertTrue(storedTranslationSettingsFromJson(enabled.toJson()).showJapaneseRomaji)
+    }
+
+    @Test
     fun typingStatusDefaultsOnAndRoundTrips() {
         assertTrue(storedTranslationSettingsFromJson("{}").showTypingStatus)
         val disabled = StoredTranslationSettings(showTypingStatus = false)

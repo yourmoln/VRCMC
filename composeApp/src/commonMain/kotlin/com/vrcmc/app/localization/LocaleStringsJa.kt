@@ -58,6 +58,7 @@ object LocaleStringsJa : LocaleStrings {
     override val resendMessage = "再送信"
     override val appearance = "外観"
     override val language = "言語"
+    override val showJapaneseRomaji = "日本語訳の上にローマ字を表示"
     override val systemTheme = "システム"
     override val lightTheme = "ライト"
     override val darkTheme = "ダーク"

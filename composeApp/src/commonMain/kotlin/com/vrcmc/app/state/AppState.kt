@@ -102,6 +102,8 @@ class AppState {
         private set
     var showOriginalText by mutableStateOf(storedTranslation.showOriginalText)
         private set
+    var showJapaneseRomaji by mutableStateOf(storedTranslation.showJapaneseRomaji)
+        private set
     val providerConfigs = initialProviderConfigs(storedTranslation.configs, storedSecrets)
     val provider
         get() = providerById(providerId)
@@ -181,6 +183,11 @@ class AppState {
         persistTranslation()
     }
 
+    fun updateShowJapaneseRomaji(enabled: Boolean) {
+        showJapaneseRomaji = enabled
+        persistTranslation()
+    }
+
     fun updateDisableDynamicInputLimit(enabled: Boolean) {
         disableDynamicInputLimit = enabled
         persistTranslation()
@@ -238,6 +245,7 @@ class AppState {
                     outputOrder = outputOrder.toList(),
                     lineBreakOutput = lineBreakOutput,
                     showOriginalText = showOriginalText,
+                    showJapaneseRomaji = showJapaneseRomaji,
                     configs = providerConfigs.toMap(),
                     voiceInput = voiceInputConfig.copy(apiKey = ""),
                     interpretationVoiceInputEnabled = interpretationVoiceInputEnabled,

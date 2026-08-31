@@ -73,6 +73,7 @@ interface LocaleStrings {
     val resendMessage: String
     val appearance: String
     val language: String
+    val showJapaneseRomaji: String
     val systemTheme: String
     val lightTheme: String
     val darkTheme: String

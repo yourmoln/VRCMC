@@ -710,6 +710,7 @@ fun ChatPage(state: AppState, strings: LocaleStrings) {
                             retryAttempt = retryAttempt,
                             retryLimit = retryLimit,
                             resendEnabled = active != null && !sending,
+                            showJapaneseRomaji = state.showJapaneseRomaji,
                             onCopy = {
                                 scope.launch {
                                     clipboard.setClipEntry(textClipEntry(message.text))

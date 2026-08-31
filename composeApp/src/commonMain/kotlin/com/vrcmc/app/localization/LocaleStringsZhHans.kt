@@ -112,6 +112,7 @@ object LocaleStringsZhHans : LocaleStrings {
     override val resendMessage = "重新发送"
     override val appearance = "外观"
     override val language = "语言"
+    override val showJapaneseRomaji = "在日语译文上方显示罗马音"
     override val systemTheme = "跟随系统"
     override val lightTheme = "浅色"
     override val darkTheme = "深色"

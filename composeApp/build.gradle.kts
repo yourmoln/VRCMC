@@ -11,11 +11,22 @@ kotlin { jvm("desktop"); androidTarget(); iosX64(); iosArm64(); iosSimulatorArm6
         implementation(libs.ktor.client.core)
     }
     commonTest.dependencies { implementation(kotlin("test")) }
-    named("desktopMain").dependencies { implementation(compose.desktop.currentOs); implementation(libs.ktor.client.cio); implementation(libs.jna.platform) }
-    androidMain.dependencies { implementation(libs.activity.compose); implementation(libs.ktor.client.cio) }
+    named("desktopMain").dependencies { implementation(compose.desktop.currentOs); implementation(libs.ktor.client.cio); implementation(libs.jna.platform); implementation(libs.kuromoji.ipadic); implementation(libs.wanakana.core) }
+    androidMain.dependencies { implementation(libs.activity.compose); implementation(libs.ktor.client.cio); implementation(libs.kuromoji.ipadic); implementation(libs.wanakana.core) }
     iosMain.dependencies { implementation(libs.ktor.client.darwin) }
 } }
 android {
+    packaging {
+        resources {
+            pickFirsts +=
+                setOf(
+                    "META-INF/CONTRIBUTORS.md",
+                    "META-INF/LICENSE.md",
+                    "META-INF/NOTICE.md",
+                )
+        }
+    }
+
     applicationVariants.all {
         outputs.all {
             val apkName = "${rootProject.name}-v$versionName.apk"
@@ -59,7 +70,10 @@ android {
         getByName("release") {
             isMinifyEnabled = true
             isShrinkResources = true
-            proguardFiles(getDefaultProguardFile("proguard-android-optimize.txt"))
+            proguardFiles(
+                getDefaultProguardFile("proguard-android-optimize.txt"),
+                "proguard-kuromoji.pro",
+            )
             if (releaseStoreFile != null) {
                 signingConfig = signingConfigs.getByName("release")
             }
@@ -70,7 +84,10 @@ compose.desktop {
     application {
         mainClass = "com.vrcmc.app.DesktopMainKt"
         buildTypes.release.proguard {
-            configurationFiles.from(project.file("proguard-rules.pro"))
+            configurationFiles.from(
+                project.file("proguard-rules.pro"),
+                project.file("proguard-kuromoji.pro"),
+            )
         }
         nativeDistributions {
             targetFormats(TargetFormat.Exe)

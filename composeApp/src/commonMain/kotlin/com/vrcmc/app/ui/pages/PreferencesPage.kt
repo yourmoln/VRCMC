@@ -23,6 +23,8 @@ internal fun PreferencesPage(
     strings: LocaleStrings,
     setTheme: (ThemeMode) -> Unit,
     setLanguage: (AppLanguage) -> Unit,
+    showJapaneseRomaji: Boolean,
+    setShowJapaneseRomaji: (Boolean) -> Unit,
     disableDynamicInputLimit: Boolean,
     setDisableDynamicInputLimit: (Boolean) -> Unit,
     showTypingStatus: Boolean,
@@ -110,6 +112,21 @@ internal fun PreferencesPage(
                                 )
                             }
                         }
+                    }
+                    HorizontalDivider()
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        verticalAlignment = Alignment.CenterVertically,
+                    ) {
+                        Text(
+                            strings.showJapaneseRomaji,
+                            modifier = Modifier.weight(1f),
+                            style = MaterialTheme.typography.labelLarge,
+                        )
+                        Switch(
+                            checked = showJapaneseRomaji,
+                            onCheckedChange = setShowJapaneseRomaji,
+                        )
                     }
                     HorizontalDivider()
                     Row(
