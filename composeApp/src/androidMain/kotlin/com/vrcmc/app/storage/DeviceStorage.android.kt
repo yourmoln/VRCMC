@@ -21,6 +21,13 @@ internal fun initDeviceStorage(context: Context) {
 
 internal fun audioApplicationContext(): Context? = audioContext
 
+internal actual fun platformJapaneseDictionaryCachePath(): String? =
+    appContext
+        ?.filesDir
+        ?.resolve("romaji")
+        ?.resolve(japaneseDictionaryArchiveName)
+        ?.absolutePath
+
 private fun prefs() = appContext?.getSharedPreferences("vrcmc", Context.MODE_PRIVATE)
 
 actual fun loadStoredDevices(): List<Device> =

@@ -10,6 +10,8 @@ coroutines = "1.10.2"
 serialization = "1.8.1"
 ktor = "3.2.3"
 jna = "5.17.0"
+kuromoji = "0.9.0"
+wanakana = "1.1.1"
 
 [libraries]
 activity-compose = { module = "androidx.activity:activity-compose", version.ref = "activity-compose" }
@@ -19,6 +21,9 @@ ktor-client-core = { module = "io.ktor:ktor-client-core", version.ref = "ktor" }
 ktor-client-cio = { module = "io.ktor:ktor-client-cio", version.ref = "ktor" }
 ktor-client-darwin = { module = "io.ktor:ktor-client-darwin", version.ref = "ktor" }
 jna-platform = { module = "net.java.dev.jna:jna-platform", version.ref = "jna" }
+kuromoji-ipadic = { module = "com.atilika.kuromoji:kuromoji-ipadic", version.ref = "kuromoji" }
+kuromoji-core = { module = "com.atilika.kuromoji:kuromoji-core", version.ref = "kuromoji" }
+wanakana-core = { module = "dev.esnault.wanakana:wanakana-core", version.ref = "wanakana" }
 
 [plugins]
 android-application = { id = "com.android.application", version.ref = "agp" }

@@ -11,6 +11,7 @@ data class StoredTranslationSettings(
     val outputOrder: List<String> = targetLanguages + originalOutputKey,
     val lineBreakOutput: Boolean = true,
     val showOriginalText: Boolean = true,
+    val showJapaneseRomaji: Boolean = false,
     val configs: Map<String, ProviderConfig> = emptyMap(),
     val voiceInput: VoiceInputConfig = VoiceInputConfig(),
     val interpretationVoiceInputEnabled: Boolean = false,
@@ -53,6 +54,7 @@ fun StoredTranslationSettings.toJson(): String =
             }
             put("lineBreakOutput", lineBreakOutput)
             put("showOriginalText", showOriginalText)
+            put("showJapaneseRomaji", showJapaneseRomaji)
             putJsonObject("configs") {
                 configs.forEach { (id, value) ->
                     putJsonObject(id) {
@@ -175,6 +177,8 @@ fun storedTranslationSettingsFromJson(value: String): StoredTranslationSettings 
                     root["lineBreakOutput"]?.jsonPrimitive?.booleanOrNull ?: true,
                 showOriginalText =
                     root["showOriginalText"]?.jsonPrimitive?.booleanOrNull ?: true,
+                showJapaneseRomaji =
+                    (root["showJapaneseRomaji"] as? JsonPrimitive)?.booleanOrNull ?: false,
                 configs = configs,
                 voiceInput =
                     root["voiceInput"]?.jsonObject?.let { obj ->

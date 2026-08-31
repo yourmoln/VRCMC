@@ -10,3 +10,9 @@
 # Ktor discovers the CIO engine and several JVM I/O bridges through ServiceLoader/reflection.
 -keep class io.ktor.** { *; }
 -dontwarn io.ktor.**
+
+# Persisted enum names are restored with valueOf at runtime.
+-keepclassmembers enum * {
+    public static **[] values();
+    public static ** valueOf(java.lang.String);
+}

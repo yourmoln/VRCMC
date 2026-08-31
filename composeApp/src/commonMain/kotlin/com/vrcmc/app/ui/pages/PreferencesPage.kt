@@ -23,6 +23,10 @@ internal fun PreferencesPage(
     strings: LocaleStrings,
     setTheme: (ThemeMode) -> Unit,
     setLanguage: (AppLanguage) -> Unit,
+    showJapaneseRomaji: Boolean,
+    setShowJapaneseRomaji: (Boolean) -> Unit,
+    japaneseDictionaryStatus: JapaneseDictionaryStatus,
+    retryJapaneseDictionaryDownload: () -> Unit,
     disableDynamicInputLimit: Boolean,
     setDisableDynamicInputLimit: (Boolean) -> Unit,
     disableAutomaticUpdateCheck: Boolean,
@@ -110,6 +114,58 @@ internal fun PreferencesPage(
                                         expanded = false
                                     },
                                 )
+                            }
+                        }
+                    }
+                    HorizontalDivider()
+                    Column(Modifier.fillMaxWidth()) {
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            verticalAlignment = Alignment.CenterVertically,
+                        ) {
+                            Text(
+                                strings.showJapaneseRomaji,
+                                modifier = Modifier.weight(1f),
+                                style = MaterialTheme.typography.labelLarge,
+                            )
+                            when (japaneseDictionaryStatus) {
+                                JapaneseDictionaryStatus.Downloading ->
+                                    CircularProgressIndicator(
+                                        modifier = Modifier.padding(horizontal = 12.dp).size(20.dp),
+                                        strokeWidth = 2.dp,
+                                    )
+                                is JapaneseDictionaryStatus.Failed ->
+                                    IconButton(onClick = retryJapaneseDictionaryDownload) {
+                                        Icon(
+                                            Icons.Default.Refresh,
+                                            strings.retryJapaneseDictionaryDownload,
+                                        )
+                                    }
+                                else -> Unit
+                            }
+                            Switch(
+                                checked = showJapaneseRomaji,
+                                onCheckedChange = setShowJapaneseRomaji,
+                                enabled =
+                                    japaneseDictionaryStatus !=
+                                        JapaneseDictionaryStatus.Downloading,
+                            )
+                        }
+                        if (showJapaneseRomaji) {
+                            when (japaneseDictionaryStatus) {
+                                JapaneseDictionaryStatus.Downloading ->
+                                    Text(
+                                        strings.japaneseDictionaryDownloading,
+                                        style = MaterialTheme.typography.bodySmall,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                    )
+                                is JapaneseDictionaryStatus.Failed ->
+                                    Text(
+                                        strings.japaneseDictionaryDownloadFailed,
+                                        style = MaterialTheme.typography.bodySmall,
+                                        color = MaterialTheme.colorScheme.error,
+                                    )
+                                else -> Unit
                             }
                         }
                     }

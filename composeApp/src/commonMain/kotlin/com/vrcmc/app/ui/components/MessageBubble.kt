@@ -20,6 +20,7 @@ internal fun MessageBubble(
     retryAttempt: Int,
     retryLimit: Int,
     resendEnabled: Boolean,
+    showJapaneseRomaji: Boolean,
     onCopy: () -> Unit,
     onResend: () -> Unit,
 ) {
@@ -76,7 +77,7 @@ internal fun MessageBubble(
                                 )
                             }
                         } else {
-                            Text(message.text, style = MaterialTheme.typography.bodyLarge)
+                            JapaneseMessageText(message, showJapaneseRomaji)
                         }
                     }
                 }

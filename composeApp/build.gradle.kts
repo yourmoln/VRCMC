@@ -1,7 +1,30 @@
 import java.util.Properties
+import org.gradle.api.tasks.bundling.Zip
 import org.jetbrains.compose.desktop.application.dsl.TargetFormat
 
 plugins { alias(libs.plugins.kotlin.multiplatform); alias(libs.plugins.android.application); alias(libs.plugins.compose); alias(libs.plugins.kotlin.compose) }
+
+val kuromojiIpadicSource by configurations.creating {
+    isCanBeConsumed = false
+    isTransitive = false
+}
+dependencies { add(kuromojiIpadicSource.name, libs.kuromoji.ipadic) }
+val kuromojiIpadicArchive =
+    kuromojiIpadicSource.elements.map { artifacts -> artifacts.single().asFile }
+val stripKuromojiDictionary by tasks.registering(Zip::class) {
+    archiveFileName.set("kuromoji-ipadic-runtime-${libs.versions.kuromoji.get()}.jar")
+    destinationDirectory.set(layout.buildDirectory.dir("generated/kuromoji"))
+    isPreserveFileTimestamps = false
+    isReproducibleFileOrder = true
+    from(kuromojiIpadicArchive.map(::zipTree)) {
+        exclude("com/atilika/kuromoji/ipadic/*.bin")
+        exclude("com/atilika/kuromoji/ipadic/compile/**")
+        exclude("META-INF/maven/**")
+    }
+}
+val kuromojiIpadicRuntime =
+    files(stripKuromojiDictionary.flatMap { it.archiveFile }).builtBy(stripKuromojiDictionary)
+
 kotlin { jvm("desktop"); androidTarget(); iosX64(); iosArm64(); iosSimulatorArm64(); sourceSets {
     commonMain.dependencies {
         implementation(compose.runtime); implementation(compose.foundation); implementation(compose.material3); implementation(compose.materialIconsExtended); implementation(compose.ui); implementation(compose.components.resources)
@@ -11,11 +34,29 @@ kotlin { jvm("desktop"); androidTarget(); iosX64(); iosArm64(); iosSimulatorArm6
         implementation(libs.ktor.client.core)
     }
     commonTest.dependencies { implementation(kotlin("test")) }
-    named("desktopMain").dependencies { implementation(compose.desktop.currentOs); implementation(libs.ktor.client.cio); implementation(libs.jna.platform) }
-    androidMain.dependencies { implementation(libs.activity.compose); implementation(libs.ktor.client.cio) }
+    named("desktopMain") {
+        kotlin.srcDir("src/jvmMain/kotlin")
+        dependencies { implementation(compose.desktop.currentOs); implementation(libs.ktor.client.cio); implementation(libs.jna.platform); implementation(libs.kuromoji.core); implementation(kuromojiIpadicRuntime); implementation(libs.wanakana.core) }
+    }
+    named("desktopTest").dependencies { implementation(libs.kuromoji.ipadic) }
+    androidMain {
+        kotlin.srcDir("src/jvmMain/kotlin")
+        dependencies { implementation(libs.activity.compose); implementation(libs.ktor.client.cio); implementation(libs.kuromoji.core); implementation(kuromojiIpadicRuntime); implementation(libs.wanakana.core) }
+    }
     iosMain.dependencies { implementation(libs.ktor.client.darwin) }
 } }
 android {
+    packaging {
+        resources {
+            pickFirsts +=
+                setOf(
+                    "META-INF/CONTRIBUTORS.md",
+                    "META-INF/LICENSE.md",
+                    "META-INF/NOTICE.md",
+                )
+        }
+    }
+
     applicationVariants.all {
         outputs.all {
             val apkName = "${rootProject.name}-v$versionName.apk"

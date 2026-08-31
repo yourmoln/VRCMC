@@ -20,6 +20,11 @@ private val errorLogsFile = storageDirectory.resolve("error-logs.json")
 private val translationSecretsFile = storageDirectory.resolve("translation-secrets.dpapi")
 private val isWindows = System.getProperty("os.name").startsWith("Windows", ignoreCase = true)
 
+internal actual fun platformJapaneseDictionaryCachePath(): String? =
+    System.getProperty("vrcmc.japaneseDictionary.path")
+        ?.takeIf(String::isNotBlank)
+        ?: storageDirectory.resolve("romaji").resolve(japaneseDictionaryArchiveName).toString()
+
 actual fun loadStoredDevices(): List<Device> =
     prefs.get("devices", "").split(';').mapNotNull { value ->
         val parts = value.split('|')
