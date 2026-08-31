@@ -88,6 +88,7 @@ object LocaleStringsZhHans : LocaleStrings {
     override val theme = "主题"
     override val preferences = "偏好设置"
     override val disableDynamicInputLimit = "关闭输入框动态上限"
+    override val disableAutomaticUpdateCheck = "关闭自动更新检测"
     override val showTypingStatus = "在 VRChat 中显示打字状态"
     override val liveInputPreview = "在 VRChat 中实时显示输入框内容"
     override val liveInputPreviewDelay = "距上次发送后刷新"

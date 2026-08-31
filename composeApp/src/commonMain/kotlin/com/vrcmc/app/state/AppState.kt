@@ -78,6 +78,9 @@ class AppState {
         )
     var translate by mutableStateOf(storedTranslation.translate)
     var disableDynamicInputLimit by mutableStateOf(storedTranslation.disableDynamicInputLimit)
+    var disableAutomaticUpdateCheck by
+        mutableStateOf(storedTranslation.disableAutomaticUpdateCheck)
+        private set
     var showTypingStatus by mutableStateOf(storedTranslation.showTypingStatus)
     var liveInputPreview by mutableStateOf(storedTranslation.liveInputPreview)
         private set
@@ -193,6 +196,11 @@ class AppState {
         persistTranslation()
     }
 
+    fun updateDisableAutomaticUpdateCheck(enabled: Boolean) {
+        disableAutomaticUpdateCheck = enabled
+        persistTranslation()
+    }
+
     fun updateShowTypingStatus(enabled: Boolean) {
         showTypingStatus = enabled
         persistTranslation()
@@ -250,6 +258,7 @@ class AppState {
                     voiceInput = voiceInputConfig.copy(apiKey = ""),
                     interpretationVoiceInputEnabled = interpretationVoiceInputEnabled,
                     disableDynamicInputLimit = disableDynamicInputLimit,
+                    disableAutomaticUpdateCheck = disableAutomaticUpdateCheck,
                     showTypingStatus = showTypingStatus,
                     liveInputPreview = liveInputPreview,
                     liveInputPreviewDelaySeconds = liveInputPreviewDelaySeconds,

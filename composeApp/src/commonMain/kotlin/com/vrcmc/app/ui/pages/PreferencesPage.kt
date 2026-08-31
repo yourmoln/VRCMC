@@ -27,6 +27,8 @@ internal fun PreferencesPage(
     setShowJapaneseRomaji: (Boolean) -> Unit,
     disableDynamicInputLimit: Boolean,
     setDisableDynamicInputLimit: (Boolean) -> Unit,
+    disableAutomaticUpdateCheck: Boolean,
+    setDisableAutomaticUpdateCheck: (Boolean) -> Unit,
     showTypingStatus: Boolean,
     setShowTypingStatus: (Boolean) -> Unit,
     liveInputPreview: Boolean,
@@ -141,6 +143,20 @@ internal fun PreferencesPage(
                         Switch(
                             checked = disableDynamicInputLimit,
                             onCheckedChange = setDisableDynamicInputLimit,
+                        )
+                    }
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        verticalAlignment = Alignment.CenterVertically,
+                    ) {
+                        Text(
+                            strings.disableAutomaticUpdateCheck,
+                            modifier = Modifier.weight(1f),
+                            style = MaterialTheme.typography.labelLarge,
+                        )
+                        Switch(
+                            checked = disableAutomaticUpdateCheck,
+                            onCheckedChange = setDisableAutomaticUpdateCheck,
                         )
                     }
                     Row(

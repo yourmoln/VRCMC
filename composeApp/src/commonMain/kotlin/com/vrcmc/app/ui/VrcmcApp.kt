@@ -65,6 +65,7 @@ fun VrcmcApp(onDarkThemeChanged: (Boolean) -> Unit = {}) {
     }
 
     LaunchedEffect(Unit) {
+        if (state.disableAutomaticUpdateCheck) return@LaunchedEffect
         checkForAppUpdate().onSuccess { result ->
             if (
                 result.updateAvailable &&
@@ -175,21 +176,30 @@ fun VrcmcApp(onDarkThemeChanged: (Boolean) -> Unit = {}) {
                                             AppScreen.CONFIGURE_VRC -> ConfigureVrcPage(strings)
                                             AppScreen.PREFERENCES ->
                                                 PreferencesPage(
-                                                    theme,
-                                                    language,
-                                                    strings,
-                                                    { theme = it },
-                                                    { language = it },
-                                                    state.showJapaneseRomaji,
-                                                    state::updateShowJapaneseRomaji,
-                                                    state.disableDynamicInputLimit,
-                                                    state::updateDisableDynamicInputLimit,
-                                                    state.showTypingStatus,
-                                                    state::updateShowTypingStatus,
-                                                    state.liveInputPreview,
-                                                    state::updateLiveInputPreview,
-                                                    state.liveInputPreviewDelaySeconds,
-                                                    state::updateLiveInputPreviewDelaySeconds,
+                                                    theme = theme,
+                                                    language = language,
+                                                    strings = strings,
+                                                    setTheme = { theme = it },
+                                                    setLanguage = { language = it },
+                                                    showJapaneseRomaji =
+                                                        state.showJapaneseRomaji,
+                                                    setShowJapaneseRomaji =
+                                                        state::updateShowJapaneseRomaji,
+                                                    disableDynamicInputLimit = state.disableDynamicInputLimit,
+                                                    setDisableDynamicInputLimit =
+                                                        state::updateDisableDynamicInputLimit,
+                                                    disableAutomaticUpdateCheck =
+                                                        state.disableAutomaticUpdateCheck,
+                                                    setDisableAutomaticUpdateCheck =
+                                                        state::updateDisableAutomaticUpdateCheck,
+                                                    showTypingStatus = state.showTypingStatus,
+                                                    setShowTypingStatus = state::updateShowTypingStatus,
+                                                    liveInputPreview = state.liveInputPreview,
+                                                    setLiveInputPreview = state::updateLiveInputPreview,
+                                                    liveInputPreviewDelaySeconds =
+                                                        state.liveInputPreviewDelaySeconds,
+                                                    setLiveInputPreviewDelaySeconds =
+                                                        state::updateLiveInputPreviewDelaySeconds,
                                                 )
                                             AppScreen.ABOUT -> AboutPage(state = state, strings = strings, onOpenLogs = { screen = AppScreen.ERROR_LOGS }, onUpdateAvailable = { availableUpdate = it })
                                             AppScreen.ERROR_LOGS -> ErrorLogsPage(state, strings)
