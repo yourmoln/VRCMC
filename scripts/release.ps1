@@ -307,16 +307,6 @@ try {
     Invoke-External $iscc @((Join-Path $repoRoot 'installer\VRCMC.iss'))
     $installer = Get-Item -LiteralPath (Join-Path $repoRoot "composeApp\build\installer\VRCMC-v$Version-setup.exe")
 
-    $releaseDirectory = Join-Path $repoRoot 'composeApp\build\release'
-    New-Item -ItemType Directory -Path $releaseDirectory -Force | Out-Null
-    $checksumsPath = Join-Path $releaseDirectory 'SHA256SUMS.txt'
-    $checksumLines = @($apk, $installer) | ForEach-Object {
-        $hash = (Get-FileHash -LiteralPath $_.FullName -Algorithm SHA256).Hash.ToLowerInvariant()
-        "$hash  $($_.Name)"
-    }
-    [System.IO.File]::WriteAllLines($checksumsPath, [string[]]$checksumLines, $utf8NoBom)
-    $checksums = Get-Item -LiteralPath $checksumsPath
-
     $metadataStatus = @(Get-GitOutput @('status', '--porcelain=v1', '--', $versionCatalog, $appInfoFile, $installerScript))
     if ($metadataStatus.Count -ne 0) {
         Write-Host 'Committing release metadata...' -ForegroundColor Cyan
@@ -335,7 +325,7 @@ try {
         -ReleaseTag $tag `
         -TargetBranch $branch `
         -Headers $githubHeaders `
-        -Assets @($apk, $installer, $checksums)
+        -Assets @($apk, $installer)
 
     Write-Host "Published ${tag}: $releaseUrl" -ForegroundColor Green
 }
