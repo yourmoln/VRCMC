@@ -279,10 +279,15 @@ try {
         throw 'Could not read the current application version from the Gradle version catalog.'
     }
     $currentVersion = $currentVersionMatch.Groups[1].Value
-    if ([version]$Version -le [version]$currentVersion) {
-        throw "Release version $Version must be newer than $currentVersion."
+    if ([version]$Version -lt [version]$currentVersion) {
+        throw "Release version $Version cannot be older than $currentVersion."
     }
-    Write-Host "Updating version declarations ($currentVersion -> $Version)..." -ForegroundColor Cyan
+    if ([version]$Version -eq [version]$currentVersion) {
+        Write-Host "Version declarations already target $Version; verifying them..." -ForegroundColor Cyan
+    }
+    else {
+        Write-Host "Updating version declarations ($currentVersion -> $Version)..." -ForegroundColor Cyan
+    }
     Set-SingleMatch $versionCatalog '^app-version\s*=\s*"[^"]+"\s*$' "app-version = `"$Version`""
     Set-SingleMatch $appInfoFile '^\s*const val VERSION\s*=\s*"[^"]+"\s*$' "    const val VERSION = `"$Version`""
     Set-SingleMatch $installerScript '^#define AppVersion\s+"[^"]+"\s*$' "#define AppVersion `"$Version`""
@@ -312,9 +317,15 @@ try {
     [System.IO.File]::WriteAllLines($checksumsPath, [string[]]$checksumLines, $utf8NoBom)
     $checksums = Get-Item -LiteralPath $checksumsPath
 
-    Write-Host 'Committing and tagging release metadata...' -ForegroundColor Cyan
-    Invoke-External git @('add', '--', $versionCatalog, $appInfoFile, $installerScript)
-    Invoke-External git @('commit', '-m', "release: $tag")
+    $metadataStatus = @(Get-GitOutput @('status', '--porcelain=v1', '--', $versionCatalog, $appInfoFile, $installerScript))
+    if ($metadataStatus.Count -ne 0) {
+        Write-Host 'Committing release metadata...' -ForegroundColor Cyan
+        Invoke-External git @('add', '--', $versionCatalog, $appInfoFile, $installerScript)
+        Invoke-External git @('commit', '-m', "release: $tag")
+    }
+    else {
+        Write-Host 'Version metadata is already committed; tagging the current commit...' -ForegroundColor Cyan
+    }
     $releaseCommitted = $true
     Invoke-External git @('tag', '-a', $tag, '-m', "VRCMC $Version")
     Invoke-External git @('push', 'origin', "HEAD:refs/heads/$branch", "refs/tags/$tag")
