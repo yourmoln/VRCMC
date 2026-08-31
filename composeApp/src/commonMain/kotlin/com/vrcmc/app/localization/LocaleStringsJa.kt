@@ -17,6 +17,7 @@ object LocaleStringsJa : LocaleStrings {
     override val theme = "テーマ"
     override val preferences = "環境設定"
     override val disableDynamicInputLimit = "入力欄の動的な文字数制限を無効化"
+    override val disableAutomaticUpdateCheck = "自動更新チェックを無効にする"
     override val showTypingStatus = "VRChat に入力中の状態を表示"
     override val liveInputPreview = "入力欄の内容を VRChat にリアルタイム表示"
     override val liveInputPreviewDelay = "前回の送信から更新するまで"

@@ -131,6 +131,16 @@ class TranslationProviderTest {
     }
 
     @Test
+    fun automaticUpdateCheckDisablementDefaultsOffAndRoundTrips() {
+        assertFalse(storedTranslationSettingsFromJson("{}").disableAutomaticUpdateCheck)
+
+        val configured = StoredTranslationSettings(disableAutomaticUpdateCheck = true)
+        assertTrue(
+            storedTranslationSettingsFromJson(configured.toJson()).disableAutomaticUpdateCheck
+        )
+    }
+
+    @Test
     fun liveInputPreviewDelayIsClampedWhenLoaded() {
         assertEquals(
             30,

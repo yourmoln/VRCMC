@@ -17,6 +17,7 @@ object LocaleStringsEn : LocaleStrings {
     override val theme = "Theme"
     override val preferences = "Preferences"
     override val disableDynamicInputLimit = "Disable dynamic input limit"
+    override val disableAutomaticUpdateCheck = "Disable automatic update checks"
     override val showTypingStatus = "Show typing status in VRChat"
     override val liveInputPreview = "Show input text live in VRChat"
     override val liveInputPreviewDelay = "Refresh after the last send"
