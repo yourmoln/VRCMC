@@ -38,7 +38,10 @@ kotlin { jvm("desktop"); androidTarget(); iosX64(); iosArm64(); iosSimulatorArm6
         kotlin.srcDir("src/jvmMain/kotlin")
         dependencies { implementation(compose.desktop.currentOs); implementation(libs.ktor.client.cio); implementation(libs.jna.platform); implementation(libs.kuromoji.core); implementation(kuromojiIpadicRuntime); implementation(libs.wanakana.core) }
     }
-    named("desktopTest").dependencies { implementation(libs.kuromoji.ipadic) }
+    named("desktopTest").dependencies {
+        implementation(libs.kuromoji.ipadic)
+        implementation(compose.desktop.uiTestJUnit4)
+    }
     androidMain {
         kotlin.srcDir("src/jvmMain/kotlin")
         dependencies { implementation(libs.activity.compose); implementation(libs.ktor.client.cio); implementation(libs.kuromoji.core); implementation(kuromojiIpadicRuntime); implementation(libs.wanakana.core) }

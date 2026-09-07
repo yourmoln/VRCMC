@@ -21,11 +21,14 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
+import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.input.key.onPreviewKeyEvent
+import androidx.compose.ui.text.input.TextFieldValue
 import androidx.compose.ui.unit.dp
 import kotlin.math.cos
 import kotlin.math.sin
@@ -137,32 +140,16 @@ internal fun ChatComposer(
                     }
                     Spacer(Modifier.width(10.dp))
                 }
-                BasicTextField(
-                    value = input,
-                    onValueChange = { onInputChange(it.take(maxInputCharacters)) },
+                ChatComposerTextInput(
+                    input = input,
+                    onInputChange = { onInputChange(it.take(maxInputCharacters)) },
+                    enabled = enabled,
+                    strings = strings,
+                    onSend = ::sendAndKeepFocus,
                     modifier =
                         Modifier.weight(1f)
                             .focusRequester(focusRequester)
                             .padding(vertical = 14.dp),
-                    textStyle =
-                        MaterialTheme.typography.bodyLarge.copy(
-                            color = MaterialTheme.colorScheme.onSurface
-                        ),
-                    cursorBrush = SolidColor(MaterialTheme.colorScheme.primary),
-                    maxLines = 5,
-                    decorationBox = { innerTextField ->
-                        Box(contentAlignment = Alignment.CenterStart) {
-                            if (input.isEmpty()) {
-                                Text(
-                                    if (enabled) strings.typeMessage else strings.addIp,
-                                    style = MaterialTheme.typography.bodyLarge,
-                                    color =
-                                        MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = .7f),
-                                )
-                            }
-                            innerTextField()
-                        }
-                    },
                 )
                 Spacer(Modifier.width(10.dp))
                 if (alwaysInterpretationEnabled) {
@@ -195,5 +182,75 @@ internal fun ChatComposer(
                 }
             }
         }
+    }
+}
+
+@Composable
+private fun ChatComposerTextInput(
+    input: String,
+    onInputChange: (String) -> Unit,
+    enabled: Boolean,
+    strings: LocaleStrings,
+    onSend: () -> Unit,
+    modifier: Modifier,
+) {
+    val textStyle = MaterialTheme.typography.bodyLarge.copy(color = MaterialTheme.colorScheme.onSurface)
+    val cursorBrush = SolidColor(MaterialTheme.colorScheme.primary)
+    val decoration: @Composable (@Composable () -> Unit) -> Unit = { innerTextField ->
+        Box(contentAlignment = Alignment.CenterStart) {
+            if (input.isEmpty()) {
+                Text(
+                    if (enabled) strings.typeMessage else strings.addIp,
+                    style = MaterialTheme.typography.bodyLarge,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = .7f),
+                )
+            }
+            innerTextField()
+        }
+    }
+    if (isDesktopAudioPlatform()) {
+        var editingValue by remember { mutableStateOf(TextFieldValue(input)) }
+        val value = editingValue.copy(text = input)
+        val keyHandler = remember { ChatComposerKeyHandler() }
+        SideEffect {
+            if (value.selection != editingValue.selection || value.composition != editingValue.composition) {
+                editingValue = value
+            }
+        }
+        BasicTextField(
+            value = value,
+            onValueChange = {
+                editingValue = it
+                if (it.text != input) onInputChange(it.text)
+            },
+            modifier = modifier
+                .onFocusChanged { if (!it.isFocused) keyHandler.reset() }
+                .onPreviewKeyEvent {
+                    keyHandler.onKeyEvent(
+                        it, desktop = true, canSend = enabled && input.isNotBlank(),
+                        composing = value.composition != null,
+                        onNewline = {
+                            val updated = insertChatComposerNewline(value)
+                            editingValue = updated
+                            onInputChange(updated.text)
+                        },
+                        onSend = onSend,
+                    )
+                },
+            textStyle = textStyle,
+            cursorBrush = cursorBrush,
+            maxLines = 5,
+            decorationBox = decoration,
+        )
+    } else {
+        BasicTextField(
+            value = input,
+            onValueChange = onInputChange,
+            modifier = modifier,
+            textStyle = textStyle,
+            cursorBrush = cursorBrush,
+            maxLines = 5,
+            decorationBox = decoration,
+        )
     }
 }
