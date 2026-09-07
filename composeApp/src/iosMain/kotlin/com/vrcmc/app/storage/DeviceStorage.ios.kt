@@ -45,6 +45,12 @@ import platform.Security.kSecValueData
 private val defaults
     get() = NSUserDefaults.standardUserDefaults
 
+actual fun loadStoredHotwordDictionary(): String = defaults.stringForKey("hotwordDictionary") ?: ""
+
+actual fun saveStoredHotwordDictionary(value: String) {
+    defaults.setObject(value, forKey = "hotwordDictionary")
+}
+
 actual fun loadStoredDevices(): List<Device> =
     (defaults.stringForKey("devices") ?: "").split(';').mapNotNull { value ->
         val parts = value.split('|')

@@ -185,6 +185,7 @@ fun VrcmcApp(onDarkThemeChanged: (Boolean) -> Unit = {}) {
                                             AppScreen.API -> ApiPage(state, strings)
                                             AppScreen.TRANSLATION_LANGUAGE -> TranslationLanguagePage(state, strings)
                                             AppScreen.SIMULTANEOUS_INTERPRETATION -> SimultaneousInterpretationPage(state, strings)
+                                            AppScreen.HOTWORD_DICTIONARY -> HotwordDictionaryPage(state, strings)
                                             AppScreen.QUICK_START -> QuickStartPage(state, strings) { screen = AppScreen.CHAT }
                                             AppScreen.CONFIGURE_VRC -> ConfigureVrcPage(strings)
                                             AppScreen.PREFERENCES ->

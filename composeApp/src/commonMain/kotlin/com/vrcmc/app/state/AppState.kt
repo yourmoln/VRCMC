@@ -3,6 +3,17 @@ package com.vrcmc.app
 import androidx.compose.runtime.*
 
 class AppState {
+    var hotwordDictionary by mutableStateOf(
+        runCatching { hotwordDictionaryFromJson(loadStoredHotwordDictionary()) }
+            .getOrDefault(HotwordDictionary())
+    )
+        private set
+
+    fun updateHotwordDictionary(value: HotwordDictionary) {
+        saveStoredHotwordDictionary(value.toJson())
+        hotwordDictionary = value
+    }
+
     private val storedTranslation =
         storedTranslationSettingsFromJson(loadStoredTranslationSettings())
     private val storedSecrets = storedProviderSecretsFromJson(loadStoredTranslationSecrets())

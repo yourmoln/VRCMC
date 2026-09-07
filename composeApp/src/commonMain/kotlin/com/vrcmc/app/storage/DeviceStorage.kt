@@ -1,5 +1,9 @@
 package com.vrcmc.app
 
+expect fun loadStoredHotwordDictionary(): String
+
+expect fun saveStoredHotwordDictionary(value: String)
+
 expect fun loadStoredDevices(): List<Device>
 
 expect fun saveStoredDevices(devices: List<Device>, activeAddress: String)

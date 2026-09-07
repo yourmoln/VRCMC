@@ -30,6 +30,12 @@ internal actual fun platformJapaneseDictionaryCachePath(): String? =
 
 private fun prefs() = appContext?.getSharedPreferences("vrcmc", Context.MODE_PRIVATE)
 
+actual fun loadStoredHotwordDictionary(): String = prefs()?.getString("hotwordDictionary", "") ?: ""
+
+actual fun saveStoredHotwordDictionary(value: String) {
+    check(checkNotNull(prefs()).edit().putString("hotwordDictionary", value).commit())
+}
+
 actual fun loadStoredDevices(): List<Device> =
     prefs()?.getString("devices", "")?.split(';')?.mapNotNull { value ->
         val parts = value.split('|')

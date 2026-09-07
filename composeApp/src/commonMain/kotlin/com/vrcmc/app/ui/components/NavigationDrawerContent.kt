@@ -1,6 +1,8 @@
 package com.vrcmc.app
 
 import androidx.compose.foundation.Image
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -10,6 +12,7 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ChatBubble
+import androidx.compose.material.icons.automirrored.filled.MenuBook
 import androidx.compose.material.icons.filled.Devices
 import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.RecordVoiceOver
@@ -44,6 +47,7 @@ internal enum class AppScreen {
     API,
     TRANSLATION_LANGUAGE,
     SIMULTANEOUS_INTERPRETATION,
+    HOTWORD_DICTIONARY,
     QUICK_START,
     CONFIGURE_VRC,
     PREFERENCES,
@@ -76,6 +80,7 @@ internal fun VrcmcNavigationDrawer(
                 strings.simultaneousInterpretation,
                 Icons.Default.RecordVoiceOver,
             ),
+            NavigationItem(AppScreen.HOTWORD_DICTIONARY, strings.hotwordDictionary, Icons.AutoMirrored.Filled.MenuBook),
         )
     val secondaryItems =
         listOf(
@@ -89,7 +94,7 @@ internal fun VrcmcNavigationDrawer(
             NavigationItem(AppScreen.ABOUT, strings.aboutApp, Icons.Default.Info),
         )
 
-    ModalDrawerSheet(modifier.width(260.dp)) {
+    ModalDrawerSheet(modifier.width(260.dp).verticalScroll(rememberScrollState())) {
         Row(
             Modifier.fillMaxWidth().padding(horizontal = 20.dp, vertical = 18.dp),
             verticalAlignment = Alignment.CenterVertically,

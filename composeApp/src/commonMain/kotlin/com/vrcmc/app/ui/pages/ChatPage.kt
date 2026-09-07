@@ -61,6 +61,8 @@ fun ChatPage(state: AppState, strings: LocaleStrings) {
     val streamingMerger = remember { StreamingTextMerger() }
     val audioRecorder = remember { createAudioRecorder() }
     val scope = rememberCoroutineScope()
+    val blockedSnackbar = remember { SnackbarHostState() }
+    var blockedNotificationJob by remember { mutableStateOf<Job?>(null) }
     val messages = state.messages.toList()
     val listState =
         rememberLazyListState(initialFirstVisibleItemIndex = messages.lastIndex.coerceAtLeast(0))
@@ -332,12 +334,33 @@ fun ChatPage(state: AppState, strings: LocaleStrings) {
         sending = false
     }
 
+    suspend fun sendOutput(target: Device, text: String, live: Boolean = false): Boolean {
+        if (!live && text.isNotBlank()) state.recordNonLiveChatboxSend()
+        val result = sendChatboxOutput(target, text)
+        when (result) {
+            ChatboxSendResult.SENT_OVER_LIMIT -> error = strings.messageTooLong
+            ChatboxSendResult.FAILED -> error = strings.sendFailed
+            ChatboxSendResult.SENT, ChatboxSendResult.EMPTY ->
+                if (error == strings.messageTooLong) error = null
+        }
+        return result == ChatboxSendResult.SENT || result == ChatboxSendResult.SENT_OVER_LIMIT
+    }
+
     fun sendMessage(rawText: String, clearDraft: Boolean) {
-        val original = rawText.trim()
+        val original = state.hotwordDictionary.process(rawText)
+        if (original == null) {
+            if (clearDraft) state.chatDraft = ""
+            error = null
+            if (blockedNotificationJob?.isActive != true) {
+                blockedNotificationJob = scope.launch { blockedSnackbar.showSnackbar(strings.sentenceBlocked) }
+            }
+            return
+        }
         val target = state.activeDevice() ?: return
         cancelActiveTranslation()
-        if (!isValidChatboxText(original, maxInputCharacters)) {
-            error = strings.messageTooLong
+        if (original.isBlank()) {
+            if (clearDraft) state.chatDraft = ""
+            error = null
             return
         }
         val shouldTranslate = state.translate && !shouldSkipTranslation(original)
@@ -352,12 +375,6 @@ fun ChatPage(state: AppState, strings: LocaleStrings) {
         val sendOriginalBeforeTranslation = state.sendOriginalBeforeTranslation
         val displayLanguages = outputOrder.filter { it in targetLanguages }
         val translatingText = "$original\n(Translating...)"
-        if (
-            shouldTranslate && sendOriginalBeforeTranslation && !isValidChatboxText(translatingText)
-        ) {
-            error = strings.messageTooLong
-            return
-        }
         sending = true
         retryAttempt = 0
         retryLimit = state.providerConfig.totalRetryCount()
@@ -388,19 +405,8 @@ fun ChatPage(state: AppState, strings: LocaleStrings) {
                     if (showTypingStatus) {
                         sendChatboxTypingOsc(target.address, false, target.receivePort)
                     }
-                    if (
-                        shouldTranslate &&
-                            sendOriginalBeforeTranslation &&
-                            run {
-                                state.recordNonLiveChatboxSend()
-                                !sendChatboxOsc(
-                                    target.address,
-                                    translatingText,
-                                    target.receivePort,
-                                )
-                            }
-                    ) {
-                        error = strings.sendFailed
+                    if (shouldTranslate && sendOriginalBeforeTranslation) {
+                        sendOutput(target, translatingText)
                     }
                     val translations =
                         if (shouldTranslate)
@@ -467,11 +473,7 @@ fun ChatPage(state: AppState, strings: LocaleStrings) {
                             lineBreakOutput,
                             showOriginalText,
                         )
-                    if (!isValidChatboxText(outgoing)) error = strings.messageTooLong
-                    state.recordNonLiveChatboxSend()
-                    if (!sendChatboxOsc(target.address, outgoing, target.receivePort)) {
-                        error = strings.sendFailed
-                    }
+                    sendOutput(target, outgoing)
                 } finally {
                     if (translationGeneration == requestGeneration) {
                         activeTranslationJob = null
@@ -520,13 +522,8 @@ fun ChatPage(state: AppState, strings: LocaleStrings) {
                         }
                     }
                     if (!latest.requiresTranslationIdle || !sending) {
-                        val sent =
-                            sendChatboxOsc(
-                                latest.device.address,
-                                latest.text,
-                                latest.device.receivePort,
-                            )
-                        if (!sent) error = strings.sendFailed
+                        val processed = state.hotwordDictionary.replaceKeywords(latest.text)
+                        val sent = sendOutput(latest.device, processed, live = true)
                         if (sent) lastLiveUpdateMillis = currentTimeMillis()
                     }
                     barrier?.completed?.complete(Unit)
@@ -586,7 +583,7 @@ fun ChatPage(state: AppState, strings: LocaleStrings) {
         if (!sending && !state.isSimultaneousInterpretationActive) {
             livePreviewReady = true
             val previewText = state.chatDraft.trim()
-            if (isValidChatboxText(previewText, maxInputCharacters)) {
+            if (previewText.isNotBlank()) {
             liveOriginalUpdates.send(
                 LiveOriginalUpdate(target, previewText, requiresTranslationIdle = true)
             )
@@ -723,6 +720,7 @@ fun ChatPage(state: AppState, strings: LocaleStrings) {
             }
         }
 
+        SnackbarHost(blockedSnackbar)
         error?.let { message ->
             Text(
                 message,
@@ -755,7 +753,7 @@ fun ChatPage(state: AppState, strings: LocaleStrings) {
                 if (
                     state.isSimultaneousInterpretationActive &&
                         active != null &&
-                        isValidChatboxText(original, maxInputCharacters)
+                        original.isNotBlank()
                 ) {
                     liveOriginalUpdates.trySend(LiveOriginalUpdate(active, original))
                 }

@@ -311,7 +311,7 @@ try {
     if ($metadataStatus.Count -ne 0) {
         Write-Host 'Committing release metadata...' -ForegroundColor Cyan
         Invoke-External git @('add', '--', $versionCatalog, $appInfoFile, $installerScript)
-        Invoke-External git @('commit', '-m', "release: $tag")
+        Invoke-External git @('commit', '-m', "chore: 发布 $tag")
     }
     else {
         Write-Host 'Version metadata is already committed; tagging the current commit...' -ForegroundColor Cyan

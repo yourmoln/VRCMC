@@ -8,10 +8,12 @@ internal fun chatboxInputCharacterLimit(translationEnabled: Boolean, translation
     return maxChatboxCharacters / outputParts
 }
 
-internal fun isValidChatboxText(text: String, maxCharacters: Int = maxChatboxCharacters): Boolean =
+internal fun isValidChatboxText(
+    text: String,
+    maxCharacters: Int = maxChatboxCharacters,
+): Boolean =
     text.isNotBlank() &&
-        text.length <= maxCharacters &&
-        text.lineSequence().count() <= maxChatboxLines
+        text.length <= maxCharacters && text.lineSequence().count() <= maxChatboxLines
 
 internal fun liveInputPreviewDelayRemainingMillis(
     nowMillis: Long,

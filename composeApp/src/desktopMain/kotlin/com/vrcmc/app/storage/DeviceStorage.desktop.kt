@@ -15,6 +15,11 @@ private val storageDirectory: Path =
     System.getenv("APPDATA")?.takeIf { it.isNotBlank() }?.let { Path.of(it, "VRCMC") }
         ?: Path.of(System.getProperty("user.home"), ".vrcmc")
 private val translationFile = storageDirectory.resolve("translation-settings.json")
+private val hotwordDictionaryFile = storageDirectory.resolve("hotword-dictionary.json")
+
+actual fun loadStoredHotwordDictionary(): String = readText(hotwordDictionaryFile)
+
+actual fun saveStoredHotwordDictionary(value: String) = writeTextAtomically(hotwordDictionaryFile, value)
 private val chatHistoryFile = storageDirectory.resolve("chat-history.json")
 private val errorLogsFile = storageDirectory.resolve("error-logs.json")
 private val translationSecretsFile = storageDirectory.resolve("translation-secrets.dpapi")

@@ -29,6 +29,7 @@ internal fun buildTranslationOutput(
     lineBreakOutput: Boolean = true,
     showOriginalText: Boolean = true,
 ): String {
+    if (translations.isEmpty()) return original
     val values =
         outputOrder
         .mapNotNull { key ->
