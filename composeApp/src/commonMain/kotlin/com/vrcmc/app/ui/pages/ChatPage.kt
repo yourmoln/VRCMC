@@ -1,9 +1,6 @@
 package com.vrcmc.app
 
 import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.itemsIndexed
-import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ChatBubbleOutline
@@ -12,7 +9,6 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalClipboard
-import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.unit.dp
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.CoroutineStart
@@ -64,14 +60,11 @@ fun ChatPage(state: AppState, strings: LocaleStrings) {
     val blockedSnackbar = remember { SnackbarHostState() }
     var blockedNotificationJob by remember { mutableStateOf<Job?>(null) }
     val messages = state.messages.toList()
-    val listState =
-        rememberLazyListState(initialFirstVisibleItemIndex = messages.lastIndex.coerceAtLeast(0))
     val active = state.activeDevice()
     val maxInputCharacters =
         if (state.disableDynamicInputLimit) maxChatboxCharacters
         else chatboxInputCharacterLimit(state.translate, state.languages.size)
     val now = currentTimeMillis()
-    val imeBottom = WindowInsets.ime.getBottom(LocalDensity.current)
     val clipboard = LocalClipboard.current
     val liveOriginalUpdates = remember { Channel<LiveOscAction>(Channel.UNLIMITED) }
     val typingUpdates = remember { Channel<TypingOscUpdate>(Channel.CONFLATED) }
@@ -641,82 +634,64 @@ fun ChatPage(state: AppState, strings: LocaleStrings) {
         }
     }
 
-    LaunchedEffect(messages) {
-        if (messages.isNotEmpty()) listState.requestScrollToItem(messages.lastIndex)
-    }
-
-    LaunchedEffect(imeBottom) {
-        if (imeBottom > 0 && messages.isNotEmpty()) {
-            listState.requestScrollToItem(messages.lastIndex)
-        }
-    }
-
     Column(Modifier.fillMaxSize().imePadding()) {
-        LazyColumn(
-            state = listState,
+        ChatHistoryList(
+            messages = messages,
             modifier = Modifier.weight(1f).fillMaxWidth(),
-            contentPadding = PaddingValues(horizontal = 16.dp, vertical = 18.dp),
-            verticalArrangement = Arrangement.spacedBy(14.dp),
-        ) {
-            if (messages.isEmpty()) {
-                item {
-                    Box(Modifier.fillParentMaxSize(), contentAlignment = Alignment.Center) {
-                        Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                            Surface(
-                                shape = RoundedCornerShape(8.dp),
-                                color = MaterialTheme.colorScheme.secondaryContainer,
-                            ) {
-                                Icon(
-                                    Icons.Default.ChatBubbleOutline,
-                                    null,
-                                    Modifier.padding(14.dp).size(28.dp),
-                                    tint = MaterialTheme.colorScheme.onSecondaryContainer,
-                                )
-                            }
-                            Spacer(Modifier.height(14.dp))
-                            Text(
-                                active?.displayEndpoint() ?: strings.addIp,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                style = MaterialTheme.typography.bodySmall,
+            emptyContent = {
+                Box(Modifier.fillParentMaxSize(), contentAlignment = Alignment.Center) {
+                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                        Surface(
+                            shape = RoundedCornerShape(8.dp),
+                            color = MaterialTheme.colorScheme.secondaryContainer,
+                        ) {
+                            Icon(
+                                Icons.Default.ChatBubbleOutline,
+                                null,
+                                Modifier.padding(14.dp).size(28.dp),
+                                tint = MaterialTheme.colorScheme.onSecondaryContainer,
                             )
                         }
-                    }
-                }
-            } else {
-                itemsIndexed(messages) { index, message ->
-                    Column(Modifier.fillMaxWidth()) {
-                        if (timestampVisibility[index]) {
-                            Text(
-                                formatChatTime(
-                                    timestamp = message.timestamp,
-                                    now = now,
-                                    yesterdayLabel = strings.yesterday,
-                                    dayBeforeYesterdayLabel = strings.dayBeforeYesterday,
-                                ),
-                                style = MaterialTheme.typography.labelSmall,
-                                color =
-                                    MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = .7f),
-                                modifier =
-                                    Modifier.align(Alignment.CenterHorizontally)
-                                        .padding(bottom = 8.dp),
-                            )
-                        }
-                        MessageBubble(
-                            message = message,
-                            strings = strings,
-                            retryAttempt = retryAttempt,
-                            retryLimit = retryLimit,
-                            resendEnabled = active != null && !sending,
-                            showJapaneseRomaji = state.showJapaneseRomaji,
-                            onCopy = {
-                                scope.launch {
-                                    clipboard.setClipEntry(textClipEntry(message.text))
-                                }
-                            },
-                            onResend = { sendMessage(message.text, clearDraft = false) },
+                        Spacer(Modifier.height(14.dp))
+                        Text(
+                            active?.displayEndpoint() ?: strings.addIp,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            style = MaterialTheme.typography.bodySmall,
                         )
                     }
                 }
+            },
+        ) { index, message ->
+            Column(Modifier.fillMaxWidth()) {
+                if (timestampVisibility[index]) {
+                    Text(
+                        formatChatTime(
+                            timestamp = message.timestamp,
+                            now = now,
+                            yesterdayLabel = strings.yesterday,
+                            dayBeforeYesterdayLabel = strings.dayBeforeYesterday,
+                        ),
+                        style = MaterialTheme.typography.labelSmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = .7f),
+                        modifier =
+                            Modifier.align(Alignment.CenterHorizontally)
+                                .padding(bottom = 8.dp),
+                    )
+                }
+                MessageBubble(
+                    message = message,
+                    strings = strings,
+                    retryAttempt = retryAttempt,
+                    retryLimit = retryLimit,
+                    resendEnabled = active != null && !sending,
+                    showJapaneseRomaji = state.showJapaneseRomaji,
+                    onCopy = {
+                        scope.launch {
+                            clipboard.setClipEntry(textClipEntry(message.text))
+                        }
+                    },
+                    onResend = { sendMessage(message.text, clearDraft = false) },
+                )
             }
         }
 

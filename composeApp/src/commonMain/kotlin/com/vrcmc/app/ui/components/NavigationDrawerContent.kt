@@ -1,18 +1,21 @@
 package com.vrcmc.app
 
 import androidx.compose.foundation.Image
-import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.verticalScroll
+import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.ChatBubble
 import androidx.compose.material.icons.automirrored.filled.MenuBook
+import androidx.compose.material.icons.filled.ChatBubble
 import androidx.compose.material.icons.filled.Devices
 import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.RecordVoiceOver
@@ -21,6 +24,7 @@ import androidx.compose.material.icons.filled.SettingsInputAntenna
 import androidx.compose.material.icons.filled.Start
 import androidx.compose.material.icons.filled.Translate
 import androidx.compose.material.icons.filled.Tune
+import androidx.compose.material3.DrawerDefaults
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
@@ -60,10 +64,13 @@ private data class NavigationItem(val screen: AppScreen, val label: String, val 
 @Composable
 internal fun VrcmcNavigationDrawer(
     selectedScreen: AppScreen,
-    state: AppState,
+    translationConfigured: Boolean,
+    translationEnabled: Boolean,
+    onTranslationEnabledChange: (Boolean) -> Unit,
     strings: LocaleStrings,
     onSelect: (AppScreen) -> Unit,
     modifier: Modifier = Modifier,
+    windowInsets: WindowInsets = DrawerDefaults.windowInsets,
 ) {
     val primaryItems =
         listOf(
@@ -94,40 +101,42 @@ internal fun VrcmcNavigationDrawer(
             NavigationItem(AppScreen.ABOUT, strings.aboutApp, Icons.Default.Info),
         )
 
-    ModalDrawerSheet(modifier.width(260.dp).verticalScroll(rememberScrollState())) {
-        Row(
-            Modifier.fillMaxWidth().padding(horizontal = 20.dp, vertical = 18.dp),
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
-            Image(
-                painter = painterResource(Res.drawable.logo),
-                contentDescription = null,
-                modifier = Modifier.size(32.dp).clip(RoundedCornerShape(6.dp)),
-            )
-            Spacer(Modifier.width(12.dp))
-            Text("VRCMC", style = MaterialTheme.typography.titleMedium)
-            if (state.isTranslationApiConfigured) {
-                Spacer(Modifier.weight(1f))
-                Icon(
-                    imageVector = Icons.Default.Translate,
+    ModalDrawerSheet(modifier.width(260.dp), windowInsets = windowInsets) {
+        Column(Modifier.fillMaxHeight().verticalScroll(rememberScrollState())) {
+            Row(
+                Modifier.fillMaxWidth().padding(horizontal = 20.dp, vertical = 18.dp),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Image(
+                    painter = painterResource(Res.drawable.logo),
                     contentDescription = null,
-                    modifier = Modifier.size(20.dp),
-                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.size(32.dp).clip(RoundedCornerShape(6.dp)),
                 )
-                Spacer(Modifier.width(2.dp))
-                Switch(
-                    checked = state.translate,
-                    onCheckedChange = state::updateTranslationEnabled,
-                    modifier =
-                        Modifier.scale(0.75f).semantics {
-                            contentDescription = strings.translateBeforeSending
-                        },
-                )
+                Spacer(Modifier.width(12.dp))
+                Text("VRCMC", style = MaterialTheme.typography.titleMedium)
+                if (translationConfigured) {
+                    Spacer(Modifier.weight(1f))
+                    Icon(
+                        imageVector = Icons.Default.Translate,
+                        contentDescription = null,
+                        modifier = Modifier.size(20.dp),
+                        tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                    Spacer(Modifier.width(2.dp))
+                    Switch(
+                        checked = translationEnabled,
+                        onCheckedChange = onTranslationEnabledChange,
+                        modifier =
+                            Modifier.scale(0.75f).semantics {
+                                contentDescription = strings.translateBeforeSending
+                            },
+                    )
+                }
             }
+            primaryItems.forEach { item -> NavigationItemRow(item, selectedScreen, onSelect) }
+            HorizontalDivider(Modifier.padding(vertical = 10.dp))
+            secondaryItems.forEach { item -> NavigationItemRow(item, selectedScreen, onSelect) }
         }
-        primaryItems.forEach { item -> NavigationItemRow(item, selectedScreen, onSelect) }
-        HorizontalDivider(Modifier.padding(vertical = 10.dp))
-        secondaryItems.forEach { item -> NavigationItemRow(item, selectedScreen, onSelect) }
     }
 }
 

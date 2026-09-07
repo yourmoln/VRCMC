@@ -105,7 +105,9 @@ fun VrcmcApp(onDarkThemeChanged: (Boolean) -> Unit = {}) {
                     if (expanded) {
                         VrcmcNavigationDrawer(
                             selectedScreen = screen,
-                            state = state,
+                            translationConfigured = state.isTranslationApiConfigured,
+                            translationEnabled = state.translate,
+                            onTranslationEnabledChange = state::updateTranslationEnabled,
                             strings = strings,
                             onSelect = { screen = it },
                         )
@@ -118,7 +120,9 @@ fun VrcmcApp(onDarkThemeChanged: (Boolean) -> Unit = {}) {
                             if (!expanded) {
                                 VrcmcNavigationDrawer(
                                     selectedScreen = screen,
-                                    state = state,
+                                    translationConfigured = state.isTranslationApiConfigured,
+                                    translationEnabled = state.translate,
+                                    onTranslationEnabledChange = state::updateTranslationEnabled,
                                     strings = strings,
                                     onSelect = { selectedScreen ->
                                         screen = selectedScreen
