@@ -28,6 +28,7 @@ class EdgeTtsProtocolTest {
         assertContentEquals(byteArrayOf(), edgeTtsAudioPayload(frame("Path:audio\r\n", byteArrayOf())))
         assertFailsWith<IllegalArgumentException> { edgeTtsAudioPayload(byteArrayOf(0)) }
         assertFailsWith<IllegalArgumentException> { edgeTtsAudioPayload(byteArrayOf(1, 0, 0)) }
+        assertFailsWith<IllegalArgumentException> { edgeTtsAudioPayload(ByteArray(edgeTtsMaxFrameBytes + 1)) }
     }
 
     private fun frame(headers: String, payload: ByteArray): ByteArray {

@@ -228,6 +228,36 @@ class ReadAloudTest {
         }
     }
 
+    @Test
+    fun networkDiagnosticsKeepOnlySafeReasonsAndHttpStatus() {
+        val secret = "private speech wss://example.invalid/?TrustedClientToken=secret"
+        val cases = listOf(
+            kotlinx.io.IOException("Connection reset by peer: $secret") to "IOException [connection reset]",
+            kotlinx.io.IOException("socket failed: EACCES (Permission denied): $secret") to "IOException [network access denied]",
+            kotlinx.io.IOException("TLS handshake failed: $secret") to "IOException [TLS connection failed]",
+            kotlinx.io.IOException(secret) to "IOException",
+            EdgeTtsHttpException(403, secret) to "EdgeTtsHttpException [HTTP 403]",
+        )
+        for ((failure, expected) in cases) {
+            val log = readAloudFailureMessage("synthesis", failure)
+            assertEquals("Edge TTS: synthesis failed: $expected", log)
+            assertFalse(log.contains("private speech") || log.contains("TrustedClientToken") || log.contains("secret"))
+        }
+    }
+
+    @Test
+    fun voiceListFailuresAreLoggedWithoutFailingPlayback() = runBlocking {
+        val errors = mutableListOf<String>()
+        val controller = ReadAloudController(this, ReadAloudConfig(enabled = true), errors::add,
+            synthesize = { _, _ -> byteArrayOf(1) }, player = FakePlayer())
+        try {
+            controller.reportVoiceListFailure(kotlinx.io.IOException("Network is unreachable"))
+            assertEquals(listOf("Edge TTS: voices failed: IOException [network unreachable]"), errors)
+            assertFalse(controller.failed)
+            assertFalse(controller.busy)
+        } finally { controller.stop() }
+    }
+
     private class FakePlayer(private val onPlay: suspend (ByteArray) -> Unit = {}) : SpeechAudioPlayer {
         override suspend fun play(mp3: ByteArray, outputDeviceId: String) = onPlay(mp3)
         override fun stop() = Unit

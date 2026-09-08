@@ -56,7 +56,7 @@ kotlin { jvm("desktop"); androidTarget(); iosX64(); iosArm64(); iosSimulatorArm6
     }
     androidMain {
         kotlin.srcDir("src/jvmMain/kotlin")
-        dependencies { implementation(libs.activity.compose); implementation(libs.ktor.client.cio); implementation(libs.kuromoji.core); implementation(kuromojiIpadicRuntime); implementation(libs.wanakana.core) }
+        dependencies { implementation(libs.activity.compose); implementation(libs.ktor.client.cio); implementation(libs.ktor.client.okhttp); implementation(libs.kuromoji.core); implementation(kuromojiIpadicRuntime); implementation(libs.wanakana.core) }
     }
     iosMain.dependencies { implementation(libs.ktor.client.darwin) }
 } }

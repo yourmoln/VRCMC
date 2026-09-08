@@ -51,6 +51,44 @@ internal expect fun createSpeechAudioPlayer(): SpeechAudioPlayer
 internal class SpeechAudioPlaybackException(val what: Int, val extra: Int) :
     IllegalStateException("Audio playback failed: $what/$extra")
 
+internal fun readAloudFailureMessage(stage: String, error: Throwable): String {
+    if (error is TimeoutCancellationException) return "Edge TTS: $stage timed out"
+    val causes = generateSequence<Throwable>(error) { it.cause }.take(4).toList()
+    val types = causes.joinToString(" <- ") { it::class.simpleName ?: "Exception" }
+    val detail = causes.firstNotNullOfOrNull {
+        when (it) {
+            is EdgeTtsHttpException -> " [HTTP ${it.statusCode}]"
+            is SpeechAudioPlaybackException -> " (${it.what}/${it.extra})"
+            else -> null
+        }
+    }
+    val reason = causes.firstNotNullOfOrNull { cause ->
+        if (cause !is kotlinx.io.IOException) return@firstNotNullOfOrNull null
+        val type = cause::class.simpleName.orEmpty()
+        val message = cause.message.orEmpty().lowercase()
+        // Only emit fixed categories; socket messages can include URLs and authentication data.
+        when {
+            type == "UnknownHostException" || "unable to resolve host" in message ||
+                "no address associated" in message -> "DNS lookup failed"
+            "SSL" in type || "TLS" in type || "handshake" in message ||
+                "certificate" in message -> "TLS connection failed"
+            "Timeout" in type || "timed out" in message || "etimedout" in message -> "connection timed out"
+            "eacces" in message || "eperm" in message || "permission denied" in message ||
+                "operation not permitted" in message -> "network access denied"
+            "network is unreachable" in message || "no route to host" in message ||
+                "enetunreach" in message || "ehostunreach" in message -> "network unreachable"
+            "connection reset" in message || "econnreset" in message -> "connection reset"
+            "connection abort" in message || "econnaborted" in message -> "connection aborted"
+            "connection refused" in message || "econnrefused" in message -> "connection refused"
+            "unexpected end of stream" in message || "broken pipe" in message -> "connection closed"
+            "failed to connect" in message -> "connection failed"
+            else -> null
+        }
+    }
+    val details = detail ?: reason?.let { " [$it]" }.orEmpty()
+    return "Edge TTS: $stage failed: $types$details"
+}
+
 // One worker owns synthesis and playback. Reconfiguration cancels both and drops queued speech.
 internal class ReadAloudController(
     private val scope: CoroutineScope,
@@ -88,6 +126,10 @@ internal class ReadAloudController(
         enqueueRequest(Request(text, config.copy(voice = voice), preview = true))
     }
 
+    fun reportVoiceListFailure(error: Throwable) {
+        onError(readAloudFailureMessage("voices", error))
+    }
+
     fun stopPreview() {
         if (previewVoice != null) stop()
     }
@@ -115,12 +157,7 @@ internal class ReadAloudController(
                         } catch (error: Exception) {
                             currentCoroutineContext().ensureActive()
                             failed = true
-                            // Exception messages may contain speech text or token-bearing request URLs.
-                            val types = generateSequence<Throwable>(error) { it.cause }.take(4)
-                                .joinToString(" <- ") { it::class.simpleName ?: "Exception" }
-                            val codes = (error as? SpeechAudioPlaybackException)
-                                ?.let { " (${it.what}/${it.extra})" }.orEmpty()
-                            onError("Edge TTS: $stage failed: $types$codes")
+                            onError(readAloudFailureMessage(stage, error))
                         } finally {
                             if (queue === channel) {
                                 busy = false
