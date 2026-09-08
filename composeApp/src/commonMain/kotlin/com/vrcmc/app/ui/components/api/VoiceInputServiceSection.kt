@@ -27,7 +27,17 @@ internal fun VoiceInputServiceSection(
     config: VoiceInputConfig,
     strings: LocaleStrings,
     onUpdate: ((VoiceInputConfig) -> VoiceInputConfig) -> Unit,
+    onDownloadLocalModel: () -> Unit = {},
+    onCancelLocalModel: () -> Unit = {},
+    localRecognizer: LocalSpeechRecognizer = localSpeechRecognizer,
 ) {
+    var providerMenu by remember { mutableStateOf(false) }
+    val localModelStatus by localRecognizer.status.collectAsState()
+    val availableProviders = if (localRecognizer.supported) VoiceInputProvider.entries else listOf(VoiceInputProvider.QWEN)
+    val showLocalModel = localRecognizer.supported && (
+        config.provider == VoiceInputProvider.LOCAL_WHISPER ||
+            localModelStatus is LocalSpeechModelStatus.Downloading || localModelStatus is LocalSpeechModelStatus.Failed
+        )
     var showKey by remember { mutableStateOf(false) }
     var regionMenu by remember { mutableStateOf(false) }
     var modelMenu by remember { mutableStateOf(false) }
@@ -41,7 +51,7 @@ internal fun VoiceInputServiceSection(
             Column(Modifier.weight(1f)) {
                 Text(strings.enableVoiceInput, style = MaterialTheme.typography.titleSmall)
                 Text(
-                    strings.voiceInputHint,
+                    if (localRecognizer.supported) strings.voiceInputHint else strings.qwenVoiceInputHint,
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
@@ -51,94 +61,133 @@ internal fun VoiceInputServiceSection(
                 onCheckedChange = { enabled -> onUpdate { it.copy(enabled = enabled) } },
             )
         }
-        if (!config.enabled) return@SettingsCard
+        if (!config.enabled) {
+            if (showLocalModel) {
+                HorizontalDivider()
+                LocalSpeechModelSettings(localModelStatus, localRecognizer.supported, strings, onDownloadLocalModel, onCancelLocalModel)
+            }
+            return@SettingsCard
+        }
 
         HorizontalDivider()
-        OutlinedTextField(
-            value = config.apiKey,
-            onValueChange = { value -> onUpdate { it.copy(apiKey = value) } },
-            modifier = Modifier.fillMaxWidth(),
-            singleLine = true,
-            label = { Text(strings.qwenApiKey) },
-            placeholder = { Text("sk-...") },
-            visualTransformation = if (showKey) VisualTransformation.None else PasswordVisualTransformation(),
-            trailingIcon = {
-                IconButton({ showKey = !showKey }) {
-                    Icon(if (showKey) Icons.Default.VisibilityOff else Icons.Default.Visibility, strings.showApiKey)
+        // Preserve an explicit way back to Qwen if stored settings select an unsupported provider.
+        if (availableProviders.size > 1 || config.provider !in availableProviders) {
+            Box {
+                OutlinedButton(
+                    onClick = { providerMenu = true },
+                    modifier = Modifier.fillMaxWidth().heightIn(min = 52.dp),
+                    shape = MaterialTheme.shapes.large,
+                ) {
+                    Text(strings.voiceInputProvider, Modifier.weight(1f))
+                    if (config.provider in availableProviders) {
+                        Text(if (config.provider == VoiceInputProvider.QWEN) "Qwen3-ASR" else strings.localWhisper)
+                    }
+                    Icon(Icons.Default.ArrowDropDown, null)
                 }
-            },
-            isError = config.apiKey.isBlank(),
-            shape = MaterialTheme.shapes.large,
-        )
-        Box {
-            OutlinedButton(
-                onClick = { regionMenu = true },
-                modifier = Modifier.fillMaxWidth().heightIn(min = 52.dp),
-                shape = MaterialTheme.shapes.large,
-            ) {
-                Icon(Icons.Default.Public, null)
-                Spacer(Modifier.width(8.dp))
-                Text(asrRegions.firstOrNull { it.id == config.region }?.label ?: config.region, Modifier.weight(1f))
-                Icon(Icons.Default.ArrowDropDown, null)
-            }
-            DropdownMenu(regionMenu, { regionMenu = false }) {
-                asrRegions.forEach { region ->
-                    DropdownMenuItem(
-                        text = { Text(region.label) },
-                        leadingIcon = { if (region.id == config.region) Icon(Icons.Default.Check, null) },
-                        onClick = {
-                            onUpdate { old ->
-                                old.copy(
-                                    region = region.id,
-                                    baseUrl =
-                                        if (region.baseUrl.isNotBlank()) region.baseUrl
-                                        else if (old.region in setOf("japan", "custom")) old.baseUrl
-                                        else "",
-                                )
-                            }
-                            regionMenu = false
-                        },
-                    )
+                DropdownMenu(providerMenu, { providerMenu = false }) {
+                    availableProviders.forEach { provider ->
+                        DropdownMenuItem(
+                            text = { Text(if (provider == VoiceInputProvider.QWEN) "Qwen3-ASR" else strings.localWhisper) },
+                            leadingIcon = { if (provider == config.provider) Icon(Icons.Default.Check, null) },
+                            onClick = {
+                                onUpdate { it.copy(provider = provider) }
+                                providerMenu = false
+                            },
+                        )
+                    }
                 }
             }
         }
-        OutlinedTextField(
-            value = config.baseUrl,
-            onValueChange = { value -> onUpdate { it.copy(baseUrl = value) } },
-            modifier = Modifier.fillMaxWidth(),
-            singleLine = true,
-            label = { Text("Base URL") },
-            leadingIcon = {
-                Icon(
-                    if (config.baseUrl.startsWith("https://")) Icons.Default.Lock
-                    else Icons.Default.Language,
-                    null,
-                )
-            },
-            isError =
-                config.baseUrl.isBlank() ||
-                    (!config.baseUrl.startsWith("https://") &&
-                        !config.baseUrl.startsWith("http://")),
-            shape = MaterialTheme.shapes.large,
-        )
-        Box {
+        if (showLocalModel) {
+            LocalSpeechModelSettings(localModelStatus, localRecognizer.supported, strings, onDownloadLocalModel, onCancelLocalModel)
+        }
+        if (config.provider == VoiceInputProvider.QWEN) {
             OutlinedTextField(
-                value = config.model,
-                onValueChange = { value -> onUpdate { it.copy(model = value) } },
+                value = config.apiKey,
+                onValueChange = { value -> onUpdate { it.copy(apiKey = value) } },
                 modifier = Modifier.fillMaxWidth(),
                 singleLine = true,
-                label = { Text(strings.qwenModel) },
-                trailingIcon = { IconButton({ modelMenu = true }) { Icon(Icons.Default.ArrowDropDown, null) } },
-                isError = config.model.isBlank(),
+                label = { Text(strings.qwenApiKey) },
+                placeholder = { Text("sk-...") },
+                visualTransformation = if (showKey) VisualTransformation.None else PasswordVisualTransformation(),
+                trailingIcon = {
+                    IconButton({ showKey = !showKey }) {
+                        Icon(if (showKey) Icons.Default.VisibilityOff else Icons.Default.Visibility, strings.showApiKey)
+                    }
+                },
+                isError = config.apiKey.isBlank(),
                 shape = MaterialTheme.shapes.large,
             )
-            DropdownMenu(modelMenu, { modelMenu = false }) {
-                listOf("qwen3-asr-flash-2026-02-10", "qwen3-asr-flash").forEach { model ->
-                    DropdownMenuItem(
-                        text = { Text(model) },
-                        leadingIcon = { if (model == config.model) Icon(Icons.Default.Check, null) },
-                        onClick = { onUpdate { it.copy(model = model) }; modelMenu = false },
+            Box {
+                OutlinedButton(
+                    onClick = { regionMenu = true },
+                    modifier = Modifier.fillMaxWidth().heightIn(min = 52.dp),
+                    shape = MaterialTheme.shapes.large,
+                ) {
+                    Icon(Icons.Default.Public, null)
+                    Spacer(Modifier.width(8.dp))
+                    Text(asrRegions.firstOrNull { it.id == config.region }?.label ?: config.region, Modifier.weight(1f))
+                    Icon(Icons.Default.ArrowDropDown, null)
+                }
+                DropdownMenu(regionMenu, { regionMenu = false }) {
+                    asrRegions.forEach { region ->
+                        DropdownMenuItem(
+                            text = { Text(region.label) },
+                            leadingIcon = { if (region.id == config.region) Icon(Icons.Default.Check, null) },
+                            onClick = {
+                                onUpdate { old ->
+                                    old.copy(
+                                        region = region.id,
+                                        baseUrl =
+                                            if (region.baseUrl.isNotBlank()) region.baseUrl
+                                            else if (old.region in setOf("japan", "custom")) old.baseUrl
+                                            else "",
+                                    )
+                                }
+                                regionMenu = false
+                            },
+                        )
+                    }
+                }
+            }
+            OutlinedTextField(
+                value = config.baseUrl,
+                onValueChange = { value -> onUpdate { it.copy(baseUrl = value) } },
+                modifier = Modifier.fillMaxWidth(),
+                singleLine = true,
+                label = { Text("Base URL") },
+                leadingIcon = {
+                    Icon(
+                        if (config.baseUrl.startsWith("https://")) Icons.Default.Lock
+                        else Icons.Default.Language,
+                        null,
                     )
+                },
+                isError =
+                    config.baseUrl.isBlank() ||
+                        (!config.baseUrl.startsWith("https://") &&
+                            !config.baseUrl.startsWith("http://")),
+                shape = MaterialTheme.shapes.large,
+            )
+            Box {
+                OutlinedTextField(
+                    value = config.model,
+                    onValueChange = { value -> onUpdate { it.copy(model = value) } },
+                    modifier = Modifier.fillMaxWidth(),
+                    singleLine = true,
+                    label = { Text(strings.qwenModel) },
+                    trailingIcon = { IconButton({ modelMenu = true }) { Icon(Icons.Default.ArrowDropDown, null) } },
+                    isError = config.model.isBlank(),
+                    shape = MaterialTheme.shapes.large,
+                )
+                DropdownMenu(modelMenu, { modelMenu = false }) {
+                    listOf("qwen3-asr-flash-2026-02-10", "qwen3-asr-flash").forEach { model ->
+                        DropdownMenuItem(
+                            text = { Text(model) },
+                            leadingIcon = { if (model == config.model) Icon(Icons.Default.Check, null) },
+                            onClick = { onUpdate { it.copy(model = model) }; modelMenu = false },
+                        )
+                    }
                 }
             }
         }
@@ -248,26 +297,77 @@ internal fun VoiceInputServiceSection(
                 keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
                 shape = MaterialTheme.shapes.large,
             )
-            OutlinedTextField(
-                value = config.partialIntervalMillis.toString(),
-                onValueChange = { value -> value.filter(Char::isDigit).toIntOrNull()?.let { interval -> onUpdate { it.copy(partialIntervalMillis = interval.coerceIn(250, 2_000)) } } },
-                modifier = Modifier.fillMaxWidth(),
-                singleLine = true,
-                label = { Text(strings.qwenPartialInterval) },
-                suffix = { Text("ms") },
-                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-                shape = MaterialTheme.shapes.large,
-            )
-            OutlinedTextField(
-                value = config.timeoutSeconds.toString(),
-                onValueChange = { value -> value.filter(Char::isDigit).toIntOrNull()?.let { timeout -> onUpdate { it.copy(timeoutSeconds = timeout.coerceIn(3, 120)) } } },
-                modifier = Modifier.fillMaxWidth(),
-                singleLine = true,
-                label = { Text(strings.qwenTimeout) },
-                suffix = { Text("s") },
-                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-                shape = MaterialTheme.shapes.large,
-            )
+            if (config.provider == VoiceInputProvider.QWEN) {
+                OutlinedTextField(
+                    value = config.partialIntervalMillis.toString(),
+                    onValueChange = { value -> value.filter(Char::isDigit).toIntOrNull()?.let { interval -> onUpdate { it.copy(partialIntervalMillis = interval.coerceIn(250, 2_000)) } } },
+                    modifier = Modifier.fillMaxWidth(),
+                    singleLine = true,
+                    label = { Text(strings.qwenPartialInterval) },
+                    suffix = { Text("ms") },
+                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                    shape = MaterialTheme.shapes.large,
+                )
+                OutlinedTextField(
+                    value = config.timeoutSeconds.toString(),
+                    onValueChange = { value -> value.filter(Char::isDigit).toIntOrNull()?.let { timeout -> onUpdate { it.copy(timeoutSeconds = timeout.coerceIn(3, 120)) } } },
+                    modifier = Modifier.fillMaxWidth(),
+                    singleLine = true,
+                    label = { Text(strings.qwenTimeout) },
+                    suffix = { Text("s") },
+                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                    shape = MaterialTheme.shapes.large,
+                )
+            }
+        }
+    }
+}
+
+
+@Composable
+internal fun LocalSpeechModelSettings(
+    status: LocalSpeechModelStatus,
+    supported: Boolean,
+    strings: LocaleStrings,
+    onDownload: () -> Unit,
+    onCancel: () -> Unit,
+) {
+    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+        Text("Whisper Small · 190 MB", style = MaterialTheme.typography.titleSmall)
+        Text(strings.localModelHint, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+        if (!supported) {
+            Text(strings.localModelUnsupported, color = MaterialTheme.colorScheme.error)
+            return@Column
+        }
+        when (status) {
+            LocalSpeechModelStatus.Missing -> {
+                OutlinedButton(onClick = onDownload) {
+                    Icon(Icons.Default.Download, null)
+                    Spacer(Modifier.width(8.dp))
+                    Text(strings.localModelDownload)
+                }
+            }
+            LocalSpeechModelStatus.Preparing -> {
+                LinearProgressIndicator(Modifier.fillMaxWidth())
+                Text(strings.localModelPreparing, style = MaterialTheme.typography.bodySmall)
+            }
+            is LocalSpeechModelStatus.Downloading -> {
+                val progress = (status.received.toFloat() / status.total.coerceAtLeast(1)).coerceIn(0f, 1f)
+                LinearProgressIndicator(progress = { progress }, modifier = Modifier.fillMaxWidth())
+                Text("${strings.localModelDownloading} ${(progress * 100).toInt()}% · ${status.received / 1_000_000} / ${status.total / 1_000_000} MB", style = MaterialTheme.typography.bodySmall)
+                OutlinedButton(onClick = onCancel) { Text(strings.localModelCancelDownload) }
+            }
+            LocalSpeechModelStatus.Downloaded -> Text(strings.localModelDownloaded, color = MaterialTheme.colorScheme.primary)
+            LocalSpeechModelStatus.Ready -> Text(strings.localModelReady, color = MaterialTheme.colorScheme.primary)
+            is LocalSpeechModelStatus.Failed -> {
+                Text(strings.localModelFailed, color = MaterialTheme.colorScheme.error)
+                if (status.detail.isNotBlank()) Text(status.detail, style = MaterialTheme.typography.bodySmall)
+                OutlinedButton(onClick = onDownload) {
+                    Icon(Icons.Default.Refresh, null)
+                    Spacer(Modifier.width(8.dp))
+                    Text(strings.localModelRetry)
+                }
+            }
         }
     }
 }

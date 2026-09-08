@@ -15,6 +15,7 @@ data class StoredTranslationSettings(
     val configs: Map<String, ProviderConfig> = emptyMap(),
     val voiceInput: VoiceInputConfig = VoiceInputConfig(),
     val readAloud: ReadAloudConfig = ReadAloudConfig(),
+    val systemAudioLanguages: SystemAudioLanguageConfig = SystemAudioLanguageConfig(),
     val interpretationVoiceInputEnabled: Boolean = false,
     val disableDynamicInputLimit: Boolean = false,
     val disableAutomaticUpdateCheck: Boolean = false,
@@ -25,6 +26,7 @@ data class StoredTranslationSettings(
 
 data class VoiceInputConfig(
     val enabled: Boolean = false,
+    val provider: VoiceInputProvider = VoiceInputProvider.QWEN,
     val apiKey: String = "",
     val region: String = "singapore",
     val baseUrl: String = "https://dashscope-intl.aliyuncs.com/compatible-mode/v1",
@@ -74,6 +76,7 @@ fun StoredTranslationSettings.toJson(): String =
             }
             putJsonObject("voiceInput") {
                 put("enabled", voiceInput.enabled)
+                put("provider", voiceInput.provider.name)
                 put("region", voiceInput.region)
                 put("baseUrl", voiceInput.baseUrl)
                 put("model", voiceInput.model)
@@ -90,6 +93,14 @@ fun StoredTranslationSettings.toJson(): String =
                 put("timeout", voiceInput.timeoutSeconds)
             }
             put("interpretationVoiceInputEnabled", interpretationVoiceInputEnabled)
+            putJsonObject("systemAudioLanguages") {
+                put("sourceLanguage", systemAudioLanguages.sourceLanguage)
+                put("targetLanguage", systemAudioLanguages.targetLanguage)
+                put("opacityPercent", systemAudioLanguages.normalized().opacityPercent)
+                put("steamVrOverlayEnabled", systemAudioLanguages.steamVrOverlayEnabled)
+                put("steamVrOverlayPosition", systemAudioLanguages.steamVrOverlayPosition.name)
+                put("steamVrOverlayScalePercent", systemAudioLanguages.normalized().steamVrOverlayScalePercent)
+            }
             putJsonObject("readAloud") {
                 put("enabled", readAloud.enabled)
                 put("source", readAloud.source.name)
@@ -190,6 +201,18 @@ fun storedTranslationSettingsFromJson(value: String): StoredTranslationSettings 
                 showJapaneseRomaji =
                     (root["showJapaneseRomaji"] as? JsonPrimitive)?.booleanOrNull ?: false,
                 configs = configs,
+                systemAudioLanguages = (root["systemAudioLanguages"] as? JsonObject)?.let { obj ->
+                    SystemAudioLanguageConfig(
+                        sourceLanguage = (obj["sourceLanguage"] as? JsonPrimitive)?.contentOrNull ?: "auto",
+                        targetLanguage = (obj["targetLanguage"] as? JsonPrimitive)?.contentOrNull ?: "简体中文",
+                        opacityPercent = (obj["opacityPercent"] as? JsonPrimitive)?.intOrNull ?: SystemAudioLanguageConfig().opacityPercent,
+                        steamVrOverlayEnabled = (obj["steamVrOverlayEnabled"] as? JsonPrimitive)?.booleanOrNull ?: false,
+                        steamVrOverlayPosition = SteamVrOverlayPosition.entries.firstOrNull {
+                            it.name == (obj["steamVrOverlayPosition"] as? JsonPrimitive)?.contentOrNull
+                        } ?: SteamVrOverlayPosition.LEFT_HAND,
+                        steamVrOverlayScalePercent = (obj["steamVrOverlayScalePercent"] as? JsonPrimitive)?.intOrNull ?: 100,
+                    ).normalized()
+                } ?: SystemAudioLanguageConfig(),
                 readAloud = (root["readAloud"] as? JsonObject)?.let { obj ->
                     ReadAloudConfig(
                         enabled = (obj["enabled"] as? JsonPrimitive)?.booleanOrNull ?: false,
@@ -205,6 +228,9 @@ fun storedTranslationSettingsFromJson(value: String): StoredTranslationSettings 
                     root["voiceInput"]?.jsonObject?.let { obj ->
                         VoiceInputConfig(
                             enabled = obj["enabled"]?.jsonPrimitive?.booleanOrNull ?: false,
+                            provider = VoiceInputProvider.entries.firstOrNull {
+                                it.name == (obj["provider"] as? JsonPrimitive)?.contentOrNull
+                            } ?: VoiceInputProvider.QWEN,
                             region = obj["region"]?.jsonPrimitive?.contentOrNull ?: "singapore",
                             baseUrl = obj["baseUrl"]?.jsonPrimitive?.contentOrNull
                                 ?: "https://dashscope-intl.aliyuncs.com/compatible-mode/v1",

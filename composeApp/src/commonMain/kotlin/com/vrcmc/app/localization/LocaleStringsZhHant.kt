@@ -1,6 +1,30 @@
 package com.vrcmc.app
 
 object LocaleStringsZhHant : LocaleStrings {
+    override val systemAudioListening = "正在聽…"
+    override val systemAudioWindowOpacity = "視窗不透明度"
+    override val steamVrOverlay = "SteamVR 疊加介面"
+    override val steamVrOverlayPosition = "疊加位置"
+    override val steamVrOverlaySize = "疊加大小"
+    override val steamVrOverlayDefaultSize = "100%（預設）"
+    override val steamVrOverlaySizeHint = "調整大小時字級不變，手部面板仍以底邊中央對齊控制器。"
+    override val steamVrOverlayLeftHand = "左手"
+    override val steamVrOverlayRightHand = "右手"
+    override val steamVrOverlayScreenCenter = "畫面中央"
+    override val steamVrOverlayHint = "在 SteamVR 中顯示字幕，與桌面視窗共用不透明度；左、右手位置跟隨對應控制器，畫面中央跟隨頭戴裝置視角。"
+    override val steamVrOverlayUnavailable = "SteamVR 疊加介面暫時無法使用，請啟動 SteamVR 並連接頭戴裝置，正在自動重新連線。"
+    override val steamVrOverlayWaitingForController = "SteamVR 疊加介面正在等待所選控制器連線。"
+    override val minimizeWindow = "最小化"
+    override val closeWindow = "關閉"
+    override val systemAudioSourceLanguage = "聽的語言"
+    override val systemAudioAutomaticLanguage = "自動"
+    override val systemAudioVadFailed = "本機人聲偵測未能啟動，請查看錯誤記錄。"
+    override val systemAudioWaitingForSentence = "正在收音，等待說完一句話…"
+    override val listenToOthers = "聽別人說話"
+    override val stopListeningToOthers = "停止聽別人說話"
+    override val systemAudioHint = "監聽 Windows 預設播放裝置，可在此視窗的設定中選擇聽的語言與目標語言。"
+    override val systemAudioFailed = "無法監聽系統聲音，請檢查播放裝置後關閉並重新開啟此視窗。"
+    override val systemAudioTooSlow = "辨識或翻譯較慢，已略過積壓的舊片段，正在繼續監聽。"
     override val readAloudClearSearch = "清空搜尋"
     override val readAloudNoVoices = "沒有符合的音色，請嘗試其他名稱或語言。"
     override val readAloudSelectedVoice = "已選音色"
@@ -240,7 +264,22 @@ object LocaleStringsZhHant : LocaleStrings {
     override val microphone = "麥克風"
     override val systemDefaultMicrophone = "系統預設麥克風"
     override val enableVoiceInput = "啟用語音輸入"
-    override val voiceInputHint = "使用 Qwen3-ASR 將錄音轉換為聊天文字"
+    override val voiceInputHint = "選擇雲端或本機模型，將錄音轉換為文字"
+    override val qwenVoiceInputHint = "使用 Qwen3-ASR 將錄音轉換為聊天文字"
+    override val voiceInputProvider = "辨識服務"
+    override val localWhisper = "本機 Whisper"
+    override val localModelHint = "手動下載約 190 MB 的多語言模型後，可按句離線辨識，無需 API Key。切換頁面、辨識服務或關閉語音輸入不會中斷下載，點擊「取消下載」可停止。翻譯仍使用已設定的翻譯服務。指定辨識語言可降低延遲。"
+    override val localModelDownload = "下載模型"
+    override val localModelCancelDownload = "取消下載"
+    override val localModelDownloaded = "模型已下載，啟用本機 Whisper 後即可辨識"
+    override val localModelPreparing = "正在準備本機模型…"
+    override val localModelDownloading = "正在下載模型"
+    override val localModelReady = "模型已就緒，可離線辨識"
+    override val localModelFailed = "本機模型準備失敗，請檢查網路或磁碟空間後重試。"
+    override val localModelRetry = "重試"
+    override val localModelUnsupported = "需要 Windows x64 和支援 AVX2 的處理器"
+    override val localModelNotReady = "請在 API → 語音輸入服務中選擇本機 Whisper，點擊「下載模型」，完成後啟用語音輸入。"
+    override val localRecognitionFailed = "本機語音辨識失敗"
     override val qwenApiKey = "Qwen API Key"
     override val qwenRegion = "區域"
     override val qwenLanguage = "辨識語言"
@@ -282,6 +321,10 @@ object LocaleStringsZhHant : LocaleStrings {
     ): String =
         when (failure.reason) {
             VoiceTranscriptionFailureReason.CUSTOM -> failure.message.ifBlank { "語音辨識失敗" }
+            VoiceTranscriptionFailureReason.LOCAL_UNSUPPORTED -> localModelUnsupported
+            VoiceTranscriptionFailureReason.LOCAL_MODEL_NOT_READY -> localModelNotReady
+            VoiceTranscriptionFailureReason.LOCAL_RECOGNITION_FAILED ->
+                localRecognitionFailed + failure.message.takeIf(String::isNotBlank)?.let { ": $it" }.orEmpty()
             VoiceTranscriptionFailureReason.NO_AUDIO -> "沒有錄到可辨識的聲音"
             VoiceTranscriptionFailureReason.API_KEY_REQUIRED -> "Qwen API Key 不可為空"
             VoiceTranscriptionFailureReason.BASE_URL_REQUIRED -> "Base URL 不可為空"

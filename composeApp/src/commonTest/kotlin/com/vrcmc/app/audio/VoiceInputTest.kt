@@ -9,6 +9,17 @@ import kotlin.math.sin
 
 class VoiceInputTest {
     @Test
+    fun localProviderRoundTripsAndOldSettingsKeepQwen() {
+        val config = VoiceInputConfig(enabled = true, provider = VoiceInputProvider.LOCAL_WHISPER,
+            apiKey = "retained-secret", model = "my-qwen-model", region = "custom")
+        val json = StoredTranslationSettings(voiceInput = config).toJson()
+        assertFalse(json.contains("retained-secret"))
+        assertEquals(config.copy(apiKey = ""), storedTranslationSettingsFromJson(json).voiceInput)
+        assertEquals(VoiceInputProvider.QWEN, storedTranslationSettingsFromJson("""{"voiceInput":{"enabled":true}}""").voiceInput.provider)
+        assertEquals(VoiceInputProvider.QWEN, storedTranslationSettingsFromJson("""{"voiceInput":{"provider":"unknown"}}""").voiceInput.provider)
+    }
+
+    @Test
     fun voiceInputSettingsRoundTripWithoutApiKey() {
         val stored = StoredTranslationSettings(
             voiceInput = VoiceInputConfig(

@@ -11,6 +11,7 @@ import io.ktor.util.hex
 import io.ktor.websocket.*
 import kotlin.random.Random
 import kotlinx.coroutines.withTimeout
+import kotlinx.io.IOException
 import kotlinx.serialization.json.*
 
 // Protocol reference: https://github.com/yourmoln/vrctts/blob/main/src-tauri/src/tts.rs
@@ -18,6 +19,11 @@ internal const val edgeTtsToken = "6A5AA1D4EAFF4E9FB37E23D68491D6F4"
 private const val edgeTtsBase = "speech.platform.bing.com/consumer/speech/synthesize/readaloud"
 private const val edgeTtsVersion = "1-143.0.3650.75"
 private const val edgeTtsUserAgent = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/143.0.0.0 Safari/537.36 Edg/143.0.0.0"
+
+internal const val edgeTtsMaxFrameBytes = 4 * 1024 * 1024
+
+internal class EdgeTtsHttpException(val statusCode: Int, val serverDate: String? = null) :
+    IOException("Edge TTS HTTP $statusCode")
 
 internal data class EdgeTtsVoice(val shortName: String, val locale: String, val gender: String)
 
@@ -48,7 +54,7 @@ internal fun edgeTtsSsml(text: String, voice: String): String =
         escapeSpeechXml(text) + "</prosody></voice></speak>"
 
 internal fun edgeTtsAudioPayload(data: ByteArray): ByteArray? {
-    require(data.size >= 2) { "Invalid Edge TTS frame" }
+    require(data.size in 2..edgeTtsMaxFrameBytes) { "Invalid Edge TTS frame size" }
     val headerSize = ((data[0].toInt() and 255) shl 8) or (data[1].toInt() and 255)
     require(headerSize <= data.size - 2) { "Invalid Edge TTS header length" }
     val headers = data.decodeToString(2, 2 + headerSize)
@@ -57,16 +63,20 @@ internal fun edgeTtsAudioPayload(data: ByteArray): ByteArray? {
 }
 
 internal object EdgeTtsService {
-    private class Forbidden(val serverDate: String?) : IllegalStateException("Edge TTS HTTP 403")
     private val client by lazy {
-        createVrcmcHttpClient {
-            install(WebSockets) { maxFrameSize = 4 * 1024 * 1024 }
-            install(HttpTimeout) { connectTimeoutMillis = 15_000; requestTimeoutMillis = 30_000 }
+        createEdgeTtsHttpClient {
+            // OkHttp does not support changing session.maxFrameSize; validate frames below.
+            install(WebSockets)
+            install(HttpTimeout) {
+                connectTimeoutMillis = 15_000
+                requestTimeoutMillis = 30_000
+                socketTimeoutMillis = 60_000
+            }
             HttpResponseValidator {
                 validateResponse { response ->
                     if (response.status == HttpStatusCode.Forbidden &&
                         response.call.request.url.encodedPath.endsWith("/edge/v1")) {
-                        throw Forbidden(response.headers[HttpHeaders.Date])
+                        throw EdgeTtsHttpException(response.status.value, response.headers[HttpHeaders.Date])
                     }
                 }
             }
@@ -101,7 +111,9 @@ internal object EdgeTtsService {
             response.bodyAsText()
             response = request()
         }
-        check(response.status.isSuccess()) { "Edge TTS voice list HTTP ${response.status.value}" }
+        if (!response.status.isSuccess()) {
+            throw EdgeTtsHttpException(response.status.value, response.headers[HttpHeaders.Date])
+        }
         Json.parseToJsonElement(response.bodyAsText()).jsonArray.mapNotNull { element ->
             val voice = element.jsonObject
             val name = voice["ShortName"]?.jsonPrimitive?.contentOrNull ?: return@mapNotNull null
@@ -116,8 +128,8 @@ internal object EdgeTtsService {
         repeat(2) { attempt ->
             try {
                 return@withTimeout synthesizeOnce(text, voice)
-            } catch (error: Forbidden) {
-                if (attempt != 0) throw error
+            } catch (error: EdgeTtsHttpException) {
+                if (attempt != 0 || error.statusCode != HttpStatusCode.Forbidden.value) throw error
                 updateClock(error.serverDate)
             }
         }
@@ -146,6 +158,7 @@ internal object EdgeTtsService {
                 """{"context":{"synthesis":{"audio":{"metadataoptions":{"sentenceBoundaryEnabled":false,"wordBoundaryEnabled":false},"outputFormat":"audio-24khz-48kbitrate-mono-mp3"}}}}"""))
             send(Frame.Text("X-RequestId:$requestId\r\nContent-Type:application/ssml+xml\r\nX-Timestamp:$timestamp\r\nPath:ssml\r\n\r\n${edgeTtsSsml(text, voice)}"))
             for (frame in incoming) {
+                require(frame.data.size <= edgeTtsMaxFrameBytes) { "Edge TTS frame exceeds limit" }
                 when (frame) {
                     is Frame.Binary -> edgeTtsAudioPayload(frame.data)?.let { payload ->
                         size += payload.size

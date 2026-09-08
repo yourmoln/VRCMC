@@ -36,7 +36,7 @@ private interface DwmApi : StdCallLibrary {
     fun DwmSetWindowAttribute(window: HWND, attribute: Int, value: Pointer, size: Int): Int
 }
 
-private fun setWindowsTitleBar(window: Window, dark: Boolean) {
+internal fun setWindowsTitleBar(window: Window, dark: Boolean) {
     if (!Platform.isWindows()) return
     runCatching {
         val hwnd = HWND(Native.getWindowPointer(window))
@@ -47,6 +47,18 @@ private fun setWindowsTitleBar(window: Window, dark: Boolean) {
         setDwmColor(api, hwnd, DWMWA_CAPTION_COLOR, if (dark) 0x00202020 else 0x00FFFFFF)
         setDwmColor(api, hwnd, DWMWA_TEXT_COLOR, if (dark) 0x00F5F5F5 else 0x00111111)
     }
+}
+
+internal fun setWindowsRoundedCorners(window: Window): Boolean {
+    if (!Platform.isWindows()) return false
+    return runCatching {
+        val hwnd = HWND(Native.getWindowPointer(window))
+        val api = Native.load("dwmapi", DwmApi::class.java)
+        Memory(Int.SIZE_BYTES.toLong()).use { value ->
+            value.setInt(0, DWMWCP_ROUND)
+            api.DwmSetWindowAttribute(hwnd, DWMWA_WINDOW_CORNER_PREFERENCE, value, Int.SIZE_BYTES) == 0
+        }
+    }.getOrDefault(false)
 }
 
 private fun setDwmBoolean(api: DwmApi, hwnd: HWND, attribute: Int, enabled: Boolean): Boolean =
@@ -66,3 +78,5 @@ private const val DWMWA_USE_IMMERSIVE_DARK_MODE_BEFORE_20H1 = 19
 private const val DWMWA_USE_IMMERSIVE_DARK_MODE = 20
 private const val DWMWA_CAPTION_COLOR = 35
 private const val DWMWA_TEXT_COLOR = 36
+private const val DWMWA_WINDOW_CORNER_PREFERENCE = 33
+private const val DWMWCP_ROUND = 2

@@ -37,10 +37,18 @@ private class AndroidSpeechAudioPlayer : SpeechAudioPlayer {
                 current.setOnCompletionListener { if (continuation.isActive) continuation.resume(Unit) }
                 current.setOnErrorListener { _, what, extra ->
                     if (continuation.isActive) continuation.resumeWithException(
-                        IllegalStateException("Audio playback failed: $what/$extra"))
+                        SpeechAudioPlaybackException(what, extra))
                     true
                 }
-                current.setOnPreparedListener { if (continuation.isActive) it.start() }
+                current.setOnPreparedListener {
+                    if (continuation.isActive) {
+                        try {
+                            it.start()
+                        } catch (error: Exception) {
+                            continuation.resumeWithException(error)
+                        }
+                    }
+                }
                 current.prepareAsync()
             }
         } finally {

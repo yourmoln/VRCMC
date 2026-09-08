@@ -27,6 +27,9 @@ enum class VoiceTranscriptionFailureReason {
     INVALID_BASE_URL,
     EMPTY_RESPONSE,
     NETWORK_REQUEST_FAILED,
+    LOCAL_UNSUPPORTED,
+    LOCAL_MODEL_NOT_READY,
+    LOCAL_RECOGNITION_FAILED,
 }
 
 sealed interface VoiceTranscriptionResult {

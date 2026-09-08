@@ -16,7 +16,12 @@ import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun ApiPage(state: AppState, strings: LocaleStrings) {
+fun ApiPage(
+    state: AppState,
+    strings: LocaleStrings,
+    onDownloadLocalModel: () -> Unit,
+    onCancelLocalModel: () -> Unit,
+) {
     val provider = state.provider
     val config = state.providerConfig
     var showProviderPicker by remember { mutableStateOf(false) }
@@ -126,6 +131,8 @@ fun ApiPage(state: AppState, strings: LocaleStrings) {
                 config = state.voiceInputConfig,
                 strings = strings,
                 onUpdate = state::updateVoiceInputConfig,
+                onDownloadLocalModel = onDownloadLocalModel,
+                onCancelLocalModel = onCancelLocalModel,
             )
         }
     }

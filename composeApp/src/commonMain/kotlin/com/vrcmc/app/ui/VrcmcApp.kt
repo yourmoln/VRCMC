@@ -37,12 +37,16 @@ fun VrcmcApp(onDarkThemeChanged: (Boolean) -> Unit = {}) {
     var updateProgress by remember { mutableStateOf<Float?>(null) }
     val drawerState = rememberDrawerState(DrawerValue.Closed)
     val scope = rememberCoroutineScope()
+    val localModel = remember(scope) { LocalSpeechModelController(scope) }
     val readAloud = remember(scope) { ReadAloudController(scope, state.readAloudConfig, state::addErrorLog) }
     val speechSnackbar = remember { SnackbarHostState() }
     DisposableEffect(readAloud) { onDispose { readAloud.stop() } }
     val focusManager = LocalFocusManager.current
     val uriHandler = LocalUriHandler.current
     val strings = localeStrings(language)
+    LaunchedEffect(state, localModel) {
+        snapshotFlow { state.voiceInputConfig }.collect(localModel::updateConfig)
+    }
     LaunchedEffect(readAloud.failed) {
         if (readAloud.failed) speechSnackbar.showSnackbar(strings.readAloudFailed)
     }
@@ -100,6 +104,7 @@ fun VrcmcApp(onDarkThemeChanged: (Boolean) -> Unit = {}) {
     BackHandler(enabled = screen != AppScreen.CHAT) { screen = AppScreen.CHAT }
 
     MaterialTheme(if (dark) darkColorScheme() else lightColorScheme()) {
+        val systemAudio = rememberSystemAudioListener(state, strings, dark)
         Surface(
             modifier = Modifier.fillMaxSize(),
             color = MaterialTheme.colorScheme.background,
@@ -168,6 +173,17 @@ fun VrcmcApp(onDarkThemeChanged: (Boolean) -> Unit = {}) {
                                         )
                                     },
                                     actions = {
+                                        if (screen == AppScreen.CHAT && systemAudio != null) {
+                                            IconToggleButton(
+                                                checked = systemAudio.isOpen,
+                                                onCheckedChange = { systemAudio.toggle() },
+                                            ) {
+                                                Icon(
+                                                    if (systemAudio.isOpen) Icons.Default.HearingDisabled else Icons.Default.Hearing,
+                                                    if (systemAudio.isOpen) strings.stopListeningToOthers else strings.listenToOthers,
+                                                )
+                                            }
+                                        }
                                         if (screen == AppScreen.CHAT && state.messages.isNotEmpty()) {
                                             IconButton({ showClearHistory = true }) {
                                                 Icon(Icons.Default.DeleteSweep, strings.clearHistory)
@@ -193,7 +209,7 @@ fun VrcmcApp(onDarkThemeChanged: (Boolean) -> Unit = {}) {
                                         when (screen) {
                                             AppScreen.CHAT -> Unit
                                             AppScreen.DEVICES -> DeviceManagementPage(state, strings) { showAddDevice = true }
-                                            AppScreen.API -> ApiPage(state, strings)
+                                            AppScreen.API -> ApiPage(state, strings, localModel::downloadModel, localModel::cancelDownload)
                                             AppScreen.TRANSLATION_LANGUAGE -> TranslationLanguagePage(state, strings)
                                             AppScreen.SIMULTANEOUS_INTERPRETATION -> SimultaneousInterpretationPage(state, strings)
                                             AppScreen.HOTWORD_DICTIONARY -> HotwordDictionaryPage(state, strings)

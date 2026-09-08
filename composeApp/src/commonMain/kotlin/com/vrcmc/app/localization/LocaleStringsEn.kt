@@ -1,6 +1,30 @@
 package com.vrcmc.app
 
 object LocaleStringsEn : LocaleStrings {
+    override val systemAudioListening = "Listening…"
+    override val systemAudioWindowOpacity = "Window opacity"
+    override val steamVrOverlay = "SteamVR overlay"
+    override val steamVrOverlayPosition = "Overlay position"
+    override val steamVrOverlaySize = "Overlay size"
+    override val steamVrOverlayDefaultSize = "100% (Default)"
+    override val steamVrOverlaySizeHint = "Resizing keeps the text size and the bottom-center hand alignment."
+    override val steamVrOverlayLeftHand = "Left hand"
+    override val steamVrOverlayRightHand = "Right hand"
+    override val steamVrOverlayScreenCenter = "Screen center"
+    override val steamVrOverlayHint = "Show subtitles in SteamVR. Shares the window opacity; hand positions follow the controller, and screen center follows your headset."
+    override val steamVrOverlayUnavailable = "SteamVR overlay is unavailable. Start SteamVR and connect your headset; reconnecting automatically."
+    override val steamVrOverlayWaitingForController = "SteamVR overlay is waiting for the selected controller."
+    override val minimizeWindow = "Minimize"
+    override val closeWindow = "Close"
+    override val systemAudioSourceLanguage = "Spoken language"
+    override val systemAudioAutomaticLanguage = "Auto"
+    override val systemAudioVadFailed = "Local speech detection could not start. Check the error logs."
+    override val systemAudioWaitingForSentence = "Recording · waiting for the sentence to end…"
+    override val listenToOthers = "Listen to others"
+    override val stopListeningToOthers = "Stop listening"
+    override val systemAudioHint = "Listening to the default Windows playback device. Choose the spoken and target languages in this window's settings."
+    override val systemAudioFailed = "Could not capture system audio. Check the playback device, then close and reopen this window."
+    override val systemAudioTooSlow = "Recognition or translation is slow. Older queued audio was skipped; listening continues."
     override val lineBreakOutput = "Line breaks"
     override val enableLineBreakOutput = "Put each language on a new line"
     override val lineBreakOutputHint = "When disabled, the second item in the display order is enclosed in parentheses."
@@ -214,7 +238,22 @@ object LocaleStringsEn : LocaleStrings {
     override val microphone = "Microphone"
     override val systemDefaultMicrophone = "System default microphone"
     override val enableVoiceInput = "Enable voice input"
-    override val voiceInputHint = "Use Qwen3-ASR to turn microphone recordings into chat text"
+    override val voiceInputHint = "Choose a cloud or local model to turn recordings into text"
+    override val qwenVoiceInputHint = "Use Qwen3-ASR to turn recordings into chat text"
+    override val voiceInputProvider = "Recognition service"
+    override val localWhisper = "Local Whisper"
+    override val localModelHint = "Manually download the multilingual model (190 MB) for offline sentence recognition without an API key. Downloads continue when changing pages or services or disabling voice input; use Cancel download to stop. Translation still uses your configured service. Selecting a specific recognition language reduces latency."
+    override val localModelDownload = "Download model"
+    override val localModelCancelDownload = "Cancel download"
+    override val localModelDownloaded = "Model downloaded; enable Local Whisper to recognize speech"
+    override val localModelPreparing = "Preparing local model…"
+    override val localModelDownloading = "Downloading model"
+    override val localModelReady = "Model ready for offline recognition"
+    override val localModelFailed = "Could not prepare the local model. Check your network or disk space and retry."
+    override val localModelRetry = "Retry"
+    override val localModelUnsupported = "Requires Windows x64 and an AVX2-capable processor"
+    override val localModelNotReady = "Select Local Whisper under API → Voice input service, click Download model, then enable voice input once it finishes."
+    override val localRecognitionFailed = "Local speech recognition failed"
     override val qwenApiKey = "Qwen API Key"
     override val qwenRegion = "Region"
     override val qwenLanguage = "Recognition language"
@@ -256,6 +295,10 @@ object LocaleStringsEn : LocaleStrings {
         when (failure.reason) {
             VoiceTranscriptionFailureReason.CUSTOM ->
                 failure.message.ifBlank { "Voice transcription failed" }
+            VoiceTranscriptionFailureReason.LOCAL_UNSUPPORTED -> localModelUnsupported
+            VoiceTranscriptionFailureReason.LOCAL_MODEL_NOT_READY -> localModelNotReady
+            VoiceTranscriptionFailureReason.LOCAL_RECOGNITION_FAILED ->
+                localRecognitionFailed + failure.message.takeIf(String::isNotBlank)?.let { ": $it" }.orEmpty()
             VoiceTranscriptionFailureReason.NO_AUDIO -> "No recognizable speech was recorded"
             VoiceTranscriptionFailureReason.API_KEY_REQUIRED -> "Qwen API Key is required"
             VoiceTranscriptionFailureReason.BASE_URL_REQUIRED -> "Base URL is required"

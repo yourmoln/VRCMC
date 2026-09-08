@@ -14,6 +14,8 @@ import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.TimeoutCancellationException
 import kotlinx.coroutines.withContext
+import kotlinx.coroutines.currentCoroutineContext
+import kotlinx.coroutines.ensureActive
 
 @Composable
 internal fun ReadAloudSettingsSection(
@@ -38,12 +40,16 @@ internal fun ReadAloudSettingsSection(
         loadFailed = false
         try {
             voices = EdgeTtsService.voices()
-        } catch (_: TimeoutCancellationException) {
+        } catch (error: TimeoutCancellationException) {
+            currentCoroutineContext().ensureActive()
             loadFailed = true
+            controller.reportVoiceListFailure(error)
         } catch (error: CancellationException) {
             throw error
-        } catch (_: Exception) {
+        } catch (error: Exception) {
+            currentCoroutineContext().ensureActive()
             loadFailed = true
+            controller.reportVoiceListFailure(error)
         } finally {
             loading = false
         }

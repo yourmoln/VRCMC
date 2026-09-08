@@ -60,6 +60,9 @@ fun ChatPage(
     var managedVoiceRestartToken by remember { mutableIntStateOf(0) }
     val streamingMerger = remember { StreamingTextMerger() }
     val audioRecorder = remember { createAudioRecorder() }
+    val localSpeechStatus by localSpeechRecognizer.status.collectAsState()
+    val voiceServiceReady = state.voiceInputConfig.enabled && state.voiceInputConfig.hasServiceConfiguration() &&
+        (state.voiceInputConfig.provider != VoiceInputProvider.LOCAL_WHISPER || localSpeechStatus == LocalSpeechModelStatus.Ready)
     val scope = rememberCoroutineScope()
     val blockedSnackbar = remember { SnackbarHostState() }
     var blockedNotificationJob by remember { mutableStateOf<Job?>(null) }
@@ -90,10 +93,16 @@ fun ChatPage(
             audioRecorder.release()
         }
     }
-    LaunchedEffect(state.voiceInputConfig.enabled) {
-        if (!state.voiceInputConfig.enabled && voiceRecording) {
+    LaunchedEffect(state.voiceInputConfig.enabled, state.voiceInputConfig.provider) {
+        if (!state.voiceInputConfig.enabled ||
+            voiceRequestConfig?.let { it.provider != state.voiceInputConfig.provider } == true) {
+            voiceGeneration++
+            activeVoiceRequestJob?.cancel()
+            pendingPartialAudio = null
             audioRecorder.stop()
             voiceRecording = false
+            voiceTranscribing = false
+            voiceSpeaking = false
         }
     }
 
@@ -111,7 +120,7 @@ fun ChatPage(
         val generation = voiceGeneration
         pendingPartialAudio = null
         activeVoiceRequestJob = scope.launch {
-            when (val result = transcribeQwenAudio(config, audio, state::addErrorLog)) {
+            when (val result = transcribeVoiceAudio(config, audio, state::addErrorLog)) {
                 is VoiceTranscriptionResult.Success ->
                     if (generation == voiceGeneration) {
                         if (!managedVoiceCapture) {
@@ -133,7 +142,7 @@ fun ChatPage(
         pendingPartialAudio = null
         voiceTranscribing = true
         activeVoiceRequestJob = scope.launch {
-            when (val result = transcribeQwenAudio(config, wav, state::addErrorLog)) {
+            when (val result = transcribeVoiceAudio(config, wav, state::addErrorLog)) {
                 is VoiceTranscriptionResult.Success ->
                     if (generation == voiceGeneration) {
                         val finalText = streamingMerger.ingestFinal(result.text)
@@ -165,8 +174,9 @@ fun ChatPage(
 
     fun startVoiceInput(stopOnSilence: Boolean = true, managed: Boolean = false) {
         val config = state.voiceInputConfig
-        if (config.apiKey.isBlank()) {
-            error = strings.apiNotConfiguredVoiceInput
+        val readinessFailure = voiceInputReadinessFailure(config)
+        if (readinessFailure != null) {
+            error = strings.voiceTranscriptionFailureMessage(readinessFailure)
             return
         }
         val generation = ++voiceGeneration
@@ -191,7 +201,9 @@ fun ChatPage(
                 },
                 onPartial = { wav ->
                     scope.launch {
-                        if (generation == voiceGeneration) submitPartialRecognition(wav)
+                        if (generation == voiceGeneration && config.provider != VoiceInputProvider.LOCAL_WHISPER) {
+                            submitPartialRecognition(wav)
+                        }
                     }
                 },
                 onFinal = { wav ->
@@ -223,6 +235,7 @@ fun ChatPage(
                 },
                 onAutoStop = audioRecorder::stop,
                 stopOnSilence = stopOnSilence,
+                emitPartials = config.provider != VoiceInputProvider.LOCAL_WHISPER,
             )
         audioRecorder.start(
             sampleRate = config.sampleRate,
@@ -285,8 +298,8 @@ fun ChatPage(
         }
     }
 
-    LaunchedEffect(state.isSimultaneousInterpretationActive, state.interpretationVoiceInputEnabled) {
-        if (state.isSimultaneousInterpretationActive && state.interpretationVoiceInputEnabled) {
+    LaunchedEffect(state.isSimultaneousInterpretationActive, state.interpretationVoiceInputEnabled, voiceServiceReady, state.voiceInputConfig.provider) {
+        if (state.isSimultaneousInterpretationActive && state.interpretationVoiceInputEnabled && voiceServiceReady) {
             if (!voiceRecording && !voiceTranscribing) {
                 if (requestAudioPermissionIfNeeded { startVoiceInput(stopOnSilence = false, managed = true) }) {
                     startVoiceInput(stopOnSilence = false, managed = true)
@@ -297,10 +310,11 @@ fun ChatPage(
         }
     }
 
-    LaunchedEffect(state.isAlwaysInterpretationActive, state.interpretationVoiceInputEnabled) {
+    LaunchedEffect(state.isAlwaysInterpretationActive, state.interpretationVoiceInputEnabled, voiceServiceReady, state.voiceInputConfig.provider) {
         if (
             state.isAlwaysInterpretationActive &&
                 state.interpretationVoiceInputEnabled &&
+                voiceServiceReady &&
                 !voiceRecording &&
                 !voiceTranscribing
         ) {

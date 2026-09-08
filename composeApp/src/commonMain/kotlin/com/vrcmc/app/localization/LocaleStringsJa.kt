@@ -1,6 +1,30 @@
 package com.vrcmc.app
 
 object LocaleStringsJa : LocaleStrings {
+    override val systemAudioListening = "聞き取り中…"
+    override val systemAudioWindowOpacity = "ウィンドウの不透明度"
+    override val steamVrOverlay = "SteamVR オーバーレイ"
+    override val steamVrOverlayPosition = "表示位置"
+    override val steamVrOverlaySize = "表示サイズ"
+    override val steamVrOverlayDefaultSize = "100%（デフォルト）"
+    override val steamVrOverlaySizeHint = "サイズを変更しても文字の大きさは変わりません。手元のパネルは下辺の中央をコントローラーに合わせます。"
+    override val steamVrOverlayLeftHand = "左手"
+    override val steamVrOverlayRightHand = "右手"
+    override val steamVrOverlayScreenCenter = "画面中央"
+    override val steamVrOverlayHint = "SteamVR に字幕を表示します。不透明度はデスクトップウィンドウと共通です。左右の手は各コントローラーに、画面中央はヘッドセットの視点に追従します。"
+    override val steamVrOverlayUnavailable = "SteamVR オーバーレイを利用できません。SteamVR を起動し、ヘッドセットを接続してください。自動的に再接続します。"
+    override val steamVrOverlayWaitingForController = "SteamVR オーバーレイは選択したコントローラーの接続を待っています。"
+    override val minimizeWindow = "最小化"
+    override val closeWindow = "閉じる"
+    override val systemAudioSourceLanguage = "聞き取る言語"
+    override val systemAudioAutomaticLanguage = "自動"
+    override val systemAudioVadFailed = "ローカル音声検出を起動できませんでした。エラーログを確認してください。"
+    override val systemAudioWaitingForSentence = "録音中 · 発話の終わりを待っています…"
+    override val listenToOthers = "相手の声を聞く"
+    override val stopListeningToOthers = "聞き取りを停止"
+    override val systemAudioHint = "Windows の既定の再生デバイスを聞き取ります。このウィンドウの設定で聞き取る言語と翻訳先言語を選べます。"
+    override val systemAudioFailed = "システム音声を取得できません。再生デバイスを確認して、このウィンドウを開き直してください。"
+    override val systemAudioTooSlow = "音声認識または翻訳が遅れています。古い未処理の音声をスキップして聞き取りを続けています。"
     override val readAloudClearSearch = "検索をクリア"
     override val readAloudNoVoices = "一致する音声がありません。別の名前や言語で検索してください。"
     override val readAloudSelectedVoice = "選択中の音声"
@@ -244,7 +268,22 @@ object LocaleStringsJa : LocaleStrings {
     override val microphone = "マイク"
     override val systemDefaultMicrophone = "システムの既定のマイク"
     override val enableVoiceInput = "音声入力を有効にする"
-    override val voiceInputHint = "Qwen3-ASR でマイク録音をチャット文字列に変換します"
+    override val voiceInputHint = "クラウドまたはローカルモデルで録音を文字に変換します"
+    override val qwenVoiceInputHint = "Qwen3-ASR で録音をチャットのテキストに変換します"
+    override val voiceInputProvider = "音声認識サービス"
+    override val localWhisper = "ローカル Whisper"
+    override val localModelHint = "多言語モデル（約 190 MB）を手動でダウンロードすると、API キーなしで文ごとにオフライン認識できます。ページやサービスの切り替え、音声入力の無効化ではダウンロードは中断されません。「ダウンロードをキャンセル」で停止できます。翻訳には設定済みのサービスを使用します。認識言語の指定で遅延を抑えられます。"
+    override val localModelDownload = "モデルをダウンロード"
+    override val localModelCancelDownload = "ダウンロードをキャンセル"
+    override val localModelDownloaded = "モデルをダウンロード済みです。ローカル Whisper を有効にすると認識できます"
+    override val localModelPreparing = "ローカルモデルを準備中…"
+    override val localModelDownloading = "モデルをダウンロード中"
+    override val localModelReady = "モデルの準備完了・オフライン認識が可能です"
+    override val localModelFailed = "モデルの準備に失敗しました。ネットワークやディスク容量を確認して再試行してください。"
+    override val localModelRetry = "再試行"
+    override val localModelUnsupported = "Windows x64 と AVX2 対応プロセッサーが必要です"
+    override val localModelNotReady = "API → 音声入力サービスでローカル Whisper を選び、「モデルをダウンロード」を押してください。完了後に音声入力を有効にしてください。"
+    override val localRecognitionFailed = "ローカル音声認識に失敗しました"
     override val qwenApiKey = "Qwen API Key"
     override val qwenRegion = "リージョン"
     override val qwenLanguage = "認識言語"
@@ -286,6 +325,10 @@ object LocaleStringsJa : LocaleStrings {
         when (failure.reason) {
             VoiceTranscriptionFailureReason.CUSTOM ->
                 failure.message.ifBlank { "音声認識に失敗しました" }
+            VoiceTranscriptionFailureReason.LOCAL_UNSUPPORTED -> localModelUnsupported
+            VoiceTranscriptionFailureReason.LOCAL_MODEL_NOT_READY -> localModelNotReady
+            VoiceTranscriptionFailureReason.LOCAL_RECOGNITION_FAILED ->
+                localRecognitionFailed + failure.message.takeIf(String::isNotBlank)?.let { ": $it" }.orEmpty()
             VoiceTranscriptionFailureReason.NO_AUDIO -> "認識可能な音声が録音されませんでした"
             VoiceTranscriptionFailureReason.API_KEY_REQUIRED -> "Qwen API Key を入力してください"
             VoiceTranscriptionFailureReason.BASE_URL_REQUIRED -> "Base URL を入力してください"

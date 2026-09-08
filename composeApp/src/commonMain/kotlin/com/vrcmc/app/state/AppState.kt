@@ -34,6 +34,13 @@ class AppState {
         private set
     var readAloudConfig by mutableStateOf(storedTranslation.readAloud)
         private set
+    var systemAudioLanguages by mutableStateOf(storedTranslation.systemAudioLanguages)
+        private set
+
+    fun updateSystemAudioLanguages(value: SystemAudioLanguageConfig) {
+        systemAudioLanguages = value.normalized()
+        persistTranslation()
+    }
 
     fun updateReadAloudConfig(value: ReadAloudConfig) {
         readAloudConfig = value
@@ -41,7 +48,7 @@ class AppState {
     }
     var interpretationVoiceInputEnabled by mutableStateOf(
         storedTranslation.interpretationVoiceInputEnabled &&
-            storedVoiceInput.enabled && storedVoiceInput.apiKey.isNotBlank()
+            storedVoiceInput.enabled && storedVoiceInput.hasServiceConfiguration()
     )
         private set
     var simultaneousInterpretationEnabled by
@@ -147,7 +154,7 @@ class AppState {
 
     fun updateVoiceInputConfig(transform: (VoiceInputConfig) -> VoiceInputConfig) {
         voiceInputConfig = transform(voiceInputConfig)
-        if (!voiceInputConfig.enabled || voiceInputConfig.apiKey.isBlank()) {
+        if (!voiceInputConfig.enabled || !voiceInputConfig.hasServiceConfiguration()) {
             interpretationVoiceInputEnabled = false
         }
         persistTranslation()
@@ -173,6 +180,7 @@ class AppState {
         voiceInputConfig =
             voiceInputConfig.copy(
                 enabled = true,
+                provider = VoiceInputProvider.QWEN,
                 apiKey = apiKey.trim(),
                 region = if (region.id == "china") "china_mainland" else region.id,
                 baseUrl = region.baseUrl,
@@ -283,6 +291,7 @@ class AppState {
                     configs = providerConfigs.toMap(),
                     voiceInput = voiceInputConfig.copy(apiKey = ""),
                     readAloud = readAloudConfig,
+                    systemAudioLanguages = systemAudioLanguages,
                     interpretationVoiceInputEnabled = interpretationVoiceInputEnabled,
                     disableDynamicInputLimit = disableDynamicInputLimit,
                     disableAutomaticUpdateCheck = disableAutomaticUpdateCheck,
@@ -296,7 +305,7 @@ class AppState {
 
     fun updateInterpretationVoiceInputEnabled(enabled: Boolean) {
         interpretationVoiceInputEnabled =
-            enabled && voiceInputConfig.enabled && voiceInputConfig.apiKey.isNotBlank()
+            enabled && voiceInputConfig.enabled && voiceInputConfig.hasServiceConfiguration()
         persistTranslation()
     }
 

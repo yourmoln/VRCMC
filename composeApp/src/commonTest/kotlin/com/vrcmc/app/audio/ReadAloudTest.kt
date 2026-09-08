@@ -173,9 +173,89 @@ class ReadAloudTest {
                 controller.enqueue("timeout")
                 controller.enqueue("next")
                 played.await()
-                assertEquals(listOf("Edge TTS: request or playback timed out"), errors)
+                assertEquals(listOf("Edge TTS: synthesis timed out"), errors)
             } finally { controller.stop() }
         }
+    }
+
+    @Test
+    fun failuresIdentifySynthesisAndPlaybackWithoutLoggingPrivateDetails() = runBlocking {
+        withTimeout(2_000) {
+            val errors = mutableListOf<String>()
+            val played = CompletableDeferred<Unit>()
+            val privateDetails = "private speech https://example.invalid/?TrustedClientToken=secret"
+            val controller = ReadAloudController(this, ReadAloudConfig(enabled = true), errors::add,
+                synthesize = { text, _ ->
+                    if (text == "synthesis failure") {
+                        throw IllegalStateException(privateDetails, UnsupportedOperationException(privateDetails))
+                    }
+                    text.encodeToByteArray()
+                }, player = FakePlayer { audio ->
+                    if (audio.decodeToString() == "playback failure") throw SpeechAudioPlaybackException(1, -1004)
+                    played.complete(Unit)
+                })
+            try {
+                controller.enqueue("synthesis failure")
+                controller.enqueue("playback failure")
+                controller.enqueue("next")
+                played.await()
+                assertEquals(listOf(
+                    "Edge TTS: synthesis failed: IllegalStateException <- UnsupportedOperationException",
+                    "Edge TTS: playback failed: SpeechAudioPlaybackException (1/-1004)",
+                ), errors)
+                assertTrue(errors.none { it.contains("private speech") || it.contains("TrustedClientToken") || it.contains("secret") })
+            } finally { controller.stop() }
+        }
+    }
+
+    @Test
+    fun playbackTimeoutIsReportedSeparatelyAndDoesNotBlockFollowingSpeech() = runBlocking {
+        withTimeout(2_000) {
+            val errors = mutableListOf<String>()
+            val played = CompletableDeferred<Unit>()
+            val controller = ReadAloudController(this, ReadAloudConfig(enabled = true), errors::add,
+                synthesize = { text, _ -> text.encodeToByteArray() },
+                player = FakePlayer { audio ->
+                    if (audio.decodeToString() == "timeout") withTimeout(1) { awaitCancellation() }
+                    played.complete(Unit)
+                })
+            try {
+                controller.enqueue("timeout")
+                controller.enqueue("next")
+                played.await()
+                assertEquals(listOf("Edge TTS: playback timed out"), errors)
+            } finally { controller.stop() }
+        }
+    }
+
+    @Test
+    fun networkDiagnosticsKeepOnlySafeReasonsAndHttpStatus() {
+        val secret = "private speech wss://example.invalid/?TrustedClientToken=secret"
+        val cases = listOf(
+            kotlinx.io.IOException("Connection reset by peer: $secret") to "IOException [connection reset]",
+            kotlinx.io.IOException("socket failed: EACCES (Permission denied): $secret") to "IOException [network access denied]",
+            kotlinx.io.IOException("TLS handshake failed: $secret") to "IOException [TLS connection failed]",
+            kotlinx.io.IOException(secret) to "IOException",
+            EdgeTtsHttpException(403, secret) to "EdgeTtsHttpException [HTTP 403]",
+        )
+        for ((failure, expected) in cases) {
+            val log = readAloudFailureMessage("synthesis", failure)
+            assertEquals("Edge TTS: synthesis failed: $expected", log)
+            assertFalse(log.contains("private speech") || log.contains("TrustedClientToken") || log.contains("secret"))
+        }
+    }
+
+    @Test
+    fun voiceListFailuresAreLoggedWithoutFailingPlayback() = runBlocking {
+        val errors = mutableListOf<String>()
+        val controller = ReadAloudController(this, ReadAloudConfig(enabled = true), errors::add,
+            synthesize = { _, _ -> byteArrayOf(1) }, player = FakePlayer())
+        try {
+            controller.reportVoiceListFailure(kotlinx.io.IOException("Network is unreachable"))
+            assertEquals(listOf("Edge TTS: voices failed: IOException [network unreachable]"), errors)
+            assertFalse(controller.failed)
+            assertFalse(controller.busy)
+        } finally { controller.stop() }
     }
 
     private class FakePlayer(private val onPlay: suspend (ByteArray) -> Unit = {}) : SpeechAudioPlayer {
