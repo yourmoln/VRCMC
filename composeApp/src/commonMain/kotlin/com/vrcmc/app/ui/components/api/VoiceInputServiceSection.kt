@@ -33,8 +33,11 @@ internal fun VoiceInputServiceSection(
 ) {
     var providerMenu by remember { mutableStateOf(false) }
     val localModelStatus by localRecognizer.status.collectAsState()
-    val showLocalModel = config.provider == VoiceInputProvider.LOCAL_WHISPER ||
-        localModelStatus is LocalSpeechModelStatus.Downloading || localModelStatus is LocalSpeechModelStatus.Failed
+    val availableProviders = if (localRecognizer.supported) VoiceInputProvider.entries else listOf(VoiceInputProvider.QWEN)
+    val showLocalModel = localRecognizer.supported && (
+        config.provider == VoiceInputProvider.LOCAL_WHISPER ||
+            localModelStatus is LocalSpeechModelStatus.Downloading || localModelStatus is LocalSpeechModelStatus.Failed
+        )
     var showKey by remember { mutableStateOf(false) }
     var regionMenu by remember { mutableStateOf(false) }
     var modelMenu by remember { mutableStateOf(false) }
@@ -48,7 +51,7 @@ internal fun VoiceInputServiceSection(
             Column(Modifier.weight(1f)) {
                 Text(strings.enableVoiceInput, style = MaterialTheme.typography.titleSmall)
                 Text(
-                    strings.voiceInputHint,
+                    if (localRecognizer.supported) strings.voiceInputHint else strings.qwenVoiceInputHint,
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
@@ -67,34 +70,31 @@ internal fun VoiceInputServiceSection(
         }
 
         HorizontalDivider()
-        Box {
-            OutlinedButton(
-                onClick = { providerMenu = true },
-                modifier = Modifier.fillMaxWidth().heightIn(min = 52.dp),
-                shape = MaterialTheme.shapes.large,
-            ) {
-                Text(strings.voiceInputProvider, Modifier.weight(1f))
-                Text(if (config.provider == VoiceInputProvider.QWEN) "Qwen3-ASR" else strings.localWhisper)
-                Icon(Icons.Default.ArrowDropDown, null)
-            }
-            DropdownMenu(providerMenu, { providerMenu = false }) {
-                VoiceInputProvider.entries.forEach { provider ->
-                    DropdownMenuItem(
-                        text = {
-                            Column {
-                                Text(if (provider == VoiceInputProvider.QWEN) "Qwen3-ASR" else strings.localWhisper)
-                                if (provider == VoiceInputProvider.LOCAL_WHISPER && !localRecognizer.supported) {
-                                    Text(strings.localModelUnsupported, style = MaterialTheme.typography.bodySmall)
-                                }
-                            }
-                        },
-                        enabled = provider == VoiceInputProvider.QWEN || localRecognizer.supported,
-                        leadingIcon = { if (provider == config.provider) Icon(Icons.Default.Check, null) },
-                        onClick = {
-                            onUpdate { it.copy(provider = provider) }
-                            providerMenu = false
-                        },
-                    )
+        // Preserve an explicit way back to Qwen if stored settings select an unsupported provider.
+        if (availableProviders.size > 1 || config.provider !in availableProviders) {
+            Box {
+                OutlinedButton(
+                    onClick = { providerMenu = true },
+                    modifier = Modifier.fillMaxWidth().heightIn(min = 52.dp),
+                    shape = MaterialTheme.shapes.large,
+                ) {
+                    Text(strings.voiceInputProvider, Modifier.weight(1f))
+                    if (config.provider in availableProviders) {
+                        Text(if (config.provider == VoiceInputProvider.QWEN) "Qwen3-ASR" else strings.localWhisper)
+                    }
+                    Icon(Icons.Default.ArrowDropDown, null)
+                }
+                DropdownMenu(providerMenu, { providerMenu = false }) {
+                    availableProviders.forEach { provider ->
+                        DropdownMenuItem(
+                            text = { Text(if (provider == VoiceInputProvider.QWEN) "Qwen3-ASR" else strings.localWhisper) },
+                            leadingIcon = { if (provider == config.provider) Icon(Icons.Default.Check, null) },
+                            onClick = {
+                                onUpdate { it.copy(provider = provider) }
+                                providerMenu = false
+                            },
+                        )
+                    }
                 }
             }
         }

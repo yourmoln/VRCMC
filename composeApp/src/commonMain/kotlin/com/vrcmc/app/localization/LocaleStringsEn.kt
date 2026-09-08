@@ -239,6 +239,7 @@ object LocaleStringsEn : LocaleStrings {
     override val systemDefaultMicrophone = "System default microphone"
     override val enableVoiceInput = "Enable voice input"
     override val voiceInputHint = "Choose a cloud or local model to turn recordings into text"
+    override val qwenVoiceInputHint = "Use Qwen3-ASR to turn recordings into chat text"
     override val voiceInputProvider = "Recognition service"
     override val localWhisper = "Local Whisper"
     override val localModelHint = "Manually download the multilingual model (190 MB) for offline sentence recognition without an API key. Downloads continue when changing pages or services or disabling voice input; use Cancel download to stop. Translation still uses your configured service. Selecting a specific recognition language reduces latency."

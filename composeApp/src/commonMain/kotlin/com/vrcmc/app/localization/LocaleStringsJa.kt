@@ -269,6 +269,7 @@ object LocaleStringsJa : LocaleStrings {
     override val systemDefaultMicrophone = "システムの既定のマイク"
     override val enableVoiceInput = "音声入力を有効にする"
     override val voiceInputHint = "クラウドまたはローカルモデルで録音を文字に変換します"
+    override val qwenVoiceInputHint = "Qwen3-ASR で録音をチャットのテキストに変換します"
     override val voiceInputProvider = "音声認識サービス"
     override val localWhisper = "ローカル Whisper"
     override val localModelHint = "多言語モデル（約 190 MB）を手動でダウンロードすると、API キーなしで文ごとにオフライン認識できます。ページやサービスの切り替え、音声入力の無効化ではダウンロードは中断されません。「ダウンロードをキャンセル」で停止できます。翻訳には設定済みのサービスを使用します。認識言語の指定で遅延を抑えられます。"
