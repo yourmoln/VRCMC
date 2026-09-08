@@ -14,6 +14,11 @@
 # JLayer resolves serialized decoder tables relative to JavaLayerUtils's package.
 -keep class javazoom.jl.decoder.JavaLayerUtils { *; }
 
+# ONNX Runtime binds these Java classes to its bundled JNI library.
+-keep class ai.onnxruntime.** { *; }
+# MethodHandle.invokeExact has JVM signature-polymorphic overloads that ProGuard cannot resolve.
+-dontwarn ai.onnxruntime.platform.Fp16Conversions
+
 # Persisted enum names are restored with valueOf at runtime.
 -keepclassmembers enum * {
     public static **[] values();

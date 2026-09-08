@@ -37,7 +37,7 @@ kotlin { jvm("desktop"); androidTarget(); iosX64(); iosArm64(); iosSimulatorArm6
     commonTest.dependencies { implementation(kotlin("test")) }
     named("desktopMain") {
         kotlin.srcDir("src/jvmMain/kotlin")
-        dependencies { implementation(libs.jlayer) }
+        dependencies { implementation(libs.jlayer); implementation(libs.onnxruntime) }
         dependencies { implementation(compose.desktop.currentOs); implementation(libs.ktor.client.cio); implementation(libs.jna.platform); implementation(libs.kuromoji.core); implementation(kuromojiIpadicRuntime); implementation(libs.wanakana.core) }
     }
     named("desktopTest").dependencies {
