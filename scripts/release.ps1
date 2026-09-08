@@ -307,14 +307,19 @@ try {
     Invoke-External $iscc @((Join-Path $repoRoot 'installer\VRCMC.iss'))
     $installer = Get-Item -LiteralPath (Join-Path $repoRoot "composeApp\build\installer\VRCMC-v$Version-setup.exe")
 
-    $metadataStatus = @(Get-GitOutput @('status', '--porcelain=v1', '--', $versionCatalog, $appInfoFile, $installerScript))
-    if ($metadataStatus.Count -ne 0) {
+    # Stage first so Git normalizes line endings before deciding whether a commit is needed.
+    Invoke-External git @('add', '--', $versionCatalog, $appInfoFile, $installerScript)
+    & git diff --cached --quiet -- $versionCatalog $appInfoFile $installerScript
+    $metadataDiffExitCode = $LASTEXITCODE
+    if ($metadataDiffExitCode -eq 1) {
         Write-Host 'Committing release metadata...' -ForegroundColor Cyan
-        Invoke-External git @('add', '--', $versionCatalog, $appInfoFile, $installerScript)
         Invoke-External git @('commit', '-m', "chore: 发布 $tag")
     }
-    else {
+    elseif ($metadataDiffExitCode -eq 0) {
         Write-Host 'Version metadata is already committed; tagging the current commit...' -ForegroundColor Cyan
+    }
+    else {
+        throw "Could not compare staged release metadata (git diff exit code $metadataDiffExitCode)."
     }
     $releaseCommitted = $true
     Invoke-External git @('tag', '-a', $tag, '-m', "VRCMC $Version")
