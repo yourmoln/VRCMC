@@ -238,7 +238,21 @@ object LocaleStringsEn : LocaleStrings {
     override val microphone = "Microphone"
     override val systemDefaultMicrophone = "System default microphone"
     override val enableVoiceInput = "Enable voice input"
-    override val voiceInputHint = "Use Qwen3-ASR to turn microphone recordings into chat text"
+    override val voiceInputHint = "Choose a cloud or local model to turn recordings into text"
+    override val voiceInputProvider = "Recognition service"
+    override val localWhisper = "Local Whisper"
+    override val localModelHint = "Manually download the multilingual model (190 MB) for offline sentence recognition without an API key. Downloads continue when changing pages or services or disabling voice input; use Cancel download to stop. Translation still uses your configured service. Selecting a specific recognition language reduces latency."
+    override val localModelDownload = "Download model"
+    override val localModelCancelDownload = "Cancel download"
+    override val localModelDownloaded = "Model downloaded; enable Local Whisper to recognize speech"
+    override val localModelPreparing = "Preparing local model…"
+    override val localModelDownloading = "Downloading model"
+    override val localModelReady = "Model ready for offline recognition"
+    override val localModelFailed = "Could not prepare the local model. Check your network or disk space and retry."
+    override val localModelRetry = "Retry"
+    override val localModelUnsupported = "Requires Windows x64 and an AVX2-capable processor"
+    override val localModelNotReady = "Select Local Whisper under API → Voice input service, click Download model, then enable voice input once it finishes."
+    override val localRecognitionFailed = "Local speech recognition failed"
     override val qwenApiKey = "Qwen API Key"
     override val qwenRegion = "Region"
     override val qwenLanguage = "Recognition language"
@@ -280,6 +294,10 @@ object LocaleStringsEn : LocaleStrings {
         when (failure.reason) {
             VoiceTranscriptionFailureReason.CUSTOM ->
                 failure.message.ifBlank { "Voice transcription failed" }
+            VoiceTranscriptionFailureReason.LOCAL_UNSUPPORTED -> localModelUnsupported
+            VoiceTranscriptionFailureReason.LOCAL_MODEL_NOT_READY -> localModelNotReady
+            VoiceTranscriptionFailureReason.LOCAL_RECOGNITION_FAILED ->
+                localRecognitionFailed + failure.message.takeIf(String::isNotBlank)?.let { ": $it" }.orEmpty()
             VoiceTranscriptionFailureReason.NO_AUDIO -> "No recognizable speech was recorded"
             VoiceTranscriptionFailureReason.API_KEY_REQUIRED -> "Qwen API Key is required"
             VoiceTranscriptionFailureReason.BASE_URL_REQUIRED -> "Base URL is required"

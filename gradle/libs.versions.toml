@@ -14,8 +14,10 @@ kuromoji = "0.9.0"
 wanakana = "1.1.1"
 onnxruntime = "1.20.0"
 lwjgl = "3.3.6"
+whisper-jni = "1.7.1"
 
 [libraries]
+whisper-jni = { module = "io.github.givimad:whisper-jni", version.ref = "whisper-jni" }
 lwjgl-core = { module = "org.lwjgl:lwjgl", version.ref = "lwjgl" }
 lwjgl-openvr = { module = "org.lwjgl:lwjgl-openvr", version.ref = "lwjgl" }
 lwjgl-opengl = { module = "org.lwjgl:lwjgl-opengl", version.ref = "lwjgl" }

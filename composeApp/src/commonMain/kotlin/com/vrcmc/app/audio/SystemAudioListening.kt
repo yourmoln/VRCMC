@@ -33,7 +33,7 @@ internal data class SystemAudioCaption(
 
 internal class SystemAudioListeningSession(
     private val transcribe: suspend (VoiceInputConfig, ByteArray) -> VoiceTranscriptionResult =
-        { config, wav -> transcribeQwenAudio(config, wav) },
+        { config, wav -> transcribeVoiceAudio(config, wav) },
     private val translate: suspend (TranslationProvider, ProviderConfig, String, String) -> TranslationResult =
         { provider, config, language, text -> translateText(provider, config, language, text) },
 ) {

@@ -105,13 +105,14 @@ internal fun SimultaneousInterpretationPage(state: AppState, strings: LocaleStri
                     checked =
                         state.interpretationVoiceInputEnabled &&
                             state.voiceInputConfig.enabled &&
-                            state.voiceInputConfig.apiKey.isNotBlank(),
+                            state.voiceInputConfig.hasServiceConfiguration(),
                     onCheckedChange = { enabled ->
                         voiceInputNotice = null
+                        val readinessFailure = voiceInputReadinessFailure(state.voiceInputConfig)
                         if (enabled && !state.voiceInputConfig.enabled) {
                             voiceInputNotice = strings.voiceInputServiceRequired
-                        } else if (enabled && state.voiceInputConfig.apiKey.isBlank()) {
-                            voiceInputNotice = strings.apiNotConfiguredVoiceInput
+                        } else if (enabled && readinessFailure != null) {
+                            voiceInputNotice = strings.voiceTranscriptionFailureMessage(readinessFailure)
                         } else {
                             state.updateInterpretationVoiceInputEnabled(enabled)
                         }

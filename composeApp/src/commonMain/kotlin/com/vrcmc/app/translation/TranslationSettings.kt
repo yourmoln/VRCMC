@@ -26,6 +26,7 @@ data class StoredTranslationSettings(
 
 data class VoiceInputConfig(
     val enabled: Boolean = false,
+    val provider: VoiceInputProvider = VoiceInputProvider.QWEN,
     val apiKey: String = "",
     val region: String = "singapore",
     val baseUrl: String = "https://dashscope-intl.aliyuncs.com/compatible-mode/v1",
@@ -75,6 +76,7 @@ fun StoredTranslationSettings.toJson(): String =
             }
             putJsonObject("voiceInput") {
                 put("enabled", voiceInput.enabled)
+                put("provider", voiceInput.provider.name)
                 put("region", voiceInput.region)
                 put("baseUrl", voiceInput.baseUrl)
                 put("model", voiceInput.model)
@@ -226,6 +228,9 @@ fun storedTranslationSettingsFromJson(value: String): StoredTranslationSettings 
                     root["voiceInput"]?.jsonObject?.let { obj ->
                         VoiceInputConfig(
                             enabled = obj["enabled"]?.jsonPrimitive?.booleanOrNull ?: false,
+                            provider = VoiceInputProvider.entries.firstOrNull {
+                                it.name == (obj["provider"] as? JsonPrimitive)?.contentOrNull
+                            } ?: VoiceInputProvider.QWEN,
                             region = obj["region"]?.jsonPrimitive?.contentOrNull ?: "singapore",
                             baseUrl = obj["baseUrl"]?.jsonPrimitive?.contentOrNull
                                 ?: "https://dashscope-intl.aliyuncs.com/compatible-mode/v1",

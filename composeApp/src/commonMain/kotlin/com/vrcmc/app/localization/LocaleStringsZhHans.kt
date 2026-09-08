@@ -118,7 +118,21 @@ object LocaleStringsZhHans : LocaleStrings {
     override val microphone = "麦克风"
     override val systemDefaultMicrophone = "系统默认麦克风"
     override val enableVoiceInput = "启用语音输入"
-    override val voiceInputHint = "使用 Qwen3-ASR 将录音转换为聊天文字"
+    override val voiceInputHint = "选择云端或本地模型，将录音转换为文字"
+    override val voiceInputProvider = "识别服务"
+    override val localWhisper = "本地 Whisper"
+    override val localModelHint = "手动下载约 190 MB 的多语言模型后，可按句离线识别，无需 API Key。切换页面、识别服务或关闭语音输入不会中断下载，点击“取消下载”可停止。翻译仍使用已配置的翻译服务。指定识别语言可降低延迟。"
+    override val localModelDownload = "下载模型"
+    override val localModelCancelDownload = "取消下载"
+    override val localModelDownloaded = "模型已下载，启用本地 Whisper 后即可识别"
+    override val localModelPreparing = "正在准备本地模型…"
+    override val localModelDownloading = "正在下载模型"
+    override val localModelReady = "模型已就绪，可离线识别"
+    override val localModelFailed = "本地模型准备失败，请检查网络或磁盘空间后重试。"
+    override val localModelRetry = "重试"
+    override val localModelUnsupported = "需要 Windows x64 和支持 AVX2 的处理器"
+    override val localModelNotReady = "请在 API → 语音输入服务中选择本地 Whisper，点击“下载模型”，完成后启用语音输入。"
+    override val localRecognitionFailed = "本地语音识别失败"
     override val qwenApiKey = "Qwen API Key"
     override val qwenRegion = "区域"
     override val qwenLanguage = "识别语言"
@@ -326,6 +340,10 @@ object LocaleStringsZhHans : LocaleStrings {
     ): String =
         when (failure.reason) {
             VoiceTranscriptionFailureReason.CUSTOM -> failure.message.ifBlank { "语音识别失败" }
+            VoiceTranscriptionFailureReason.LOCAL_UNSUPPORTED -> localModelUnsupported
+            VoiceTranscriptionFailureReason.LOCAL_MODEL_NOT_READY -> localModelNotReady
+            VoiceTranscriptionFailureReason.LOCAL_RECOGNITION_FAILED ->
+                localRecognitionFailed + failure.message.takeIf(String::isNotBlank)?.let { ": $it" }.orEmpty()
             VoiceTranscriptionFailureReason.NO_AUDIO -> "没有录到可识别的声音"
             VoiceTranscriptionFailureReason.API_KEY_REQUIRED -> "Qwen API Key 不能为空"
             VoiceTranscriptionFailureReason.BASE_URL_REQUIRED -> "Base URL 不能为空"

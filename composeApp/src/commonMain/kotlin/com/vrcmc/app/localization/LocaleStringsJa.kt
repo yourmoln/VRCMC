@@ -268,7 +268,21 @@ object LocaleStringsJa : LocaleStrings {
     override val microphone = "マイク"
     override val systemDefaultMicrophone = "システムの既定のマイク"
     override val enableVoiceInput = "音声入力を有効にする"
-    override val voiceInputHint = "Qwen3-ASR でマイク録音をチャット文字列に変換します"
+    override val voiceInputHint = "クラウドまたはローカルモデルで録音を文字に変換します"
+    override val voiceInputProvider = "音声認識サービス"
+    override val localWhisper = "ローカル Whisper"
+    override val localModelHint = "多言語モデル（約 190 MB）を手動でダウンロードすると、API キーなしで文ごとにオフライン認識できます。ページやサービスの切り替え、音声入力の無効化ではダウンロードは中断されません。「ダウンロードをキャンセル」で停止できます。翻訳には設定済みのサービスを使用します。認識言語の指定で遅延を抑えられます。"
+    override val localModelDownload = "モデルをダウンロード"
+    override val localModelCancelDownload = "ダウンロードをキャンセル"
+    override val localModelDownloaded = "モデルをダウンロード済みです。ローカル Whisper を有効にすると認識できます"
+    override val localModelPreparing = "ローカルモデルを準備中…"
+    override val localModelDownloading = "モデルをダウンロード中"
+    override val localModelReady = "モデルの準備完了・オフライン認識が可能です"
+    override val localModelFailed = "モデルの準備に失敗しました。ネットワークやディスク容量を確認して再試行してください。"
+    override val localModelRetry = "再試行"
+    override val localModelUnsupported = "Windows x64 と AVX2 対応プロセッサーが必要です"
+    override val localModelNotReady = "API → 音声入力サービスでローカル Whisper を選び、「モデルをダウンロード」を押してください。完了後に音声入力を有効にしてください。"
+    override val localRecognitionFailed = "ローカル音声認識に失敗しました"
     override val qwenApiKey = "Qwen API Key"
     override val qwenRegion = "リージョン"
     override val qwenLanguage = "認識言語"
@@ -310,6 +324,10 @@ object LocaleStringsJa : LocaleStrings {
         when (failure.reason) {
             VoiceTranscriptionFailureReason.CUSTOM ->
                 failure.message.ifBlank { "音声認識に失敗しました" }
+            VoiceTranscriptionFailureReason.LOCAL_UNSUPPORTED -> localModelUnsupported
+            VoiceTranscriptionFailureReason.LOCAL_MODEL_NOT_READY -> localModelNotReady
+            VoiceTranscriptionFailureReason.LOCAL_RECOGNITION_FAILED ->
+                localRecognitionFailed + failure.message.takeIf(String::isNotBlank)?.let { ": $it" }.orEmpty()
             VoiceTranscriptionFailureReason.NO_AUDIO -> "認識可能な音声が録音されませんでした"
             VoiceTranscriptionFailureReason.API_KEY_REQUIRED -> "Qwen API Key を入力してください"
             VoiceTranscriptionFailureReason.BASE_URL_REQUIRED -> "Base URL を入力してください"

@@ -23,6 +23,9 @@
 # MethodHandle.invokeExact has JVM signature-polymorphic overloads that ProGuard cannot resolve.
 -dontwarn ai.onnxruntime.platform.Fp16Conversions
 
+# Whisper JNI looks up parameter fields and callbacks by their original names.
+-keep class io.github.givimad.whisperjni.** { *; }
+
 # Persisted enum names are restored with valueOf at runtime.
 -keepclassmembers enum * {
     public static **[] values();

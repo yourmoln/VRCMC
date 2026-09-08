@@ -37,7 +37,7 @@ kotlin { jvm("desktop"); androidTarget(); iosX64(); iosArm64(); iosSimulatorArm6
     commonTest.dependencies { implementation(kotlin("test")) }
     named("desktopMain") {
         kotlin.srcDir("src/jvmMain/kotlin")
-        dependencies { implementation(libs.jlayer); implementation(libs.onnxruntime) }
+        dependencies { implementation(libs.jlayer); implementation(libs.onnxruntime); implementation(libs.whisper.jni) }
         dependencies {
             implementation(libs.lwjgl.core)
             implementation(libs.lwjgl.openvr)

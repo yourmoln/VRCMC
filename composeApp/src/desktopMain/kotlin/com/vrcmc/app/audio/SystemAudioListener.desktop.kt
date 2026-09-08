@@ -79,6 +79,9 @@ internal fun SystemAudioSubtitleWindow(
     val config = languageConfig.normalized()
     // Appearance changes must not cancel capture or clear completed captions.
     val listeningSettings = settings.withLanguages(config)
+    val localModelStatus by localSpeechRecognizer.status.collectAsState()
+    val localModelReady = settings.voice.provider != VoiceInputProvider.LOCAL_WHISPER ||
+        localModelStatus == LocalSpeechModelStatus.Ready
     val windowState = rememberWindowState(width = 360.dp, height = 480.dp, position = WindowPosition(24.dp, 24.dp))
     var showSettings by remember { mutableStateOf(false) }
     val captions = remember { mutableStateListOf<SystemAudioCaption>() }
@@ -96,13 +99,15 @@ internal fun SystemAudioSubtitleWindow(
         onError = onError,
     )
     // Reconfiguration cancels capture and in-flight requests before starting the new session.
-    LaunchedEffect(listeningSettings, strings) {
+    LaunchedEffect(listeningSettings, strings, localModelReady) {
         failure = null
         speaking = false
         lagging = false
         captions.clear()
-        if (listeningSettings.voice.apiKey.isBlank() || listeningSettings.voice.baseUrl.isBlank() || listeningSettings.voice.model.isBlank()) {
-            failure = strings.apiNotConfiguredVoiceInput
+        val readinessFailure = voiceInputReadinessFailure(listeningSettings.voice)
+        if (readinessFailure != null) {
+            failure = if (listeningSettings.voice.provider == VoiceInputProvider.QWEN) strings.apiNotConfiguredVoiceInput
+                else strings.voiceTranscriptionFailureMessage(readinessFailure)
             return@LaunchedEffect
         }
         if (!listeningSettings.provider.isConfigured(listeningSettings.providerConfig)) {
