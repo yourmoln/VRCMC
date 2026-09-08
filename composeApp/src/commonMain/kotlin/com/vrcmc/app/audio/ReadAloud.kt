@@ -48,6 +48,9 @@ internal interface SpeechAudioPlayer {
 
 internal expect fun createSpeechAudioPlayer(): SpeechAudioPlayer
 
+internal class SpeechAudioPlaybackException(val what: Int, val extra: Int) :
+    IllegalStateException("Audio playback failed: $what/$extra")
+
 // One worker owns synthesis and playback. Reconfiguration cancels both and drops queued speech.
 internal class ReadAloudController(
     private val scope: CoroutineScope,
@@ -98,20 +101,26 @@ internal class ReadAloudController(
                     for (message in channel) {
                         busy = true
                         previewVoice = message.settings.voice.takeIf { message.preview }
+                        var stage = "synthesis"
                         try {
                             val audio = withTimeout(60_000) { synthesize(message.text, message.settings.voice) }
+                            stage = "playback"
                             withTimeout(180_000) { player.play(audio, message.settings.outputDeviceId) }
                         } catch (_: TimeoutCancellationException) {
                             currentCoroutineContext().ensureActive()
                             failed = true
-                            onError("Edge TTS: request or playback timed out")
+                            onError("Edge TTS: $stage timed out")
                         } catch (error: CancellationException) {
                             throw error
                         } catch (error: Exception) {
                             currentCoroutineContext().ensureActive()
                             failed = true
-                            // Never include text or the token-bearing request URL in logs.
-                            onError("Edge TTS: ${error::class.simpleName}")
+                            // Exception messages may contain speech text or token-bearing request URLs.
+                            val types = generateSequence<Throwable>(error) { it.cause }.take(4)
+                                .joinToString(" <- ") { it::class.simpleName ?: "Exception" }
+                            val codes = (error as? SpeechAudioPlaybackException)
+                                ?.let { " (${it.what}/${it.extra})" }.orEmpty()
+                            onError("Edge TTS: $stage failed: $types$codes")
                         } finally {
                             if (queue === channel) {
                                 busy = false

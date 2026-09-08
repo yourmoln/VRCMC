@@ -173,7 +173,57 @@ class ReadAloudTest {
                 controller.enqueue("timeout")
                 controller.enqueue("next")
                 played.await()
-                assertEquals(listOf("Edge TTS: request or playback timed out"), errors)
+                assertEquals(listOf("Edge TTS: synthesis timed out"), errors)
+            } finally { controller.stop() }
+        }
+    }
+
+    @Test
+    fun failuresIdentifySynthesisAndPlaybackWithoutLoggingPrivateDetails() = runBlocking {
+        withTimeout(2_000) {
+            val errors = mutableListOf<String>()
+            val played = CompletableDeferred<Unit>()
+            val privateDetails = "private speech https://example.invalid/?TrustedClientToken=secret"
+            val controller = ReadAloudController(this, ReadAloudConfig(enabled = true), errors::add,
+                synthesize = { text, _ ->
+                    if (text == "synthesis failure") {
+                        throw IllegalStateException(privateDetails, UnsupportedOperationException(privateDetails))
+                    }
+                    text.encodeToByteArray()
+                }, player = FakePlayer { audio ->
+                    if (audio.decodeToString() == "playback failure") throw SpeechAudioPlaybackException(1, -1004)
+                    played.complete(Unit)
+                })
+            try {
+                controller.enqueue("synthesis failure")
+                controller.enqueue("playback failure")
+                controller.enqueue("next")
+                played.await()
+                assertEquals(listOf(
+                    "Edge TTS: synthesis failed: IllegalStateException <- UnsupportedOperationException",
+                    "Edge TTS: playback failed: SpeechAudioPlaybackException (1/-1004)",
+                ), errors)
+                assertTrue(errors.none { it.contains("private speech") || it.contains("TrustedClientToken") || it.contains("secret") })
+            } finally { controller.stop() }
+        }
+    }
+
+    @Test
+    fun playbackTimeoutIsReportedSeparatelyAndDoesNotBlockFollowingSpeech() = runBlocking {
+        withTimeout(2_000) {
+            val errors = mutableListOf<String>()
+            val played = CompletableDeferred<Unit>()
+            val controller = ReadAloudController(this, ReadAloudConfig(enabled = true), errors::add,
+                synthesize = { text, _ -> text.encodeToByteArray() },
+                player = FakePlayer { audio ->
+                    if (audio.decodeToString() == "timeout") withTimeout(1) { awaitCancellation() }
+                    played.complete(Unit)
+                })
+            try {
+                controller.enqueue("timeout")
+                controller.enqueue("next")
+                played.await()
+                assertEquals(listOf("Edge TTS: playback timed out"), errors)
             } finally { controller.stop() }
         }
     }
