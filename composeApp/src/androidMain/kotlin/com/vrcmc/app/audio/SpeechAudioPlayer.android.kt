@@ -1,9 +1,8 @@
 package com.vrcmc.app
 
 import android.media.AudioAttributes
+import android.media.MediaDataSource
 import android.media.MediaPlayer
-import java.io.File
-import java.io.FileInputStream
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.suspendCancellableCoroutine
 import kotlinx.coroutines.withContext
@@ -17,48 +16,44 @@ internal actual fun createSpeechAudioPlayer(): SpeechAudioPlayer = AndroidSpeech
 private class AndroidSpeechAudioPlayer : SpeechAudioPlayer {
     private var player: MediaPlayer? = null
 
-    override suspend fun play(mp3: ByteArray, outputDeviceId: String): Unit = withContext(Dispatchers.IO) {
-        val context = checkNotNull(audioApplicationContext()) { "Audio context is not initialized" }
-        val audioFile = File.createTempFile("vrcmc-tts-", ".mp3", context.cacheDir)
+    override suspend fun play(mp3: ByteArray, outputDeviceId: String): Unit = withContext(Dispatchers.Main) {
+        val current = MediaPlayer()
+        player = current
         try {
-            audioFile.writeBytes(mp3)
-            withContext(Dispatchers.Main) {
-                val current = MediaPlayer()
-                player = current
-                try {
-                    current.setAudioAttributes(AudioAttributes.Builder()
-                        .setUsage(AudioAttributes.USAGE_MEDIA)
-                        .setContentType(AudioAttributes.CONTENT_TYPE_SPEECH).build())
-                    // A regular seekable descriptor avoids vendor-specific MediaDataSource bridges.
-                    FileInputStream(audioFile).use { source ->
-                        current.setDataSource(source.fd, 0, mp3.size.toLong())
-                    }
-                    suspendCancellableCoroutine<Unit> { continuation ->
-                        current.setOnCompletionListener { if (continuation.isActive) continuation.resume(Unit) }
-                        current.setOnErrorListener { _, what, extra ->
-                            if (continuation.isActive) continuation.resumeWithException(
-                                SpeechAudioPlaybackException(what, extra))
-                            true
-                        }
-                        current.setOnPreparedListener {
-                            if (continuation.isActive) {
-                                try {
-                                    it.start()
-                                } catch (error: Exception) {
-                                    continuation.resumeWithException(error)
-                                }
-                            }
-                        }
-                        current.prepareAsync()
-                    }
-                } finally {
-                    current.release()
-                    if (player === current) player = null
+            current.setAudioAttributes(AudioAttributes.Builder()
+                .setUsage(AudioAttributes.USAGE_MEDIA)
+                .setContentType(AudioAttributes.CONTENT_TYPE_SPEECH).build())
+            current.setDataSource(object : MediaDataSource() {
+                override fun getSize(): Long = mp3.size.toLong()
+                override fun readAt(position: Long, buffer: ByteArray, offset: Int, size: Int): Int {
+                    if (position < 0 || position >= mp3.size) return -1
+                    val count = minOf(size, mp3.size - position.toInt())
+                    mp3.copyInto(buffer, offset, position.toInt(), position.toInt() + count)
+                    return count
                 }
+                override fun close() = Unit
+            })
+            suspendCancellableCoroutine<Unit> { continuation ->
+                current.setOnCompletionListener { if (continuation.isActive) continuation.resume(Unit) }
+                current.setOnErrorListener { _, what, extra ->
+                    if (continuation.isActive) continuation.resumeWithException(
+                        SpeechAudioPlaybackException(what, extra))
+                    true
+                }
+                current.setOnPreparedListener {
+                    if (continuation.isActive) {
+                        try {
+                            it.start()
+                        } catch (error: Exception) {
+                            continuation.resumeWithException(error)
+                        }
+                    }
+                }
+                current.prepareAsync()
             }
         } finally {
-            // This also runs after cancellation or a decoder error, on the I/O dispatcher.
-            audioFile.delete()
+            current.release()
+            if (player === current) player = null
         }
     }
 
