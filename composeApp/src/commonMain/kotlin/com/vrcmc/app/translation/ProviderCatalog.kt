@@ -1,5 +1,7 @@
 package com.vrcmc.app
 
+internal const val defaultTranslationProviderId = "microsoft_edge_web"
+
 val translationProviders = coreProviders + regionalProviders + additionalProviders
 
 fun providerById(id: String) =

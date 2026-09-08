@@ -82,9 +82,43 @@ class TranslationProviderTest {
     @Test
     fun invalidStoredDataFallsBackSafely() {
         val restored = storedTranslationSettingsFromJson("not-json")
-        assertEquals("deepseek", restored.providerId)
+        assertEquals("microsoft_edge_web", restored.providerId)
         assertFalse(restored.translate)
         assertTrue(restored.sendOriginalBeforeTranslation)
+    }
+
+    @Test
+    fun freshInstallSelectsConfiguredBingWithoutCredentials() {
+        val settings =
+            listOf(
+                StoredTranslationSettings(),
+                storedTranslationSettingsFromJson(""),
+                storedTranslationSettingsFromJson("{}"),
+            )
+        settings.forEach { stored ->
+            assertEquals("microsoft_edge_web", stored.providerId)
+            val provider = providerById(stored.providerId)
+            val config = initialProviderConfigs(stored.configs).getValue(provider.id)
+            assertTrue(provider.isConfigured(config))
+            assertEquals("", config.apiKey)
+            assertFalse(provider.keyRequired)
+            assertFalse(stored.translate)
+        }
+    }
+
+    @Test
+    fun existingUsersKeepTheirSelectedProviderAndTranslationSwitch() {
+        for (providerId in listOf("deepseek", "qianwen", "openai", "microsoft_edge_web")) {
+            for (enabled in listOf(false, true)) {
+                val stored =
+                    storedTranslationSettingsFromJson(
+                        """{"provider":"$providerId","translate":$enabled}"""
+                    )
+                assertEquals(providerId, stored.providerId)
+                assertEquals(enabled, stored.translate)
+                assertEquals(stored, storedTranslationSettingsFromJson(stored.toJson()))
+            }
+        }
     }
 
     @Test

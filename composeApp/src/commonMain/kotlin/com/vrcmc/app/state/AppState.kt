@@ -85,7 +85,7 @@ class AppState {
     var providerId by
         mutableStateOf(
             storedTranslation.providerId.takeIf { id -> translationProviders.any { it.id == id } }
-                ?: "deepseek"
+                ?: defaultTranslationProviderId
         )
     var translate by mutableStateOf(storedTranslation.translate)
     var disableDynamicInputLimit by mutableStateOf(storedTranslation.disableDynamicInputLimit)
@@ -170,6 +170,14 @@ class AppState {
                 region = if (region.id == "china") "china_mainland" else region.id,
                 baseUrl = region.baseUrl,
             )
+        persistTranslation()
+    }
+
+    fun configureBingTranslation() {
+        val provider = providerById("microsoft_edge_web")
+        providerId = provider.id
+        providerConfigs[provider.id] = defaultProviderConfig(provider)
+        translate = true
         persistTranslation()
     }
 

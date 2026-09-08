@@ -4,7 +4,7 @@ import androidx.compose.runtime.mutableStateMapOf
 import kotlinx.serialization.json.*
 
 data class StoredTranslationSettings(
-    val providerId: String = "deepseek",
+    val providerId: String = defaultTranslationProviderId,
     val translate: Boolean = false,
     val sendOriginalBeforeTranslation: Boolean = true,
     val targetLanguages: List<String> = listOf("English"),
@@ -170,7 +170,7 @@ fun storedTranslationSettingsFromJson(value: String): StoredTranslationSettings 
                     ?.mapNotNull { it.jsonPrimitive.contentOrNull }
                     .orEmpty()
             StoredTranslationSettings(
-                providerId = root["provider"]?.jsonPrimitive?.content ?: "deepseek",
+                providerId = root["provider"]?.jsonPrimitive?.content ?: defaultTranslationProviderId,
                 translate = root["translate"]?.jsonPrimitive?.booleanOrNull ?: false,
                 sendOriginalBeforeTranslation =
                     root["sendOriginalBeforeTranslation"]?.jsonPrimitive?.booleanOrNull ?: true,

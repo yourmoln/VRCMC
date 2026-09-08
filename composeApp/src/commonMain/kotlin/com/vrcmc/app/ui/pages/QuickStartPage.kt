@@ -28,24 +28,30 @@ internal fun QuickStartPage(
 ) {
     val desktop = isDesktopAudioPlatform()
     var currentStep by remember { mutableIntStateOf(1) }
-    var qwenConfigured by remember { mutableStateOf(false) }
+    var configuredProviderId by remember { mutableStateOf<String?>(null) }
 
     Column(Modifier.fillMaxSize()) {
         QuickStartProgress(currentStep, strings)
         HorizontalDivider()
         when (currentStep) {
             1 ->
-                QwenQuickStartStep(
+                TranslationQuickStartStep(
                     state = state,
                     strings = strings,
-                    onConfigured = {
-                        qwenConfigured = true
+                    onConfigured = { providerId ->
+                        configuredProviderId = providerId
                         if (desktop) onFinish() else currentStep = 2
                     },
                     onSkip = { if (desktop) onFinish() else currentStep = 2 },
                 )
             2 -> {
-                if (qwenConfigured) {
+                val successMessage =
+                    when (configuredProviderId) {
+                        "qianwen" -> strings.autoConfigureSuccess
+                        "microsoft_edge_web" -> strings.bingConfigureSuccess
+                        else -> null
+                    }
+                if (successMessage != null) {
                     Row(
                         Modifier.fillMaxWidth()
                             .padding(horizontal = 16.dp, vertical = 10.dp),
@@ -57,7 +63,7 @@ internal fun QuickStartPage(
                             tint = MaterialTheme.colorScheme.primary,
                         )
                         Spacer(Modifier.width(8.dp))
-                        Text(strings.autoConfigureSuccess, style = MaterialTheme.typography.bodyMedium)
+                        Text(successMessage, style = MaterialTheme.typography.bodyMedium)
                     }
                 }
                 ConfigureVrcPage(strings, Modifier.weight(1f))
@@ -79,8 +85,8 @@ internal fun QuickStartPage(
 @Composable
 private fun QuickStartProgress(currentStep: Int, strings: LocaleStrings) {
     val labels =
-        if (isDesktopAudioPlatform()) listOf(strings.quickStartQwen)
-        else listOf(strings.quickStartQwen, strings.quickStartVrc, strings.quickStartDevice)
+        if (isDesktopAudioPlatform()) listOf(strings.quickStartTranslation)
+        else listOf(strings.quickStartTranslation, strings.quickStartVrc, strings.quickStartDevice)
     Column(
         Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 12.dp),
         verticalArrangement = Arrangement.spacedBy(10.dp),
@@ -116,10 +122,10 @@ private fun QuickStartProgress(currentStep: Int, strings: LocaleStrings) {
 }
 
 @Composable
-private fun QwenQuickStartStep(
+private fun TranslationQuickStartStep(
     state: AppState,
     strings: LocaleStrings,
-    onConfigured: () -> Unit,
+    onConfigured: (String) -> Unit,
     onSkip: () -> Unit,
 ) {
     val provider = remember { providerById("qianwen") }
@@ -260,7 +266,7 @@ private fun QwenQuickStartStep(
                                 ) {
                                     is TranslationResult.Success -> {
                                         state.configureQwenServices(apiKey, selectedRegion.id)
-                                        onConfigured()
+                                        onConfigured(provider.id)
                                     }
                                     is TranslationResult.Failure ->
                                         error = strings.translationFailureMessage(result)
@@ -286,6 +292,27 @@ private fun QwenQuickStartStep(
                     }
                 }
             }
+        }
+        item {
+            OutlinedButton(
+                onClick = {
+                    state.configureBingTranslation()
+                    onConfigured("microsoft_edge_web")
+                },
+                enabled = !testing,
+                modifier = Modifier.fillMaxWidth().heightIn(min = 52.dp),
+                shape = RoundedCornerShape(8.dp),
+            ) {
+                Icon(Icons.Default.Translate, null)
+                Spacer(Modifier.width(8.dp))
+                Text(strings.useFreeBingTranslation)
+            }
+            Spacer(Modifier.height(6.dp))
+            Text(
+                strings.quickStartBingHint,
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
         }
         item {
             TextButton(
