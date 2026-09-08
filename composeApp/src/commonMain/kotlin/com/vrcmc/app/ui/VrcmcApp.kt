@@ -100,6 +100,7 @@ fun VrcmcApp(onDarkThemeChanged: (Boolean) -> Unit = {}) {
     BackHandler(enabled = screen != AppScreen.CHAT) { screen = AppScreen.CHAT }
 
     MaterialTheme(if (dark) darkColorScheme() else lightColorScheme()) {
+        val systemAudio = rememberSystemAudioListener(state, strings, dark)
         Surface(
             modifier = Modifier.fillMaxSize(),
             color = MaterialTheme.colorScheme.background,
@@ -168,6 +169,17 @@ fun VrcmcApp(onDarkThemeChanged: (Boolean) -> Unit = {}) {
                                         )
                                     },
                                     actions = {
+                                        if (screen == AppScreen.CHAT && systemAudio != null) {
+                                            IconToggleButton(
+                                                checked = systemAudio.isOpen,
+                                                onCheckedChange = { systemAudio.toggle() },
+                                            ) {
+                                                Icon(
+                                                    if (systemAudio.isOpen) Icons.Default.HearingDisabled else Icons.Default.Hearing,
+                                                    if (systemAudio.isOpen) strings.stopListeningToOthers else strings.listenToOthers,
+                                                )
+                                            }
+                                        }
                                         if (screen == AppScreen.CHAT && state.messages.isNotEmpty()) {
                                             IconButton({ showClearHistory = true }) {
                                                 Icon(Icons.Default.DeleteSweep, strings.clearHistory)
