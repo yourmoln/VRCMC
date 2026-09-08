@@ -11,6 +11,9 @@
 -keep class io.ktor.** { *; }
 -dontwarn io.ktor.**
 
+# JLayer resolves serialized decoder tables relative to JavaLayerUtils's package.
+-keep class javazoom.jl.decoder.JavaLayerUtils { *; }
+
 # Persisted enum names are restored with valueOf at runtime.
 -keepclassmembers enum * {
     public static **[] values();

@@ -14,6 +14,7 @@ data class StoredTranslationSettings(
     val showJapaneseRomaji: Boolean = false,
     val configs: Map<String, ProviderConfig> = emptyMap(),
     val voiceInput: VoiceInputConfig = VoiceInputConfig(),
+    val readAloud: ReadAloudConfig = ReadAloudConfig(),
     val interpretationVoiceInputEnabled: Boolean = false,
     val disableDynamicInputLimit: Boolean = false,
     val disableAutomaticUpdateCheck: Boolean = false,
@@ -89,6 +90,12 @@ fun StoredTranslationSettings.toJson(): String =
                 put("timeout", voiceInput.timeoutSeconds)
             }
             put("interpretationVoiceInputEnabled", interpretationVoiceInputEnabled)
+            putJsonObject("readAloud") {
+                put("enabled", readAloud.enabled)
+                put("source", readAloud.source.name)
+                put("voice", readAloud.voice)
+                put("outputDeviceId", readAloud.outputDeviceId)
+            }
             put("disableDynamicInputLimit", disableDynamicInputLimit)
             put("disableAutomaticUpdateCheck", disableAutomaticUpdateCheck)
             put("showTypingStatus", showTypingStatus)
@@ -183,6 +190,17 @@ fun storedTranslationSettingsFromJson(value: String): StoredTranslationSettings 
                 showJapaneseRomaji =
                     (root["showJapaneseRomaji"] as? JsonPrimitive)?.booleanOrNull ?: false,
                 configs = configs,
+                readAloud = (root["readAloud"] as? JsonObject)?.let { obj ->
+                    ReadAloudConfig(
+                        enabled = (obj["enabled"] as? JsonPrimitive)?.booleanOrNull ?: false,
+                        source = ReadAloudSource.entries.firstOrNull {
+                            it.name == (obj["source"] as? JsonPrimitive)?.contentOrNull
+                        } ?: ReadAloudSource.ORIGINAL,
+                        voice = (obj["voice"] as? JsonPrimitive)?.contentOrNull
+                            ?.takeIf { it.isNotBlank() } ?: ReadAloudConfig().voice,
+                        outputDeviceId = (obj["outputDeviceId"] as? JsonPrimitive)?.contentOrNull.orEmpty(),
+                    )
+                } ?: ReadAloudConfig(),
                 voiceInput =
                     root["voiceInput"]?.jsonObject?.let { obj ->
                         VoiceInputConfig(

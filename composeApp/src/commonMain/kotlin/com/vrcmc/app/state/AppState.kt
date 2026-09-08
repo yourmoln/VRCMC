@@ -32,6 +32,13 @@ class AppState {
     var chatDraft by mutableStateOf("")
     var voiceInputConfig by mutableStateOf(storedVoiceInput)
         private set
+    var readAloudConfig by mutableStateOf(storedTranslation.readAloud)
+        private set
+
+    fun updateReadAloudConfig(value: ReadAloudConfig) {
+        readAloudConfig = value
+        persistTranslation()
+    }
     var interpretationVoiceInputEnabled by mutableStateOf(
         storedTranslation.interpretationVoiceInputEnabled &&
             storedVoiceInput.enabled && storedVoiceInput.apiKey.isNotBlank()
@@ -275,6 +282,7 @@ class AppState {
                     showJapaneseRomaji = showJapaneseRomaji,
                     configs = providerConfigs.toMap(),
                     voiceInput = voiceInputConfig.copy(apiKey = ""),
+                    readAloud = readAloudConfig,
                     interpretationVoiceInputEnabled = interpretationVoiceInputEnabled,
                     disableDynamicInputLimit = disableDynamicInputLimit,
                     disableAutomaticUpdateCheck = disableAutomaticUpdateCheck,

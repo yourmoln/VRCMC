@@ -37,9 +37,15 @@ fun VrcmcApp(onDarkThemeChanged: (Boolean) -> Unit = {}) {
     var updateProgress by remember { mutableStateOf<Float?>(null) }
     val drawerState = rememberDrawerState(DrawerValue.Closed)
     val scope = rememberCoroutineScope()
+    val readAloud = remember(scope) { ReadAloudController(scope, state.readAloudConfig, state::addErrorLog) }
+    val speechSnackbar = remember { SnackbarHostState() }
+    DisposableEffect(readAloud) { onDispose { readAloud.stop() } }
     val focusManager = LocalFocusManager.current
     val uriHandler = LocalUriHandler.current
     val strings = localeStrings(language)
+    LaunchedEffect(readAloud.failed) {
+        if (readAloud.failed) speechSnackbar.showSnackbar(strings.readAloudFailed)
+    }
     val japaneseDictionaryStatus = JapaneseDictionaryManager.status
     val dark =
         when (theme) {
@@ -133,6 +139,7 @@ fun VrcmcApp(onDarkThemeChanged: (Boolean) -> Unit = {}) {
                         },
                     ) {
                         Scaffold(
+                            snackbarHost = { SnackbarHost(speechSnackbar) },
                             topBar = {
                                 TopAppBar(
                                     colors =
@@ -177,7 +184,7 @@ fun VrcmcApp(onDarkThemeChanged: (Boolean) -> Unit = {}) {
                                     .widthIn(max = 1200.dp)
                                     .align(Alignment.Center),
                             ) {
-                                ChatPage(state, strings)
+                                ChatPage(state, strings, readAloud::enqueue)
                                 if (screen != AppScreen.CHAT) {
                                     Surface(
                                         modifier = Modifier.fillMaxSize(),
@@ -225,6 +232,12 @@ fun VrcmcApp(onDarkThemeChanged: (Boolean) -> Unit = {}) {
                                                         state.liveInputPreviewDelaySeconds,
                                                     setLiveInputPreviewDelaySeconds =
                                                         state::updateLiveInputPreviewDelaySeconds,
+                                                    readAloudConfig = state.readAloudConfig,
+                                                    setReadAloudConfig = {
+                                                        readAloud.configure(it)
+                                                        state.updateReadAloudConfig(it)
+                                                    },
+                                                    readAloudController = readAloud,
                                                 )
                                             AppScreen.ABOUT -> AboutPage(state = state, strings = strings, onOpenLogs = { screen = AppScreen.ERROR_LOGS }, onUpdateAvailable = { availableUpdate = it })
                                             AppScreen.ERROR_LOGS -> ErrorLogsPage(state, strings)

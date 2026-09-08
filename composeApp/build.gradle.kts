@@ -32,10 +32,12 @@ kotlin { jvm("desktop"); androidTarget(); iosX64(); iosArm64(); iosSimulatorArm6
         implementation(libs.kotlinx.coroutines.core)
         implementation(libs.kotlinx.serialization.json)
         implementation(libs.ktor.client.core)
+        implementation(libs.ktor.client.websockets)
     }
     commonTest.dependencies { implementation(kotlin("test")) }
     named("desktopMain") {
         kotlin.srcDir("src/jvmMain/kotlin")
+        dependencies { implementation(libs.jlayer) }
         dependencies { implementation(compose.desktop.currentOs); implementation(libs.ktor.client.cio); implementation(libs.jna.platform); implementation(libs.kuromoji.core); implementation(kuromojiIpadicRuntime); implementation(libs.wanakana.core) }
     }
     named("desktopTest").dependencies {

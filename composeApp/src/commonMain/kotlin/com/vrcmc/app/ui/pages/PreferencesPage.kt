@@ -37,6 +37,9 @@ internal fun PreferencesPage(
     setLiveInputPreview: (Boolean) -> Unit,
     liveInputPreviewDelaySeconds: Int,
     setLiveInputPreviewDelaySeconds: (Int) -> Unit,
+    readAloudConfig: ReadAloudConfig,
+    setReadAloudConfig: (ReadAloudConfig) -> Unit,
+    readAloudController: ReadAloudController,
 ) {
     var expanded by remember { mutableStateOf(false) }
     val modes = ThemeMode.values()
@@ -256,6 +259,9 @@ internal fun PreferencesPage(
                     }
                 }
             }
+        }
+        item {
+            ReadAloudSettingsSection(readAloudConfig, strings, setReadAloudConfig, readAloudController)
         }
     }
 }

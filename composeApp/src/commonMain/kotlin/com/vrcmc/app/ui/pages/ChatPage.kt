@@ -33,7 +33,11 @@ private data class LiveOscBarrier(val completed: CompletableDeferred<Unit>) : Li
 private data class TypingOscUpdate(val device: Device, val typing: Boolean)
 
 @Composable
-fun ChatPage(state: AppState, strings: LocaleStrings) {
+fun ChatPage(
+    state: AppState,
+    strings: LocaleStrings,
+    onReadAloud: (String, ReadAloudConfig) -> Unit = { _, _ -> },
+) {
     var error by remember { mutableStateOf<String?>(null) }
     var sending by remember { mutableStateOf(false) }
     var retryAttempt by remember { mutableIntStateOf(0) }
@@ -366,6 +370,7 @@ fun ChatPage(state: AppState, strings: LocaleStrings) {
         val lineBreakOutput = state.lineBreakOutput
         val showOriginalText = state.showOriginalText
         val sendOriginalBeforeTranslation = state.sendOriginalBeforeTranslation
+        val readAloudConfig = state.readAloudConfig
         val displayLanguages = outputOrder.filter { it in targetLanguages }
         val translatingText = "$original\n(Translating...)"
         sending = true
@@ -466,7 +471,12 @@ fun ChatPage(state: AppState, strings: LocaleStrings) {
                             lineBreakOutput,
                             showOriginalText,
                         )
-                    sendOutput(target, outgoing)
+                    if (sendOutput(target, outgoing) && readAloudConfig.enabled) {
+                        onReadAloud(
+                            readAloudText(readAloudConfig.source, original, successful, outputOrder, outgoing),
+                            readAloudConfig,
+                        )
+                    }
                 } finally {
                     if (translationGeneration == requestGeneration) {
                         activeTranslationJob = null
