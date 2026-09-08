@@ -199,10 +199,12 @@ class ReadAloudTest {
                 controller.enqueue("playback failure")
                 controller.enqueue("next")
                 played.await()
-                assertEquals(listOf(
-                    "Edge TTS: synthesis failed: IllegalStateException <- UnsupportedOperationException",
-                    "Edge TTS: playback failed: SpeechAudioPlaybackException (1/-1004)",
-                ), errors)
+                assertEquals(2, errors.size)
+                // JVM coroutine stack-trace recovery can copy the exception and retain the original as its cause.
+                assertTrue(Regex(
+                    "Edge TTS: synthesis failed: (?:IllegalStateException <- )+UnsupportedOperationException",
+                ).matches(errors[0]), errors[0])
+                assertEquals("Edge TTS: playback failed: SpeechAudioPlaybackException (1/-1004)", errors[1])
                 assertTrue(errors.none { it.contains("private speech") || it.contains("TrustedClientToken") || it.contains("secret") })
             } finally { controller.stop() }
         }
