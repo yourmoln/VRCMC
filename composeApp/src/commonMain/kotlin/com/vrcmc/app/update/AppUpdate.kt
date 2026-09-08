@@ -11,6 +11,7 @@ import kotlinx.serialization.json.contentOrNull
 import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.jsonPrimitive
 import kotlinx.serialization.json.jsonArray
+import kotlinx.serialization.json.longOrNull
 
 object AppInfo {
     const val VERSION = "1.2.2"
@@ -25,6 +26,9 @@ data class AppRelease(
     val body: String,
     val htmlUrl: String,
     val apkUrl: String?,
+    val exeUrl: String? = null,
+    val exeSize: Long? = null,
+    val exeSha256: String? = null,
 )
 
 data class UpdateCheckResult(
@@ -48,7 +52,7 @@ private val releaseApiUrls = listOf(
     "https://gh-proxy.com/${AppInfo.LATEST_RELEASE_API_URL}",
 )
 
-expect fun isAndroidApp(): Boolean
+expect fun appUpdateDownloadUrl(release: AppRelease): String?
 
 expect suspend fun installAppUpdate(
     release: AppRelease,
@@ -73,20 +77,33 @@ suspend fun checkForAppUpdate(): Result<UpdateCheckResult> =
             }.onFailure { lastError = it }.getOrNull()
         } ?: throw (lastError ?: IllegalStateException("Unable to reach GitHub release service"))
 
-        val releaseJson = updateJson.parseToJsonElement(response.bodyAsText()).jsonObject
-        val tagName = releaseJson.getValue("tag_name").jsonPrimitive.content
-        val release =
-            AppRelease(
-                tagName = tagName,
-                name = releaseJson["name"]?.jsonPrimitive?.contentOrNull.orEmpty(),
-                body = releaseJson["body"]?.jsonPrimitive?.contentOrNull.orEmpty(),
-                htmlUrl = releaseJson.getValue("html_url").jsonPrimitive.content,
-                apkUrl = releaseJson["assets"]?.jsonArray
-                    ?.mapNotNull { asset -> asset.jsonObject["browser_download_url"]?.jsonPrimitive?.contentOrNull }
-                    ?.firstOrNull { it.endsWith(".apk", ignoreCase = true) },
-            )
-        UpdateCheckResult(release, isNewerVersion(tagName, AppInfo.VERSION))
+        val release = parseAppRelease(response.bodyAsText())
+        UpdateCheckResult(release, isNewerVersion(release.tagName, AppInfo.VERSION))
     }
+
+internal fun parseAppRelease(body: String): AppRelease {
+    val releaseJson = updateJson.parseToJsonElement(body).jsonObject
+    val assets = releaseJson["assets"]?.jsonArray.orEmpty().map { it.jsonObject }
+    val exeAssets = assets.filter {
+        it["browser_download_url"]?.jsonPrimitive?.contentOrNull?.endsWith(".exe", ignoreCase = true) == true
+    }
+    // The release script publishes an Inno Setup installer; prefer it over other executables.
+    val exe = exeAssets.firstOrNull {
+        it["browser_download_url"]?.jsonPrimitive?.contentOrNull?.endsWith("-setup.exe", ignoreCase = true) == true
+    } ?: exeAssets.firstOrNull()
+    return AppRelease(
+        tagName = releaseJson.getValue("tag_name").jsonPrimitive.content,
+        name = releaseJson["name"]?.jsonPrimitive?.contentOrNull.orEmpty(),
+        body = releaseJson["body"]?.jsonPrimitive?.contentOrNull.orEmpty(),
+        htmlUrl = releaseJson.getValue("html_url").jsonPrimitive.content,
+        apkUrl = assets.mapNotNull { it["browser_download_url"]?.jsonPrimitive?.contentOrNull }
+            .firstOrNull { it.endsWith(".apk", ignoreCase = true) },
+        exeUrl = exe?.get("browser_download_url")?.jsonPrimitive?.contentOrNull,
+        exeSize = exe?.get("size")?.jsonPrimitive?.longOrNull,
+        exeSha256 = exe?.get("digest")?.jsonPrimitive?.contentOrNull
+            ?.takeIf { it.startsWith("sha256:", ignoreCase = true) }?.substringAfter(':'),
+    )
+}
 
 internal fun isNewerVersion(candidate: String, current: String): Boolean {
     val candidateParts = versionParts(candidate) ?: return false

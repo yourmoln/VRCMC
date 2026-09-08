@@ -9,30 +9,12 @@ import android.net.Uri
 import android.os.Build
 import android.os.Environment
 import androidx.core.content.FileProvider
-import io.ktor.client.plugins.HttpTimeout
-import io.ktor.client.request.head
-import io.ktor.client.request.header
-import io.ktor.http.HttpHeaders
-import io.ktor.http.isSuccess
 import java.io.File
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.channels.Channel
-import kotlinx.coroutines.cancelChildren
-import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.delay
-import kotlinx.coroutines.launch
-import kotlinx.coroutines.withTimeoutOrNull
 import kotlinx.coroutines.withContext
 
-actual fun isAndroidApp(): Boolean = true
-
-private val mirrors = listOf(
-    "", "https://ghfast.top/", "https://git.yylx.win/", "https://gh-proxy.com/",
-    "https://ghfile.geekertao.top/", "https://gh-proxy.net/", "https://ghm.078465.xyz/",
-    "https://gitproxy.127731.xyz/", "https://jiashu.1win.eu.org/", "https://github.tbedu.top/",
-)
-
-private fun mirrorUrl(prefix: String, source: String) = if (prefix.isEmpty()) source else prefix + source
+actual fun appUpdateDownloadUrl(release: AppRelease): String? = release.apkUrl
 
 actual suspend fun installAppUpdate(
     release: AppRelease,
@@ -40,44 +22,14 @@ actual suspend fun installAppUpdate(
 ): Result<Unit> = runCatching {
     val source = requireNotNull(release.apkUrl) { "This release has no Android APK" }
     onProgress(null)
-    val client = createVrcmcHttpClient {
-        expectSuccess = false
-        install(HttpTimeout) {
-            requestTimeoutMillis = 8_000
-            connectTimeoutMillis = 5_000
-            socketTimeoutMillis = 8_000
-        }
-    }
-    val fastest = try {
-        coroutineScope {
-            val winners = Channel<String>(Channel.UNLIMITED)
-            mirrors.forEach { prefix ->
-                launch(Dispatchers.IO) {
-                    runCatching {
-                        client.head(mirrorUrl(prefix, source)) {
-                            header(HttpHeaders.UserAgent, "VRCMC/${AppInfo.VERSION}")
-                        }
-                    }.getOrNull()?.takeIf { it.status.isSuccess() }?.let {
-                        winners.send(prefix)
-                    }
-                }
-            }
-            val winner = withTimeoutOrNull(8_000) { winners.receive() }
-            coroutineContext.cancelChildren()
-            winners.close()
-            winner
-        }
-    } finally {
-        client.close()
-    }
-    check(fastest != null) { "No available download source" }
+    val downloadUrl = findFastestAppUpdateUrl(source)
 
     val context = requireNotNull(audioApplicationContext()).applicationContext
     val fileName = "VRCMC-${release.tagName.replace(Regex("[^A-Za-z0-9._-]"), "_")}.apk"
     val target = File(context.getExternalFilesDir(Environment.DIRECTORY_DOWNLOADS), fileName)
     target.delete()
     val manager = context.getSystemService(Context.DOWNLOAD_SERVICE) as DownloadManager
-    val request = DownloadManager.Request(Uri.parse(mirrorUrl(fastest, source)))
+    val request = DownloadManager.Request(Uri.parse(downloadUrl))
         .setTitle("VRCMC ${release.tagName}")
         .setDescription("VRCMC update")
         .setMimeType(APK_MIME_TYPE)

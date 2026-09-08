@@ -275,7 +275,7 @@ interface LocaleStrings {
     val updateCheckFailed: String
     val updateAvailable: String
     val updateNow: String
-    val updateAndroid: String
+    val updateDownload: String
     val later: String
     val ignoreThisVersion: String
     val errorLogs: String

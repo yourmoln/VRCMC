@@ -32,7 +32,7 @@ internal fun AppUpdateDialog(
     strings: LocaleStrings,
     onUpdate: () -> Unit,
     onDismiss: (ignoreVersion: Boolean) -> Unit,
-    isAndroid: Boolean,
+    canDownloadUpdate: Boolean,
     updating: Boolean,
     progress: Float?,
 ) {
@@ -79,7 +79,7 @@ internal fun AppUpdateDialog(
         },
         confirmButton = {
             TextButton(onUpdate, enabled = !updating) {
-                Text(if (isAndroid) strings.updateAndroid else strings.updateNow)
+                Text(if (canDownloadUpdate) strings.updateDownload else strings.updateNow)
             }
         },
         dismissButton = {

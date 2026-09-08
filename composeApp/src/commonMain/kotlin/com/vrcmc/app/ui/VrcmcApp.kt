@@ -293,22 +293,27 @@ fun VrcmcApp(onDarkThemeChanged: (Boolean) -> Unit = {}) {
             )
         }
         availableUpdate?.let { release ->
+            val canDownloadUpdate = appUpdateDownloadUrl(release) != null
             AppUpdateDialog(
                 release = release,
                 strings = strings,
                 onUpdate = {
-                    if (isAndroidApp() && release.apkUrl != null) {
+                    if (canDownloadUpdate) {
                         updateInProgress = true
                         updateProgress = null
                         scope.launch {
-                            installAppUpdate(release) { updateProgress = it }
-                                .onSuccess { availableUpdate = null }
-                                .onFailure {
-                                    uriHandler.openUri(release.htmlUrl)
-                                    availableUpdate = null
-                                }
-                            updateInProgress = false
-                            updateProgress = null
+                            try {
+                                installAppUpdate(release) { updateProgress = it }
+                                    .onSuccess { availableUpdate = null }
+                                    .onFailure {
+                                        state.addErrorLog("App update failed: ${it.message}")
+                                        uriHandler.openUri(release.htmlUrl)
+                                        availableUpdate = null
+                                    }
+                            } finally {
+                                updateInProgress = false
+                                updateProgress = null
+                            }
                         }
                     } else {
                         uriHandler.openUri(release.htmlUrl)
@@ -319,7 +324,7 @@ fun VrcmcApp(onDarkThemeChanged: (Boolean) -> Unit = {}) {
                     if (ignoreVersion) saveIgnoredUpdateVersion(release.tagName)
                     availableUpdate = null
                 },
-                isAndroid = isAndroidApp(),
+                canDownloadUpdate = canDownloadUpdate,
                 updating = updateInProgress,
                 progress = updateProgress,
             )
