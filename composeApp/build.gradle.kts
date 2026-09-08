@@ -38,6 +38,16 @@ kotlin { jvm("desktop"); androidTarget(); iosX64(); iosArm64(); iosSimulatorArm6
     named("desktopMain") {
         kotlin.srcDir("src/jvmMain/kotlin")
         dependencies { implementation(libs.jlayer); implementation(libs.onnxruntime) }
+        dependencies {
+            implementation(libs.lwjgl.core)
+            implementation(libs.lwjgl.openvr)
+            implementation(libs.lwjgl.opengl)
+            implementation(libs.lwjgl.glfw)
+            runtimeOnly("org.lwjgl:lwjgl:${libs.versions.lwjgl.get()}:natives-windows")
+            runtimeOnly("org.lwjgl:lwjgl-openvr:${libs.versions.lwjgl.get()}:natives-windows")
+            runtimeOnly("org.lwjgl:lwjgl-opengl:${libs.versions.lwjgl.get()}:natives-windows")
+            runtimeOnly("org.lwjgl:lwjgl-glfw:${libs.versions.lwjgl.get()}:natives-windows")
+        }
         dependencies { implementation(compose.desktop.currentOs); implementation(libs.ktor.client.cio); implementation(libs.jna.platform); implementation(libs.kuromoji.core); implementation(kuromojiIpadicRuntime); implementation(libs.wanakana.core) }
     }
     named("desktopTest").dependencies {
@@ -119,6 +129,8 @@ compose.desktop {
             configurationFiles.from(project.file("proguard-rules.pro"))
         }
         nativeDistributions {
+            // LWJGL uses sun.misc.Unsafe for its native buffers and function bindings.
+            modules("jdk.unsupported")
             targetFormats(TargetFormat.Exe)
             packageName = "VRCMC"
             packageVersion = libs.versions.app.version.get()

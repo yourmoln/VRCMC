@@ -5,6 +5,34 @@ import kotlin.test.assertEquals
 
 class SystemAudioLanguageConfigTest {
     @Test
+    fun steamVrSettingsRoundTripWithSharedOpacityAndSafeDefaults() {
+        for (position in SteamVrOverlayPosition.entries) for (scale in steamVrOverlayScalePercents) {
+            val config = SystemAudioLanguageConfig(
+                "en", "日本語", 65, steamVrOverlayEnabled = true, steamVrOverlayPosition = position,
+                steamVrOverlayScalePercent = scale,
+            )
+            val restored = storedTranslationSettingsFromJson(StoredTranslationSettings(systemAudioLanguages = config).toJson())
+            assertEquals(config, restored.systemAudioLanguages)
+        }
+        val old = storedTranslationSettingsFromJson("""{"systemAudioLanguages":{"opacityPercent":45}}""")
+        assertEquals(SystemAudioLanguageConfig(opacityPercent = 45), old.systemAudioLanguages)
+        for (invalid in listOf("null", "{}", "42", "\"unknown\"")) {
+            val restored = storedTranslationSettingsFromJson("""{"systemAudioLanguages":{"sourceLanguage":"en","opacityPercent":70,"steamVrOverlayEnabled":$invalid,"steamVrOverlayPosition":$invalid}}""")
+            assertEquals(SystemAudioLanguageConfig(sourceLanguage = "en", opacityPercent = 70), restored.systemAudioLanguages)
+        }
+    }
+
+    @Test
+    fun missingOrInvalidOverlaySizesKeepTheCurrentDefaultAndOtherSettings() {
+        for (value in listOf("null", "{}", "\"bad\"", "0", "65", "201", "-2147483648")) {
+            val restored = storedTranslationSettingsFromJson("""{"systemAudioLanguages":{"sourceLanguage":"en","steamVrOverlayEnabled":true,"steamVrOverlayScalePercent":$value}}""")
+            assertEquals(SystemAudioLanguageConfig(sourceLanguage = "en", steamVrOverlayEnabled = true), restored.systemAudioLanguages)
+        }
+        val old = storedTranslationSettingsFromJson("""{"systemAudioLanguages":{"steamVrOverlayEnabled":true}}""")
+        assertEquals(100, old.systemAudioLanguages.steamVrOverlayScalePercent)
+    }
+
+    @Test
     fun existingChatAndMicrophoneLanguagesDoNotOverrideListeningDefaults() {
         val restored = storedTranslationSettingsFromJson("""{"targetLanguages":["English"],"voiceInput":{"language":"ja"}}""")
         assertEquals(SystemAudioLanguageConfig("auto", "简体中文"), restored.systemAudioLanguages)

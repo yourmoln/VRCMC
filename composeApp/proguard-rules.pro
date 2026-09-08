@@ -7,6 +7,10 @@
 }
 -dontwarn com.sun.jna.**
 
+# LWJGL loads its OpenVR bindings and bundled native libraries by class name.
+-keep class org.lwjgl.** { *; }
+-dontwarn org.lwjgl.**
+
 # Ktor discovers the CIO engine and several JVM I/O bridges through ServiceLoader/reflection.
 -keep class io.ktor.** { *; }
 -dontwarn io.ktor.**

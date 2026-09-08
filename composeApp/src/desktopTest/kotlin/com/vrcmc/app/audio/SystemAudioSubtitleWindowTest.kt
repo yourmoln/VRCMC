@@ -167,6 +167,76 @@ class SystemAudioSubtitleWindowTest {
     }
 
     @Test
+    fun steamVrSettingsSaveAllPresetsShareOpacityAndCancelWithoutApplying() {
+        assumeTrue(Platform.isWindows())
+        var config by mutableStateOf(SystemAudioLanguageConfig())
+        var visible by mutableStateOf(true)
+        var saves = 0
+        compose.setContent {
+            MaterialTheme {
+                if (visible) SystemAudioLanguageSettingsDialog(
+                    config = config, strings = LocaleStringsZhHans,
+                    onSave = { config = it; saves++; visible = false },
+                    onDismiss = { visible = false },
+                )
+            }
+        }
+        compose.onNodeWithContentDescription(LocaleStringsZhHans.steamVrOverlay).assertIsOff().performClick()
+        waitForSelection(LocaleStringsZhHans.steamVrOverlayPosition, "左手")
+        waitForSelection(LocaleStringsZhHans.steamVrOverlaySize, LocaleStringsZhHans.steamVrOverlayDefaultSize)
+        for (scale in steamVrOverlayScalePercents + 150) {
+            compose.onNodeWithContentDescription(LocaleStringsZhHans.steamVrOverlaySize).performScrollTo().performClick()
+            val label = if (scale == 100) LocaleStringsZhHans.steamVrOverlayDefaultSize else "$scale%"
+            compose.onNodeWithText(label).performScrollTo().performClick()
+            waitForSelection(LocaleStringsZhHans.steamVrOverlaySize, label)
+        }
+        for (label in listOf("右手", "屏幕中间", "左手", "屏幕中间")) {
+            compose.onNodeWithContentDescription(LocaleStringsZhHans.steamVrOverlayPosition).performScrollTo().performClick()
+            compose.onNodeWithText(label).performClick()
+            waitForSelection(LocaleStringsZhHans.steamVrOverlayPosition, label)
+        }
+        compose.onNodeWithContentDescription(LocaleStringsZhHans.systemAudioWindowOpacity).performScrollTo()
+            .performSemanticsAction(SemanticsActions.SetProgress) { it(55f) }
+        waitForSelection(LocaleStringsZhHans.systemAudioWindowOpacity, "55%")
+        compose.runOnIdle { assertEquals(SystemAudioLanguageConfig(), config) }
+        val image = compose.onNodeWithTag("systemAudioLanguageSettings").captureToImage()
+        val output = File("build/test-screenshots/system-audio-steamvr-settings.png")
+        output.parentFile.mkdirs()
+        ImageIO.write(image.toAwtImage(), "png", output)
+        compose.onNodeWithText(LocaleStringsZhHans.save).performScrollTo().performClick()
+        compose.waitUntil(5_000) { saves == 1 }
+        val expected = SystemAudioLanguageConfig(
+            opacityPercent = 55, steamVrOverlayEnabled = true, steamVrOverlayPosition = SteamVrOverlayPosition.SCREEN_CENTER,
+            steamVrOverlayScalePercent = 150,
+        )
+        compose.runOnIdle {
+            assertEquals(expected, config)
+            val provider = providerById("microsoft_edge_web")
+            val services = SystemAudioListeningSettings(VoiceInputConfig(), provider, defaultProviderConfig(provider), listOf("English"))
+            assertEquals(services.withLanguages(SystemAudioLanguageConfig()), services.withLanguages(config))
+            visible = true
+        }
+        waitForSelection(LocaleStringsZhHans.steamVrOverlayPosition, "屏幕中间")
+        waitForSelection(LocaleStringsZhHans.steamVrOverlaySize, "150%")
+        compose.onNodeWithContentDescription(LocaleStringsZhHans.steamVrOverlaySize).performScrollTo().performClick()
+        compose.onNodeWithText("75%").performScrollTo().performClick()
+        waitForSelection(LocaleStringsZhHans.steamVrOverlaySize, "75%")
+        compose.onNodeWithContentDescription(LocaleStringsZhHans.steamVrOverlay).assertIsOn().performScrollTo().performClick()
+        compose.onNodeWithContentDescription(LocaleStringsZhHans.steamVrOverlayPosition).assertDoesNotExist()
+        compose.onNodeWithContentDescription(LocaleStringsZhHans.steamVrOverlaySize).assertDoesNotExist()
+        compose.onNodeWithText(LocaleStringsZhHans.cancel).performScrollTo().performClick()
+        compose.runOnIdle {
+            assertEquals(expected, config)
+            assertEquals(1, saves)
+            visible = true
+        }
+        compose.onNodeWithContentDescription(LocaleStringsZhHans.steamVrOverlay).performScrollTo().performClick()
+        compose.onNodeWithText(LocaleStringsZhHans.save).performScrollTo().performClick()
+        compose.waitUntil(5_000) { saves == 2 }
+        compose.runOnIdle { assertEquals(expected.copy(steamVrOverlayEnabled = false), config) }
+    }
+
+    @Test
     fun settingsApplyLanguagesAndOpacityOnlyWhenSaved() {
         assumeTrue(Platform.isWindows())
         val provider = providerById("microsoft_edge_web")

@@ -85,6 +85,16 @@ internal fun SystemAudioSubtitleWindow(
     var failure by remember { mutableStateOf<String?>(null) }
     var speaking by remember { mutableStateOf(false) }
     var lagging by remember { mutableStateOf(false) }
+    val overlayStatus = rememberSteamVrSubtitleOverlay(
+        config = config,
+        content = SteamVrOverlayContent(
+            status = failure ?: if (lagging) strings.systemAudioTooSlow
+                else if (speaking) strings.systemAudioListening else strings.voiceWaitingForSpeech,
+            captions = captions.toList(),
+            dark = dark,
+        ),
+        onError = onError,
+    )
     // Reconfiguration cancels capture and in-flight requests before starting the new session.
     LaunchedEffect(listeningSettings, strings) {
         failure = null
@@ -191,6 +201,15 @@ internal fun SystemAudioSubtitleWindow(
                             )
                         }
                         val listState = rememberLazyListState()
+                        val overlayMessage = when (overlayStatus) {
+                            SteamVrOverlayStatus.UNAVAILABLE -> strings.steamVrOverlayUnavailable
+                            SteamVrOverlayStatus.WAITING_FOR_CONTROLLER -> strings.steamVrOverlayWaitingForController
+                            else -> null
+                        }
+                        if (overlayMessage != null) {
+                            Text(overlayMessage, style = MaterialTheme.typography.labelMedium,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant)
+                        }
                         LaunchedEffect(captions.toList()) {
                             if (captions.isNotEmpty()) listState.scrollToItem(captions.lastIndex)
                         }
@@ -243,6 +262,9 @@ internal fun SystemAudioLanguageSettingsDialog(
     var source by remember { mutableStateOf(config.sourceLanguage) }
     var target by remember { mutableStateOf(config.targetLanguage) }
     var opacity by remember { mutableIntStateOf(config.normalized().opacityPercent) }
+    var overlayEnabled by remember { mutableStateOf(config.steamVrOverlayEnabled) }
+    var overlayPosition by remember { mutableStateOf(config.steamVrOverlayPosition) }
+    var overlayScale by remember { mutableIntStateOf(config.normalized().steamVrOverlayScalePercent) }
     Dialog(onDismissRequest = onDismiss) {
         Surface(
             modifier = Modifier.fillMaxWidth().testTag("systemAudioLanguageSettings"),
@@ -268,6 +290,38 @@ internal fun SystemAudioLanguageSettingsDialog(
                         onSelect = { target = it },
                     )
                     Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+                        Text(strings.steamVrOverlay, Modifier.weight(1f), style = MaterialTheme.typography.labelLarge)
+                        Switch(
+                            checked = overlayEnabled,
+                            onCheckedChange = { overlayEnabled = it },
+                            modifier = Modifier.semantics { contentDescription = strings.steamVrOverlay },
+                        )
+                    }
+                    if (overlayEnabled) {
+                        SystemAudioLanguagePicker(
+                            label = strings.steamVrOverlayPosition,
+                            selected = overlayPosition.name,
+                            options = listOf(
+                                SteamVrOverlayPosition.LEFT_HAND.name to strings.steamVrOverlayLeftHand,
+                                SteamVrOverlayPosition.RIGHT_HAND.name to strings.steamVrOverlayRightHand,
+                                SteamVrOverlayPosition.SCREEN_CENTER.name to strings.steamVrOverlayScreenCenter,
+                            ),
+                            onSelect = { overlayPosition = SteamVrOverlayPosition.valueOf(it) },
+                        )
+                        SystemAudioLanguagePicker(
+                            label = strings.steamVrOverlaySize,
+                            selected = overlayScale.toString(),
+                            options = steamVrOverlayScalePercents.map {
+                                it.toString() to if (it == 100) strings.steamVrOverlayDefaultSize else "$it%"
+                            },
+                            onSelect = { overlayScale = it.toInt() },
+                        )
+                        Text(strings.steamVrOverlaySizeHint, style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant)
+                        Text(strings.steamVrOverlayHint, style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    }
+                    Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
                         Text(strings.systemAudioWindowOpacity, Modifier.weight(1f), style = MaterialTheme.typography.labelLarge)
                         Text("$opacity%", style = MaterialTheme.typography.labelLarge)
                     }
@@ -283,7 +337,13 @@ internal fun SystemAudioLanguageSettingsDialog(
                 }
                 Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End) {
                     TextButton(onClick = onDismiss) { Text(strings.cancel) }
-                    TextButton(onClick = { onSave(SystemAudioLanguageConfig(source, target, opacity).normalized()) }) { Text(strings.save) }
+                    TextButton(onClick = {
+                        onSave(config.copy(
+                            sourceLanguage = source, targetLanguage = target, opacityPercent = opacity,
+                            steamVrOverlayEnabled = overlayEnabled, steamVrOverlayPosition = overlayPosition,
+                            steamVrOverlayScalePercent = overlayScale,
+                        ).normalized())
+                    }) { Text(strings.save) }
                 }
             }
         }
