@@ -42,6 +42,7 @@ internal fun ProviderPickerDialog(
                 }
                 .sortedWith(
                     compareByDescending<TranslationProvider> { it.id == "qianwen" }
+                        .thenByDescending { it.id == "microsoft_edge_web" }
                         .thenByDescending { it.id in recommendedProviderIds }
                         .thenBy { it.label }
                 )
@@ -88,6 +89,7 @@ internal fun ProviderPickerDialog(
                 ) {
                     items(filtered, key = { it.id }) { option ->
                         val isQwen = option.id == "qianwen"
+                        val isBing = option.id == "microsoft_edge_web"
                         val qwenGold = if (darkTheme) qwenGoldDark else qwenGoldLight
                         Surface(
                             Modifier.fillMaxWidth().clickable { onSelect(option.id) },
@@ -105,14 +107,19 @@ internal fun ProviderPickerDialog(
                                 Spacer(Modifier.width(12.dp))
                                 Column(Modifier.weight(1f)) {
                                     Row(verticalAlignment = Alignment.CenterVertically) {
-                                        Text(option.label, fontWeight = FontWeight.Medium)
-                                        if (option.id in recommendedProviderIds) {
+                                        Text(
+                                            option.label,
+                                            Modifier.weight(1f, fill = false),
+                                            fontWeight = FontWeight.Medium,
+                                        )
+                                        if (isBing || option.id in recommendedProviderIds) {
                                             Spacer(Modifier.width(6.dp))
                                             SuggestionChip(
                                                 {},
                                                 {
                                                     Text(
-                                                        if (isQwen) strings.highlyRecommended
+                                                        if (isBing) strings.free
+                                                        else if (isQwen) strings.highlyRecommended
                                                         else strings.recommended,
                                                         style = MaterialTheme.typography.labelSmall,
                                                     )

@@ -162,6 +162,7 @@ object LocaleStringsJa : LocaleStrings {
     override val searchProvider = "プロバイダーまたはプロトコルを検索"
     override val recommended = "おすすめ"
     override val highlyRecommended = "特におすすめ"
+    override val free = "無料"
     override val chooseLanguage = "翻訳先言語を選択"
     override val twoLanguageHint = "1～2 言語を選択できます。2 つの翻訳は並行して実行されます。"
     override val languageSettings = "翻訳言語"

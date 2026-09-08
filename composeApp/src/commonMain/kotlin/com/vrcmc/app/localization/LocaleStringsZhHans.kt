@@ -214,6 +214,7 @@ object LocaleStringsZhHans : LocaleStrings {
     override val searchProvider = "搜索服务商或协议"
     override val recommended = "推荐"
     override val highlyRecommended = "非常推荐"
+    override val free = "免费"
     override val chooseLanguage = "选择目标语言"
     override val twoLanguageHint = "可选择 1–2 种语言；双语翻译会并行执行"
     override val languageSettings = "翻译语言"
