@@ -1,6 +1,19 @@
 package com.vrcmc.app
 
 object LocaleStringsJa : LocaleStrings {
+    override val systemAudioListening = "聞き取り中…"
+    override val systemAudioWindowOpacity = "ウィンドウの不透明度"
+    override val minimizeWindow = "最小化"
+    override val closeWindow = "閉じる"
+    override val systemAudioSourceLanguage = "聞き取る言語"
+    override val systemAudioAutomaticLanguage = "自動"
+    override val systemAudioVadFailed = "ローカル音声検出を起動できませんでした。エラーログを確認してください。"
+    override val systemAudioWaitingForSentence = "録音中 · 発話の終わりを待っています…"
+    override val listenToOthers = "相手の声を聞く"
+    override val stopListeningToOthers = "聞き取りを停止"
+    override val systemAudioHint = "Windows の既定の再生デバイスを聞き取ります。このウィンドウの設定で聞き取る言語と翻訳先言語を選べます。"
+    override val systemAudioFailed = "システム音声を取得できません。再生デバイスを確認して、このウィンドウを開き直してください。"
+    override val systemAudioTooSlow = "音声認識または翻訳が遅れています。古い未処理の音声をスキップして聞き取りを続けています。"
     override val readAloudClearSearch = "検索をクリア"
     override val readAloudNoVoices = "一致する音声がありません。別の名前や言語で検索してください。"
     override val readAloudSelectedVoice = "選択中の音声"

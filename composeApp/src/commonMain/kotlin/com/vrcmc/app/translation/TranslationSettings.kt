@@ -15,6 +15,7 @@ data class StoredTranslationSettings(
     val configs: Map<String, ProviderConfig> = emptyMap(),
     val voiceInput: VoiceInputConfig = VoiceInputConfig(),
     val readAloud: ReadAloudConfig = ReadAloudConfig(),
+    val systemAudioLanguages: SystemAudioLanguageConfig = SystemAudioLanguageConfig(),
     val interpretationVoiceInputEnabled: Boolean = false,
     val disableDynamicInputLimit: Boolean = false,
     val disableAutomaticUpdateCheck: Boolean = false,
@@ -90,6 +91,11 @@ fun StoredTranslationSettings.toJson(): String =
                 put("timeout", voiceInput.timeoutSeconds)
             }
             put("interpretationVoiceInputEnabled", interpretationVoiceInputEnabled)
+            putJsonObject("systemAudioLanguages") {
+                put("sourceLanguage", systemAudioLanguages.sourceLanguage)
+                put("targetLanguage", systemAudioLanguages.targetLanguage)
+                put("opacityPercent", systemAudioLanguages.normalized().opacityPercent)
+            }
             putJsonObject("readAloud") {
                 put("enabled", readAloud.enabled)
                 put("source", readAloud.source.name)
@@ -190,6 +196,13 @@ fun storedTranslationSettingsFromJson(value: String): StoredTranslationSettings 
                 showJapaneseRomaji =
                     (root["showJapaneseRomaji"] as? JsonPrimitive)?.booleanOrNull ?: false,
                 configs = configs,
+                systemAudioLanguages = (root["systemAudioLanguages"] as? JsonObject)?.let { obj ->
+                    SystemAudioLanguageConfig(
+                        sourceLanguage = (obj["sourceLanguage"] as? JsonPrimitive)?.contentOrNull ?: "auto",
+                        targetLanguage = (obj["targetLanguage"] as? JsonPrimitive)?.contentOrNull ?: "简体中文",
+                        opacityPercent = (obj["opacityPercent"] as? JsonPrimitive)?.intOrNull ?: SystemAudioLanguageConfig().opacityPercent,
+                    ).normalized()
+                } ?: SystemAudioLanguageConfig(),
                 readAloud = (root["readAloud"] as? JsonObject)?.let { obj ->
                     ReadAloudConfig(
                         enabled = (obj["enabled"] as? JsonPrimitive)?.booleanOrNull ?: false,

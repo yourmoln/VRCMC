@@ -34,6 +34,13 @@ class AppState {
         private set
     var readAloudConfig by mutableStateOf(storedTranslation.readAloud)
         private set
+    var systemAudioLanguages by mutableStateOf(storedTranslation.systemAudioLanguages)
+        private set
+
+    fun updateSystemAudioLanguages(value: SystemAudioLanguageConfig) {
+        systemAudioLanguages = value.normalized()
+        persistTranslation()
+    }
 
     fun updateReadAloudConfig(value: ReadAloudConfig) {
         readAloudConfig = value
@@ -283,6 +290,7 @@ class AppState {
                     configs = providerConfigs.toMap(),
                     voiceInput = voiceInputConfig.copy(apiKey = ""),
                     readAloud = readAloudConfig,
+                    systemAudioLanguages = systemAudioLanguages,
                     interpretationVoiceInputEnabled = interpretationVoiceInputEnabled,
                     disableDynamicInputLimit = disableDynamicInputLimit,
                     disableAutomaticUpdateCheck = disableAutomaticUpdateCheck,

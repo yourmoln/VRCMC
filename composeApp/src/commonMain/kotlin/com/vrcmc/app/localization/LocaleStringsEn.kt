@@ -1,6 +1,19 @@
 package com.vrcmc.app
 
 object LocaleStringsEn : LocaleStrings {
+    override val systemAudioListening = "Listening…"
+    override val systemAudioWindowOpacity = "Window opacity"
+    override val minimizeWindow = "Minimize"
+    override val closeWindow = "Close"
+    override val systemAudioSourceLanguage = "Spoken language"
+    override val systemAudioAutomaticLanguage = "Auto"
+    override val systemAudioVadFailed = "Local speech detection could not start. Check the error logs."
+    override val systemAudioWaitingForSentence = "Recording · waiting for the sentence to end…"
+    override val listenToOthers = "Listen to others"
+    override val stopListeningToOthers = "Stop listening"
+    override val systemAudioHint = "Listening to the default Windows playback device. Choose the spoken and target languages in this window's settings."
+    override val systemAudioFailed = "Could not capture system audio. Check the playback device, then close and reopen this window."
+    override val systemAudioTooSlow = "Recognition or translation is slow. Older queued audio was skipped; listening continues."
     override val lineBreakOutput = "Line breaks"
     override val enableLineBreakOutput = "Put each language on a new line"
     override val lineBreakOutputHint = "When disabled, the second item in the display order is enclosed in parentheses."

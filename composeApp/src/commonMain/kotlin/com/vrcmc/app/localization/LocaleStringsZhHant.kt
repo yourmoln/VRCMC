@@ -1,6 +1,19 @@
 package com.vrcmc.app
 
 object LocaleStringsZhHant : LocaleStrings {
+    override val systemAudioListening = "正在聽…"
+    override val systemAudioWindowOpacity = "視窗不透明度"
+    override val minimizeWindow = "最小化"
+    override val closeWindow = "關閉"
+    override val systemAudioSourceLanguage = "聽的語言"
+    override val systemAudioAutomaticLanguage = "自動"
+    override val systemAudioVadFailed = "本機人聲偵測未能啟動，請查看錯誤記錄。"
+    override val systemAudioWaitingForSentence = "正在收音，等待說完一句話…"
+    override val listenToOthers = "聽別人說話"
+    override val stopListeningToOthers = "停止聽別人說話"
+    override val systemAudioHint = "監聽 Windows 預設播放裝置，可在此視窗的設定中選擇聽的語言與目標語言。"
+    override val systemAudioFailed = "無法監聽系統聲音，請檢查播放裝置後關閉並重新開啟此視窗。"
+    override val systemAudioTooSlow = "辨識或翻譯較慢，已略過積壓的舊片段，正在繼續監聽。"
     override val readAloudClearSearch = "清空搜尋"
     override val readAloudNoVoices = "沒有符合的音色，請嘗試其他名稱或語言。"
     override val readAloudSelectedVoice = "已選音色"

@@ -1,6 +1,19 @@
 package com.vrcmc.app
 
 interface LocaleStrings {
+    val systemAudioListening: String get() = "Listening…"
+    val systemAudioWindowOpacity: String get() = "Window opacity"
+    val minimizeWindow: String get() = "Minimize"
+    val closeWindow: String get() = "Close"
+    val systemAudioSourceLanguage: String get() = "Spoken language"
+    val systemAudioAutomaticLanguage: String get() = "Auto"
+    val systemAudioVadFailed: String get() = "Local speech detection could not start. Check the error logs."
+    val systemAudioWaitingForSentence: String get() = "Recording · waiting for the sentence to end…"
+    val listenToOthers: String get() = "Listen to others"
+    val stopListeningToOthers: String get() = "Stop listening"
+    val systemAudioHint: String get() = "Listening to the default Windows playback device. Choose the spoken and target languages in this window's settings."
+    val systemAudioFailed: String get() = "Could not capture system audio. Check the playback device, then close and reopen this window."
+    val systemAudioTooSlow: String get() = "Recognition or translation is slow. Older queued audio was skipped; listening continues."
     val readAloudClearSearch: String get() = "Clear search"
     val readAloudNoVoices: String get() = "No matching voices. Try another name or language."
     val readAloudSelectedVoice: String get() = "Selected voice"
