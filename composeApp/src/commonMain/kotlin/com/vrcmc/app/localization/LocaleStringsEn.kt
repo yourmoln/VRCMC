@@ -128,6 +128,9 @@ object LocaleStringsEn : LocaleStrings {
         "Used only after the primary model exhausts all retryable attempts"
     override val fallbackRetryCount = "Fallback retry attempts"
     override val fallbackRetryCountHint = "0–10 retries; defaults to 3"
+    override val enableBingFallback = "Use Bing translation as a final fallback"
+    override val bingFallbackHint =
+        "After the primary and any enabled fallback model exhaust their attempts, try free Bing translation once"
     override val translateBehaviorHint =
         "Send the original text together with its translation to VRChat"
     override val advancedSettings = "Advanced request settings"

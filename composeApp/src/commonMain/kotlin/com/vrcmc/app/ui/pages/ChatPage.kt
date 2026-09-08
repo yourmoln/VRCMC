@@ -370,7 +370,7 @@ fun ChatPage(state: AppState, strings: LocaleStrings) {
         val translatingText = "$original\n(Translating...)"
         sending = true
         retryAttempt = 0
-        retryLimit = state.providerConfig.totalRetryCount()
+        retryLimit = state.providerConfig.totalRetryCount(state.provider)
         error = null
         if (clearDraft) state.chatDraft = ""
         state.addMessage(ChatMessage(original, MessageRole.USER))

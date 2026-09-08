@@ -157,6 +157,8 @@ interface LocaleStrings {
     val fallbackModelHint: String
     val fallbackRetryCount: String
     val fallbackRetryCountHint: String
+    val enableBingFallback: String
+    val bingFallbackHint: String
     val translateBehaviorHint: String
     val advancedSettings: String
     val requestTimeout: String

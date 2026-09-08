@@ -142,6 +142,8 @@ object LocaleStringsJa : LocaleStrings {
     override val fallbackModelHint = "プライマリモデルで再試行可能な回数を使い切った場合のみ使用します"
     override val fallbackRetryCount = "フォールバックの再試行回数"
     override val fallbackRetryCountHint = "0～10 回。既定値は 3 回です"
+    override val enableBingFallback = "Bing 翻訳を最終フォールバックに使用"
+    override val bingFallbackHint = "プライマリモデルと有効なフォールバックモデルの試行が失敗した場合、無料の Bing 翻訳を一度だけ呼び出します"
     override val translateBehaviorHint = "原文と翻訳を一緒に VRChat へ送信します"
     override val advancedSettings = "リクエストの詳細設定"
     override val requestTimeout = "リクエストのタイムアウト"

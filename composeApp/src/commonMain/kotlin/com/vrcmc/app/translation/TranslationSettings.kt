@@ -67,6 +67,7 @@ fun StoredTranslationSettings.toJson(): String =
                         put("fallbackModel", value.fallbackModel)
                         put("fallbackRetries", value.fallbackRetryCount)
                         put("fallbackEnabled", value.fallbackEnabled)
+                        put("bingFallbackEnabled", value.bingFallbackEnabled)
                     }
                 }
             }
@@ -148,6 +149,8 @@ fun storedTranslationSettingsFromJson(value: String): StoredTranslationSettings 
                                         .coerceIn(0, 10),
                                 fallbackEnabled =
                                     obj["fallbackEnabled"]?.jsonPrimitive?.booleanOrNull ?: false,
+                                bingFallbackEnabled =
+                                    obj["bingFallbackEnabled"]?.jsonPrimitive?.booleanOrNull ?: false,
                             )
                         }
                     }

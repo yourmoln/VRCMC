@@ -195,6 +195,8 @@ object LocaleStringsZhHans : LocaleStrings {
     override val fallbackModelHint = "仅在主模型耗尽所有可重试次数后调用"
     override val fallbackRetryCount = "备用模型重试次数"
     override val fallbackRetryCountHint = "范围 0–10 次，默认 3 次"
+    override val enableBingFallback = "启用必应翻译兜底"
+    override val bingFallbackHint = "主模型及已启用的备用模型尝试失败后，自动调用一次免费必应翻译"
     override val translateBehaviorHint = "将原文和译文一起发送至 VRChat"
     override val advancedSettings = "高级请求设置"
     override val requestTimeout = "请求超时"

@@ -51,7 +51,7 @@ fun ApiPage(state: AppState, strings: LocaleStrings) {
                                         language to
                                             translateText(
                                                 provider,
-                                                config,
+                                                config.copy(bingFallbackEnabled = false),
                                                 language,
                                                 "Hello, how are you?",
                                             )

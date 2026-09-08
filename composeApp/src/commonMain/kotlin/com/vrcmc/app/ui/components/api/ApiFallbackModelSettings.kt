@@ -115,4 +115,23 @@ internal fun ApiFallbackModelSettings(
             )
         }
     }
+    if (provider.protocol != ProviderProtocol.MICROSOFT_EDGE_WEB) {
+        HorizontalDivider()
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Column(Modifier.weight(1f)) {
+                Text(strings.enableBingFallback)
+                Text(
+                    strings.bingFallbackHint,
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            }
+            Switch(
+                checked = config.bingFallbackEnabled,
+                onCheckedChange = { enabled ->
+                    onUpdate { old -> old.copy(bingFallbackEnabled = enabled) }
+                },
+            )
+        }
+    }
 }

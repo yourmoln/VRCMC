@@ -7,6 +7,8 @@ import io.ktor.client.request.*
 import io.ktor.client.request.forms.*
 import io.ktor.http.*
 import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.currentCoroutineContext
+import kotlinx.coroutines.ensureActive
 import kotlinx.serialization.json.*
 
 enum class TranslationFailureReason {
@@ -63,20 +65,17 @@ suspend fun translateText(
         )
     if (!isSupportedHttpEndpoint(config.baseUrl))
         return TranslationResult.Failure(reason = TranslationFailureReason.INVALID_BASE_URL)
-    return translateWithFallback(
+    return translateWithBingFallback(
+        provider = provider,
+        config = config,
         sourceText = text,
-        primaryModel = config.model,
-        retryCount = config.retryCount,
-        fallbackModel = config.fallbackModel.takeIf { config.fallbackEnabled }.orEmpty(),
-        fallbackRetryCount = config.fallbackRetryCount,
         onRetry = onRetry,
-    ) { model ->
-        val requestConfig = config.copy(model = model)
+    ) { requestProvider, requestConfig ->
         try {
-            when (provider.protocol) {
+            when (requestProvider.protocol) {
                 ProviderProtocol.OPENAI -> {
                     requestOpenAi(
-                            provider,
+                            requestProvider,
                             requestConfig,
                             targetLanguage,
                             text,
@@ -84,7 +83,7 @@ suspend fun translateText(
                         )
                 }
                 ProviderProtocol.ANTHROPIC ->
-                    requestAnthropic(provider, requestConfig, targetLanguage, text, onApiFailure)
+                    requestAnthropic(requestProvider, requestConfig, targetLanguage, text, onApiFailure)
                 ProviderProtocol.GOOGLE_WEB ->
                     requestGoogleWeb(requestConfig, targetLanguage, text, onApiFailure)
                 ProviderProtocol.MICROSOFT_EDGE_WEB ->
@@ -110,11 +109,56 @@ suspend fun translateText(
     }
 }
 
-internal fun ProviderConfig.totalRetryCount(): Int {
+internal fun ProviderConfig.totalRetryCount(provider: TranslationProvider): Int {
     val primaryRetries = retryCount.coerceIn(0, 10)
     val hasFallback =
         fallbackEnabled && fallbackModel.isNotBlank() && fallbackModel.trim() != model.trim()
-    return primaryRetries + if (hasFallback) fallbackRetryCount.coerceIn(0, 10) + 1 else 0
+    val modelFallbackAttempts = if (hasFallback) fallbackRetryCount.coerceIn(0, 10) + 1 else 0
+    val bingFallbackAttempts =
+        if (bingFallbackEnabled && provider.protocol != ProviderProtocol.MICROSOFT_EDGE_WEB) 1 else 0
+    return primaryRetries + modelFallbackAttempts + bingFallbackAttempts
+}
+
+internal suspend fun translateWithBingFallback(
+    provider: TranslationProvider,
+    config: ProviderConfig,
+    sourceText: String,
+    onRetry: (Int) -> Unit = {},
+    request: suspend (TranslationProvider, ProviderConfig) -> TranslationResult,
+): TranslationResult {
+    var lastRetryAttempt = 0
+    val result =
+        translateWithFallback(
+            sourceText = sourceText,
+            primaryModel = config.model,
+            retryCount = config.retryCount,
+            fallbackModel = config.fallbackModel.takeIf { config.fallbackEnabled }.orEmpty(),
+            fallbackRetryCount = config.fallbackRetryCount,
+            onRetry = { attempt ->
+                lastRetryAttempt = attempt
+                onRetry(attempt)
+            },
+        ) { model ->
+            request(provider, config.copy(model = model))
+        }
+    if (
+        result !is TranslationResult.Failure ||
+            !config.bingFallbackEnabled ||
+            provider.protocol == ProviderProtocol.MICROSOFT_EDGE_WEB
+    )
+        return result
+
+    currentCoroutineContext().ensureActive()
+    val bingProvider = providerById("microsoft_edge_web")
+    val bingConfig =
+        defaultProviderConfig(bingProvider).copy(
+            timeoutSeconds = config.timeoutSeconds,
+            retryCount = 0,
+        )
+    onRetry(lastRetryAttempt + 1)
+    return translateWithRetries(sourceText, retryCount = 0) {
+        request(bingProvider, bingConfig)
+    }
 }
 
 internal suspend fun translateWithFallback(

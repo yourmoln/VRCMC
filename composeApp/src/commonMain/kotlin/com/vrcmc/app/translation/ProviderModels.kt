@@ -42,6 +42,7 @@ data class ProviderConfig(
     val fallbackModel: String = "",
     val fallbackRetryCount: Int = 3,
     val fallbackEnabled: Boolean = false,
+    val bingFallbackEnabled: Boolean = false,
 )
 
 internal fun TranslationProvider.isConfigured(config: ProviderConfig): Boolean =

@@ -212,6 +212,7 @@ class TranslationProviderTest {
         assertEquals(5, restored.configs.getValue("deepseek").retryCount)
         assertEquals(3, restored.configs.getValue("deepseek").fallbackRetryCount)
         assertFalse(restored.configs.getValue("deepseek").fallbackEnabled)
+        assertFalse(restored.configs.getValue("deepseek").bingFallbackEnabled)
     }
 
     @Test
@@ -239,6 +240,28 @@ class TranslationProviderTest {
         assertEquals("deepseek-v4-pro", config.fallbackModel)
         assertEquals(3, config.fallbackRetryCount)
         assertFalse(config.fallbackEnabled)
+    }
+
+    @Test
+    fun bingFallbackDefaultsToDisabledForAllProviders() {
+        assertFalse(ProviderConfig().bingFallbackEnabled)
+        translationProviders.forEach { provider ->
+            assertFalse(defaultProviderConfig(provider).bingFallbackEnabled)
+        }
+    }
+
+    @Test
+    fun bingFallbackSettingsRoundTripIndependentlyOfFallbackModelsAndOtherProviders() {
+        val value =
+            StoredTranslationSettings(
+                configs =
+                    mapOf(
+                        "qianwen" to ProviderConfig(bingFallbackEnabled = true),
+                        "deepseek" to ProviderConfig(fallbackEnabled = true),
+                    )
+            )
+
+        assertEquals(value, storedTranslationSettingsFromJson(value.toJson()))
     }
 
     @Test

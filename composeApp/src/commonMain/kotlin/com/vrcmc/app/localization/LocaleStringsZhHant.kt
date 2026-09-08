@@ -139,6 +139,8 @@ object LocaleStringsZhHant : LocaleStrings {
     override val fallbackModelHint = "僅在主要模型用盡所有可重試次數後使用"
     override val fallbackRetryCount = "備用模型重試次數"
     override val fallbackRetryCountHint = "可重試 0–10 次；預設為 3 次"
+    override val enableBingFallback = "啟用 Bing 翻譯兜底"
+    override val bingFallbackHint = "主要模型及已啟用的備用模型嘗試失敗後，自動呼叫一次免費 Bing 翻譯"
     override val translateBehaviorHint = "將原文與譯文一起傳送至 VRChat"
     override val advancedSettings = "進階要求設定"
     override val requestTimeout = "要求逾時"
