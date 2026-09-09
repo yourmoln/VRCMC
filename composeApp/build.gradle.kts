@@ -25,6 +25,45 @@ val stripKuromojiDictionary by tasks.registering(Zip::class) {
 val kuromojiIpadicRuntime =
     files(stripKuromojiDictionary.flatMap { it.archiveFile }).builtBy(stripKuromojiDictionary)
 
+val isWindowsX64 = providers.systemProperty("os.name").get().startsWith("Windows", ignoreCase = true) &&
+    providers.systemProperty("os.arch").get().lowercase() in setOf("amd64", "x86_64")
+
+// These two dependencies have no transitive runtime dependencies. Keep their Java
+// classes, JNI resource paths and notices, but omit other platforms and debug symbols.
+// Use the original artifacts on other hosts so desktop development remains portable.
+fun desktopNativeRuntime(
+    taskName: String,
+    dependency: Provider<MinimalExternalModuleDependency>,
+    vararg excludedPaths: String,
+): Any {
+    if (!isWindowsX64) return dependency
+    val source = configurations.create("${taskName}Source") {
+        isCanBeConsumed = false
+        isTransitive = false
+    }
+    dependencies.add(source.name, dependency)
+    val archive = source.elements.map { it.single().asFile }
+    val stripped = tasks.register<Zip>(taskName) {
+        archiveFileName.set(archive.map { "${it.nameWithoutExtension}-windows-x64.jar" })
+        destinationDirectory.set(layout.buildDirectory.dir("generated/windows-native"))
+        isPreserveFileTimestamps = false
+        isReproducibleFileOrder = true
+        from(archive.map(::zipTree)) { exclude(*excludedPaths) }
+    }
+    return files(stripped.flatMap { it.archiveFile }).builtBy(stripped)
+}
+
+val desktopOnnxRuntime = desktopNativeRuntime(
+    "stripOnnxRuntimeNatives", libs.onnxruntime,
+    "ai/onnxruntime/native/linux-*/**",
+    "ai/onnxruntime/native/osx-*/**",
+    "ai/onnxruntime/native/**/*.pdb",
+)
+val desktopWhisperRuntime = desktopNativeRuntime(
+    "stripWhisperNatives", libs.whisper.jni,
+    "debian-*/**", "macos-*/**",
+)
+
 kotlin { jvm("desktop"); androidTarget(); iosX64(); iosArm64(); iosSimulatorArm64(); sourceSets {
     commonMain.dependencies {
         implementation(compose.runtime); implementation(compose.foundation); implementation(compose.material3); implementation(compose.materialIconsExtended); implementation(compose.ui); implementation(compose.components.resources)
@@ -37,7 +76,7 @@ kotlin { jvm("desktop"); androidTarget(); iosX64(); iosArm64(); iosSimulatorArm6
     commonTest.dependencies { implementation(kotlin("test")) }
     named("desktopMain") {
         kotlin.srcDir("src/jvmMain/kotlin")
-        dependencies { implementation(libs.jlayer); implementation(libs.onnxruntime); implementation(libs.whisper.jni) }
+        dependencies { implementation(libs.jlayer); implementation(desktopOnnxRuntime); implementation(desktopWhisperRuntime) }
         dependencies {
             implementation(libs.lwjgl.core)
             implementation(libs.lwjgl.openvr)
