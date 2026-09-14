@@ -1,6 +1,5 @@
 package com.vrcmc.app
 
-import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
@@ -36,10 +35,9 @@ internal fun MessageBubble(
                     modifier =
                         Modifier.widthIn(max = 320.dp)
                             .wrapContentWidth()
-                            .combinedClickable(
+                            .messageActionsTrigger(
                                 enabled = !message.isLoading,
-                                onClick = {},
-                                onLongClick = { menuExpanded = true },
+                                onOpen = { menuExpanded = true },
                             ),
                     shape = RoundedCornerShape(8.dp),
                     color = bubbleColor,
