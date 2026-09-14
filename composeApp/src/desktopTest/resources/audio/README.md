@@ -8,7 +8,7 @@ Text: “Testing speech detection. Only spoken words should be translated.”
 
 The service smoke test is explicitly enabled with `VRCMC_LISTENING_API_SMOKE=1`; it uses the locally configured ASR/translation services and sends only this known fixture. Hardware loopback tests require `VRCMC_LOOPBACK_SMOKE=1` and play the English fixture locally. Normal tests use the actual VAD model with fake service functions and never access cloud services.
 
-`VRCMC_LOCAL_ASR_INTEGRATION_TEST=1` enables `LocalWhisperIntegrationTest`: it downloads and verifies Whisper Small into `composeApp/build/local-asr-test`, then recognizes both fixtures locally and checks automatic language detection. It does not read API credentials or upload audio.
+`VRCMC_LOCAL_ASR_INTEGRATION_TEST=1` enables `LocalWhisperIntegrationTest`: it downloads and verifies every selectable local Whisper model into `composeApp/build/local-asr-test`, then recognizes both fixtures locally and checks automatic language detection with each model. It does not read API credentials or upload audio.
 
 `VRCMC_LOCAL_ASR_QUALITY_TEST=1` enables the three-language conversation benchmark in `LocalWhisperQualityTest`. Nine fixed Chinese/Japanese/English sentences use six Edge TTS voices (the text is sent only to Edge TTS to generate test fixtures). Clean, 20 dB SNR noise and automatic-language variants are recognized locally. Cached audio and per-case CER/WER/latency results stay in `composeApp/build/local-asr-test/quality-report.md`. Accuracy gates are at most 20% error per case and 10% mean per language/scenario; latency is recorded separately because it depends on the host CPU and concurrent workload.
 

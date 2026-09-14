@@ -15,15 +15,36 @@ import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.currentCoroutineContext
 import kotlinx.coroutines.ensureActive
 
-internal const val whisperModelSize = 190_085_487L
-internal const val whisperModelSha256 = "ae85e4a935d7a567bd102fe55afc16bb595bdb618e11b2fc7591bc08120411bb"
 private const val whisperModelRevision = "5359861c739e955e79d9a303bcbc70fb988958b1"
+
+private data class LocalWhisperModelArtifact(
+    val fileName: String,
+    val size: Long,
+    val sha256: String,
+)
+
+private fun LocalWhisperModel.artifact(): LocalWhisperModelArtifact = when (this) {
+    LocalWhisperModel.SMALL_Q5_1 -> LocalWhisperModelArtifact(
+        fileName = "ggml-small-q5_1.bin",
+        size = 190_085_487L,
+        sha256 = "ae85e4a935d7a567bd102fe55afc16bb595bdb618e11b2fc7591bc08120411bb",
+    )
+    LocalWhisperModel.MEDIUM_Q5_0 -> LocalWhisperModelArtifact(
+        fileName = "ggml-medium-q5_0.bin",
+        size = 539_212_467L,
+        sha256 = "19fea4b380c3a618ec4723c3eef2eb785ffba0d0538cf43f8f235e7b3b34220f",
+    )
+}
+
+internal fun LocalWhisperModel.modelFileName(): String = artifact().fileName
+internal fun LocalWhisperModel.modelSize(): Long = artifact().size
+internal fun LocalWhisperModel.modelSha256(): String = artifact().sha256
 
 // Call on Dispatchers.IO. A failed or cancelled download must never replace a valid model.
 internal class LocalWhisperModelStore(
     val path: Path,
-    private val expectedSize: Long = whisperModelSize,
-    private val expectedHash: String = whisperModelSha256,
+    internal val expectedSize: Long = LocalWhisperModel.SMALL_Q5_1.modelSize(),
+    private val expectedHash: String = LocalWhisperModel.SMALL_Q5_1.modelSha256(),
 ) {
     suspend fun isValid(): Boolean {
         if (!Files.isRegularFile(path) || Files.size(path) != expectedSize) return false
@@ -79,7 +100,11 @@ internal class LocalWhisperModelStore(
     }
 }
 
-internal suspend fun downloadWhisperModel(store: LocalWhisperModelStore, onProgress: (Long, Long) -> Unit) {
+internal suspend fun downloadWhisperModel(
+    model: LocalWhisperModel,
+    store: LocalWhisperModelStore,
+    onProgress: (Long, Long) -> Unit,
+) {
     val client = createVrcmcHttpClient {
         install(HttpTimeout) {
             connectTimeoutMillis = 15_000
@@ -92,7 +117,9 @@ internal suspend fun downloadWhisperModel(store: LocalWhisperModelStore, onProgr
         // Both sources serve the same pinned file; SHA-256 is checked before it can be loaded.
         for (host in listOf("huggingface.co", "hf-mirror.com")) {
             try {
-                client.prepareGet("https://$host/ggerganov/whisper.cpp/resolve/$whisperModelRevision/ggml-small-q5_1.bin").execute { response ->
+                client.prepareGet(
+                    "https://$host/ggerganov/whisper.cpp/resolve/$whisperModelRevision/${model.modelFileName()}",
+                ).execute { response ->
                     check(response.status.isSuccess()) { "Model server returned HTTP ${response.status.value}" }
                     store.install(response.bodyAsChannel(), onProgress)
                 }

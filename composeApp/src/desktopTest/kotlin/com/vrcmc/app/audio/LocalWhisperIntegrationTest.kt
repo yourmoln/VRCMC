@@ -9,26 +9,37 @@ import org.junit.Assume.assumeTrue
 
 class LocalWhisperIntegrationTest {
     @Test
-    fun downloadsVerifiesLoadsAndRecognizesEnglishAndChineseOffline() = runBlocking {
+    fun downloadsVerifiesLoadsAndRecognizesAllModelsOffline() = runBlocking {
         assumeTrue(System.getenv("VRCMC_LOCAL_ASR_INTEGRATION_TEST") == "1")
         assumeTrue(localWhisperSupported())
-        val cache = Path.of("build", "local-asr-test", "ggml-small-q5_1.bin").toAbsolutePath()
-        val recognizer = DesktopLocalSpeechRecognizer(LocalWhisperModelStore(cache))
-        try {
-            assertTrue(recognizer.downloadModel(), recognizer.status.value.toString())
-            assertTrue(recognizer.prepare(), recognizer.status.value.toString())
-            for ((fixture, language, expected) in listOf(
-                Triple("speech.wav", "en", "speech"),
-                Triple("speech-zh.wav", "zh", "语音"),
-                Triple("speech.wav", "auto", "speech"),
-            )) {
-                val wav = checkNotNull(javaClass.getResourceAsStream("/audio/$fixture")).use { it.readBytes() }
-                val result = assertIs<VoiceTranscriptionResult.Success>(recognizer.transcribe(wav, language))
-                println("Local Whisper ($language): ${result.text}")
-                assertTrue(result.text.contains(expected, ignoreCase = true), result.text)
+        val root = Path.of("build", "local-asr-test").toAbsolutePath()
+        for (model in LocalWhisperModel.entries) {
+            val store = LocalWhisperModelStore(
+                path = root.resolve(model.modelFileName()),
+                expectedSize = model.modelSize(),
+                expectedHash = model.modelSha256(),
+            )
+            val recognizer = DesktopLocalSpeechRecognizer(
+                stores = mapOf(model to store),
+            )
+            try {
+                assertTrue(recognizer.downloadModel(model), recognizer.status(model).value.toString())
+                assertTrue(recognizer.prepare(model), recognizer.status(model).value.toString())
+                for ((fixture, language, expected) in listOf(
+                    Triple("speech.wav", "en", "speech"),
+                    Triple("speech-zh.wav", "zh", "语音"),
+                    Triple("speech.wav", "auto", "speech"),
+                )) {
+                    val wav = checkNotNull(javaClass.getResourceAsStream("/audio/$fixture")).use { it.readBytes() }
+                    val result = assertIs<VoiceTranscriptionResult.Success>(
+                        recognizer.transcribe(model, wav, language),
+                    )
+                    println("${model.displayName} ($language): ${result.text}")
+                    assertTrue(result.text.contains(expected, ignoreCase = true), result.text)
+                }
+            } finally {
+                recognizer.release()
             }
-        } finally {
-            recognizer.release()
         }
     }
 }

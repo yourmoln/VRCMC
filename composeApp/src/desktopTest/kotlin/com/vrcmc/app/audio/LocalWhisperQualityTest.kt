@@ -24,6 +24,7 @@ import org.junit.Assume.assumeTrue
  */
 class LocalWhisperQualityTest {
     private data class Utterance(val id: String, val language: String, val voice: String, val text: String)
+    private val model = LocalWhisperModel.SMALL_Q5_1
     private val utterances = listOf(
         Utterance("zh-room", "zh", "zh-CN-XiaoxiaoNeural", "你好，我刚刚加入这个房间，可以听到我的声音吗？"),
         Utterance("zh-controller", "zh", "zh-CN-YunxiNeural", "请等我一下，我的手柄没电了，需要重新连接。"),
@@ -49,8 +50,8 @@ class LocalWhisperQualityTest {
         val errors = mutableListOf<Pair<String, Double>>()
         val failures = mutableListOf<String>()
         try {
-            assertTrue(recognizer.downloadModel(), recognizer.status.value.toString())
-            assertTrue(recognizer.prepare(), recognizer.status.value.toString())
+            assertTrue(recognizer.downloadModel(model), recognizer.status(model).value.toString())
+            assertTrue(recognizer.prepare(model), recognizer.status(model).value.toString())
             for (utterance in utterances) {
                 val mp3 = root.resolve("${utterance.id}.mp3")
                 if (!Files.isRegularFile(mp3)) Files.write(mp3, synthesizeFixture(utterance))
@@ -63,7 +64,9 @@ class LocalWhisperQualityTest {
                 for ((variant, audio) in variants) {
                     val language = if (variant == "auto") "auto" else utterance.language
                     val started = System.nanoTime()
-                    val result = assertIs<VoiceTranscriptionResult.Success>(recognizer.transcribe(toWav(audio), language))
+                    val result = assertIs<VoiceTranscriptionResult.Success>(
+                        recognizer.transcribe(model, toWav(audio), language),
+                    )
                     val elapsed = (System.nanoTime() - started) / 1_000_000_000.0
                     val duration = audio.size / 16_000.0
                     val rate = errorRate(utterance.text, result.text, utterance.language)
@@ -102,8 +105,8 @@ class LocalWhisperQualityTest {
         val failures = mutableListOf<String>()
         val chunkedLanguages = mutableSetOf<String>()
         try {
-            assertTrue(recognizer.downloadModel(), recognizer.status.value.toString())
-            assertTrue(recognizer.prepare(), recognizer.status.value.toString())
+            assertTrue(recognizer.downloadModel(model), recognizer.status(model).value.toString())
+            assertTrue(recognizer.prepare(model), recognizer.status(model).value.toString())
             for (item in manifest) {
                 val obj = item.jsonObject
                 val language = obj.getValue("language").jsonPrimitive.content
@@ -113,7 +116,9 @@ class LocalWhisperQualityTest {
                 val modes = if (chunkedLanguages.add(language)) listOf("whole", "chunks") else listOf("whole")
                 for (mode in modes) {
                     val started = System.nanoTime()
-                    val actual = if (mode == "whole") assertIs<VoiceTranscriptionResult.Success>(recognizer.transcribe(wav, language)).text
+                    val actual = if (mode == "whole") assertIs<VoiceTranscriptionResult.Success>(
+                        recognizer.transcribe(model, wav, language),
+                    ).text
                         else recognizeChunks(recognizer, wav, language)
                     val elapsed = (System.nanoTime() - started) / 1_000_000_000.0
                     val rate = errorRate(expected, actual, language)
@@ -157,7 +162,9 @@ class LocalWhisperQualityTest {
         val completed = mutableListOf<String>()
         for (chunk in chunks) {
             chunk.wav?.let {
-                val text = assertIs<VoiceTranscriptionResult.Success>(recognizer.transcribe(it, language)).text
+                val text = assertIs<VoiceTranscriptionResult.Success>(
+                    recognizer.transcribe(model, it, language),
+                ).text
                 completed += assembler.append(text, chunk.overlapSamples > 0)
             }
             if (chunk.isFinal) completed += assembler.finish()

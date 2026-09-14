@@ -11,12 +11,25 @@ class VoiceInputTest {
     @Test
     fun localProviderRoundTripsAndOldSettingsKeepQwen() {
         val config = VoiceInputConfig(enabled = true, provider = VoiceInputProvider.LOCAL_WHISPER,
+            localWhisperModel = LocalWhisperModel.MEDIUM_Q5_0,
             apiKey = "retained-secret", model = "my-qwen-model", region = "custom")
         val json = StoredTranslationSettings(voiceInput = config).toJson()
         assertFalse(json.contains("retained-secret"))
+        assertTrue(json.contains("medium-q5_0"))
         assertEquals(config.copy(apiKey = ""), storedTranslationSettingsFromJson(json).voiceInput)
         assertEquals(VoiceInputProvider.QWEN, storedTranslationSettingsFromJson("""{"voiceInput":{"enabled":true}}""").voiceInput.provider)
         assertEquals(VoiceInputProvider.QWEN, storedTranslationSettingsFromJson("""{"voiceInput":{"provider":"unknown"}}""").voiceInput.provider)
+        assertEquals(
+            LocalWhisperModel.SMALL_Q5_1,
+            storedTranslationSettingsFromJson("""{"voiceInput":{"provider":"LOCAL_WHISPER"}}""")
+                .voiceInput.localWhisperModel,
+        )
+        assertEquals(
+            LocalWhisperModel.SMALL_Q5_1,
+            storedTranslationSettingsFromJson(
+                """{"voiceInput":{"provider":"LOCAL_WHISPER","localWhisperModel":"unknown"}}""",
+            ).voiceInput.localWhisperModel,
+        )
     }
 
     @Test

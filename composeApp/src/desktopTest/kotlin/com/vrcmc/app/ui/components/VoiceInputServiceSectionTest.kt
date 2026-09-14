@@ -41,12 +41,46 @@ class VoiceInputServiceSectionTest {
         compose.onNodeWithText(strings.localWhisper).performClick()
         compose.onNodeWithText(strings.qwenApiKey).assertDoesNotExist()
         compose.onNodeWithText("Base URL").assertDoesNotExist()
-        compose.onNodeWithText("Whisper Small · 190 MB").assertIsDisplayed()
+        compose.onNodeWithText(LocalWhisperModel.SMALL_Q5_1.displayLabel).assertIsDisplayed()
         compose.runOnIdle { assertEquals(original.copy(provider = VoiceInputProvider.LOCAL_WHISPER), config) }
         compose.onNodeWithText(strings.voiceInputProvider).performClick()
         compose.onNodeWithText("Qwen3-ASR").performClick()
         compose.onNodeWithText(strings.qwenApiKey).assertIsDisplayed()
         compose.runOnIdle { assertEquals(original, config) }
+    }
+
+    @Test
+    fun selectingMediumUpdatesConfigShowsSizeAndDownloadsMedium() {
+        val recognizer = DownloadTestRecognizer()
+        var config by mutableStateOf(
+            VoiceInputConfig(enabled = true, provider = VoiceInputProvider.LOCAL_WHISPER),
+        )
+        var requestedModel: LocalWhisperModel? = null
+        compose.setContent {
+            MaterialTheme {
+                Column(Modifier.width(480.dp).verticalScroll(rememberScrollState())) {
+                    VoiceInputServiceSection(
+                        config = config,
+                        strings = strings,
+                        onUpdate = { config = it(config) },
+                        onDownloadLocalModel = { requestedModel = it },
+                        localRecognizer = recognizer,
+                    )
+                }
+            }
+        }
+
+        compose.onNodeWithText(LocalWhisperModel.SMALL_Q5_1.displayLabel).performClick()
+        compose.onNodeWithText(LocalWhisperModel.MEDIUM_Q5_0.displayLabel).performClick()
+
+        compose.onNodeWithText("Whisper Medium Q5_0 · 539 MB").assertIsDisplayed()
+        compose.runOnIdle {
+            assertEquals(LocalWhisperModel.MEDIUM_Q5_0, config.localWhisperModel)
+        }
+        compose.onNodeWithText(strings.localModelDownload).performClick()
+        compose.runOnIdle {
+            assertEquals(LocalWhisperModel.MEDIUM_Q5_0, requestedModel)
+        }
     }
 
     @Test
@@ -58,7 +92,15 @@ class VoiceInputServiceSectionTest {
             MaterialTheme {
                 Surface {
                     Column(Modifier.width(480.dp).padding(16.dp)) {
-                        LocalSpeechModelSettings(status, true, strings, { downloads++ }, { cancellations++ })
+                        LocalSpeechModelSettings(
+                            model = LocalWhisperModel.SMALL_Q5_1,
+                            status = status,
+                            supported = true,
+                            strings = strings,
+                            onModelChange = {},
+                            onDownload = { downloads++ },
+                            onCancel = { cancellations++ },
+                        )
                     }
                 }
             }
@@ -70,6 +112,7 @@ class VoiceInputServiceSectionTest {
             status = LocalSpeechModelStatus.Downloading(95_000_000, 190_000_000)
         }
         compose.onNodeWithText("正在下载模型 50% · 95 / 190 MB").assertIsDisplayed()
+        compose.onNodeWithText(LocalWhisperModel.SMALL_Q5_1.displayLabel).assertIsNotEnabled()
         compose.onNodeWithText(strings.localModelCancelDownload).performClick()
         compose.runOnIdle { assertEquals(1, cancellations) }
         val output = File("build/test-screenshots/local-speech-model.png")
@@ -132,12 +175,16 @@ class VoiceInputServiceSectionTest {
 
     private class DownloadTestRecognizer : LocalSpeechRecognizer by UnsupportedLocalSpeechRecognizer {
         override val supported = true
-        override val status = MutableStateFlow<LocalSpeechModelStatus>(LocalSpeechModelStatus.Missing)
+        private val statuses = LocalWhisperModel.entries.associateWith {
+            MutableStateFlow<LocalSpeechModelStatus>(LocalSpeechModelStatus.Missing)
+        }
         var downloads = 0
         var cancellations = 0
-        override suspend fun downloadModel(): Boolean {
+        override fun status(model: LocalWhisperModel) = statuses.getValue(model)
+        override suspend fun downloadModel(model: LocalWhisperModel): Boolean {
             downloads++
-            status.value = LocalSpeechModelStatus.Downloading(95_000_000, 190_000_000)
+            val status = statuses.getValue(model)
+            status.value = LocalSpeechModelStatus.Downloading(95_000_000, model.downloadSizeMb * 1_000_000L)
             try {
                 awaitCancellation()
             } finally {

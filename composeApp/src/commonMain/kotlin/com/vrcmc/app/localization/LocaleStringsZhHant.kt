@@ -268,7 +268,7 @@ object LocaleStringsZhHant : LocaleStrings {
     override val qwenVoiceInputHint = "使用 Qwen3-ASR 將錄音轉換為聊天文字"
     override val voiceInputProvider = "辨識服務"
     override val localWhisper = "本機 Whisper"
-    override val localModelHint = "手動下載約 190 MB 的多語言模型後，可按句離線辨識，無需 API Key。切換頁面、辨識服務或關閉語音輸入不會中斷下載，點擊「取消下載」可停止。翻譯仍使用已設定的翻譯服務。指定辨識語言可降低延遲。"
+    override val localModelHint = "手動下載所選多語言模型後，可按句離線辨識，無需 API Key。切換頁面、辨識服務或關閉語音輸入不會中斷下載，點擊「取消下載」可停止。翻譯仍使用已設定的翻譯服務。指定辨識語言可降低延遲。"
     override val localModelDownload = "下載模型"
     override val localModelCancelDownload = "取消下載"
     override val localModelDownloaded = "模型已下載，啟用本機 Whisper 後即可辨識"

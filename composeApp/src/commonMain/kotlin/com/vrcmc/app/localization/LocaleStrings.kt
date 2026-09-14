@@ -289,7 +289,7 @@ interface LocaleStrings {
     val qwenVoiceInputHint: String get() = "使用 Qwen3-ASR 将录音转换为聊天文字"
     val voiceInputProvider: String get() = "识别服务"
     val localWhisper: String get() = "本地 Whisper"
-    val localModelHint: String get() = "手动下载约 190 MB 的多语言模型后，可按句离线识别，无需 API Key。切换页面、识别服务或关闭语音输入不会中断下载，点击“取消下载”可停止。翻译仍使用已配置的翻译服务。指定识别语言可降低延迟。"
+    val localModelHint: String get() = "手动下载所选多语言模型后，可按句离线识别，无需 API Key。切换页面、识别服务或关闭语音输入不会中断下载，点击“取消下载”可停止。翻译仍使用已配置的翻译服务。指定识别语言可降低延迟。"
     val localModelDownload: String get() = "下载模型"
     val localModelCancelDownload: String get() = "取消下载"
     val localModelDownloaded: String get() = "模型已下载，启用本地 Whisper 后即可识别"

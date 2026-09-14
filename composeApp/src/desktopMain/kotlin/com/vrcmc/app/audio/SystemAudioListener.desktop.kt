@@ -79,7 +79,10 @@ internal fun SystemAudioSubtitleWindow(
     val config = languageConfig.normalized()
     // Appearance changes must not cancel capture or clear completed captions.
     val listeningSettings = settings.withLanguages(config)
-    val localModelStatus by localSpeechRecognizer.status.collectAsState()
+    val localModelStatusFlow = remember(settings.voice.localWhisperModel) {
+        localSpeechRecognizer.status(settings.voice.localWhisperModel)
+    }
+    val localModelStatus by localModelStatusFlow.collectAsState()
     val localModelReady = settings.voice.provider != VoiceInputProvider.LOCAL_WHISPER ||
         localModelStatus == LocalSpeechModelStatus.Ready
     val windowState = rememberWindowState(width = 360.dp, height = 480.dp, position = WindowPosition(24.dp, 24.dp))

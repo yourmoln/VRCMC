@@ -19,8 +19,8 @@ import kotlinx.coroutines.launch
 fun ApiPage(
     state: AppState,
     strings: LocaleStrings,
-    onDownloadLocalModel: () -> Unit,
-    onCancelLocalModel: () -> Unit,
+    onDownloadLocalModel: (LocalWhisperModel) -> Unit,
+    onCancelLocalModel: (LocalWhisperModel) -> Unit,
 ) {
     val provider = state.provider
     val config = state.providerConfig

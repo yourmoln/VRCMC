@@ -30,6 +30,7 @@ VRCMC is a VRChat Chatbox companion built with Kotlin Multiplatform and Compose 
 - **Bilingual output**: Select one or two target languages and customize the display order of the original text and translations.
 - **Resilient requests**: Configure timeouts, automatic retries, fallback models, custom headers, and streaming responses.
 - **Interpretation modes**: Use voice input from your system keyboard and send content based on the VRChat microphone state.
+- **Local speech recognition (Windows)**: Explicitly download and select Whisper Small Q5_1 (190 MB) or the more accurate, slower Medium Q5_0 (539 MB). Each model has an independent cache; inference runs locally on x64 AVX2 CPUs without an ASR API key.
 - **Local experience**: Chat history, device configurations, and error logs are stored locally, with light, dark, and multilingual UI support.
 
 ## Translation Services

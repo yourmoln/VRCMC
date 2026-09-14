@@ -27,12 +27,15 @@ internal fun VoiceInputServiceSection(
     config: VoiceInputConfig,
     strings: LocaleStrings,
     onUpdate: ((VoiceInputConfig) -> VoiceInputConfig) -> Unit,
-    onDownloadLocalModel: () -> Unit = {},
-    onCancelLocalModel: () -> Unit = {},
+    onDownloadLocalModel: (LocalWhisperModel) -> Unit = {},
+    onCancelLocalModel: (LocalWhisperModel) -> Unit = {},
     localRecognizer: LocalSpeechRecognizer = localSpeechRecognizer,
 ) {
     var providerMenu by remember { mutableStateOf(false) }
-    val localModelStatus by localRecognizer.status.collectAsState()
+    val localModelStatusFlow = remember(localRecognizer, config.localWhisperModel) {
+        localRecognizer.status(config.localWhisperModel)
+    }
+    val localModelStatus by localModelStatusFlow.collectAsState()
     val availableProviders = if (localRecognizer.supported) VoiceInputProvider.entries else listOf(VoiceInputProvider.QWEN)
     val showLocalModel = localRecognizer.supported && (
         config.provider == VoiceInputProvider.LOCAL_WHISPER ||
@@ -40,7 +43,7 @@ internal fun VoiceInputServiceSection(
         )
     var showKey by remember { mutableStateOf(false) }
     var regionMenu by remember { mutableStateOf(false) }
-    var modelMenu by remember { mutableStateOf(false) }
+    var qwenModelMenu by remember { mutableStateOf(false) }
     var languageMenu by remember { mutableStateOf(false) }
     var microphoneMenu by remember { mutableStateOf(false) }
     var advanced by remember { mutableStateOf(false) }
@@ -64,7 +67,15 @@ internal fun VoiceInputServiceSection(
         if (!config.enabled) {
             if (showLocalModel) {
                 HorizontalDivider()
-                LocalSpeechModelSettings(localModelStatus, localRecognizer.supported, strings, onDownloadLocalModel, onCancelLocalModel)
+                LocalSpeechModelSettings(
+                    model = config.localWhisperModel,
+                    status = localModelStatus,
+                    supported = localRecognizer.supported,
+                    strings = strings,
+                    onModelChange = { model -> onUpdate { it.copy(localWhisperModel = model) } },
+                    onDownload = { onDownloadLocalModel(config.localWhisperModel) },
+                    onCancel = { onCancelLocalModel(config.localWhisperModel) },
+                )
             }
             return@SettingsCard
         }
@@ -99,7 +110,15 @@ internal fun VoiceInputServiceSection(
             }
         }
         if (showLocalModel) {
-            LocalSpeechModelSettings(localModelStatus, localRecognizer.supported, strings, onDownloadLocalModel, onCancelLocalModel)
+            LocalSpeechModelSettings(
+                model = config.localWhisperModel,
+                status = localModelStatus,
+                supported = localRecognizer.supported,
+                strings = strings,
+                onModelChange = { model -> onUpdate { it.copy(localWhisperModel = model) } },
+                onDownload = { onDownloadLocalModel(config.localWhisperModel) },
+                onCancel = { onCancelLocalModel(config.localWhisperModel) },
+            )
         }
         if (config.provider == VoiceInputProvider.QWEN) {
             OutlinedTextField(
@@ -176,16 +195,16 @@ internal fun VoiceInputServiceSection(
                     modifier = Modifier.fillMaxWidth(),
                     singleLine = true,
                     label = { Text(strings.qwenModel) },
-                    trailingIcon = { IconButton({ modelMenu = true }) { Icon(Icons.Default.ArrowDropDown, null) } },
+                    trailingIcon = { IconButton({ qwenModelMenu = true }) { Icon(Icons.Default.ArrowDropDown, null) } },
                     isError = config.model.isBlank(),
                     shape = MaterialTheme.shapes.large,
                 )
-                DropdownMenu(modelMenu, { modelMenu = false }) {
+                DropdownMenu(qwenModelMenu, { qwenModelMenu = false }) {
                     listOf("qwen3-asr-flash-2026-02-10", "qwen3-asr-flash").forEach { model ->
                         DropdownMenuItem(
                             text = { Text(model) },
                             leadingIcon = { if (model == config.model) Icon(Icons.Default.Check, null) },
-                            onClick = { onUpdate { it.copy(model = model) }; modelMenu = false },
+                            onClick = { onUpdate { it.copy(model = model) }; qwenModelMenu = false },
                         )
                     }
                 }
@@ -326,14 +345,39 @@ internal fun VoiceInputServiceSection(
 
 @Composable
 internal fun LocalSpeechModelSettings(
+    model: LocalWhisperModel,
     status: LocalSpeechModelStatus,
     supported: Boolean,
     strings: LocaleStrings,
+    onModelChange: (LocalWhisperModel) -> Unit,
     onDownload: () -> Unit,
     onCancel: () -> Unit,
 ) {
+    var modelMenu by remember { mutableStateOf(false) }
     Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-        Text("Whisper Small · 190 MB", style = MaterialTheme.typography.titleSmall)
+        Box {
+            OutlinedButton(
+                onClick = { modelMenu = true },
+                enabled = supported && status !is LocalSpeechModelStatus.Downloading,
+                modifier = Modifier.fillMaxWidth().heightIn(min = 52.dp),
+                shape = MaterialTheme.shapes.large,
+            ) {
+                Text(model.displayLabel, Modifier.weight(1f))
+                Icon(Icons.Default.ArrowDropDown, null)
+            }
+            DropdownMenu(modelMenu, { modelMenu = false }) {
+                LocalWhisperModel.entries.forEach { option ->
+                    DropdownMenuItem(
+                        text = { Text(option.displayLabel) },
+                        leadingIcon = { if (option == model) Icon(Icons.Default.Check, null) },
+                        onClick = {
+                            onModelChange(option)
+                            modelMenu = false
+                        },
+                    )
+                }
+            }
+        }
         Text(strings.localModelHint, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
         if (!supported) {
             Text(strings.localModelUnsupported, color = MaterialTheme.colorScheme.error)

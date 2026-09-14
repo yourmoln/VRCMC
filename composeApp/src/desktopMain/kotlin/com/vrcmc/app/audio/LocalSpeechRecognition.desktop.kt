@@ -22,14 +22,31 @@ import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
 
 internal actual val localSpeechRecognizer: LocalSpeechRecognizer by lazy {
-    DesktopLocalSpeechRecognizer(LocalWhisperModelStore(localWhisperModelPath()))
+    DesktopLocalSpeechRecognizer(
+        stores = LocalWhisperModel.entries.associateWith { model ->
+            LocalWhisperModelStore(
+                path = localWhisperModelPath(model),
+                expectedSize = model.modelSize(),
+                expectedHash = model.modelSha256(),
+            )
+        },
+    )
 }
 
-private fun localWhisperModelPath(): Path =
-    System.getProperty("vrcmc.whisperModel.path")?.takeIf(String::isNotBlank)?.let(Path::of)
-        ?: (System.getenv("LOCALAPPDATA")?.takeIf(String::isNotBlank)?.let { Path.of(it, "VRCMC") }
-            ?: Path.of(System.getProperty("user.home"), ".vrcmc"))
-            .resolve("models").resolve("whisper-small").resolve("ggml-small-q5_1.bin")
+private fun localWhisperModelPath(model: LocalWhisperModel): Path {
+    val overrideProperty = when (model) {
+        LocalWhisperModel.SMALL_Q5_1 -> "vrcmc.whisperModel.path"
+        LocalWhisperModel.MEDIUM_Q5_0 -> "vrcmc.whisperMediumModel.path"
+    }
+    System.getProperty(overrideProperty)?.takeIf(String::isNotBlank)?.let { return Path.of(it) }
+    val root = System.getenv("LOCALAPPDATA")?.takeIf(String::isNotBlank)?.let { Path.of(it, "VRCMC") }
+        ?: Path.of(System.getProperty("user.home"), ".vrcmc")
+    val directory = when (model) {
+        LocalWhisperModel.SMALL_Q5_1 -> "whisper-small"
+        LocalWhisperModel.MEDIUM_Q5_0 -> "whisper-medium"
+    }
+    return root.resolve("models").resolve(directory).resolve(model.modelFileName())
+}
 
 internal fun localWhisperSupported(): Boolean =
     Platform.isWindows() && Platform.is64Bit() && !Platform.isARM() &&
@@ -41,47 +58,81 @@ internal interface LocalWhisperEngine : AutoCloseable {
 }
 
 internal class DesktopLocalSpeechRecognizer(
-    private val store: LocalWhisperModelStore,
+    private val stores: Map<LocalWhisperModel, LocalWhisperModelStore>,
     override val supported: Boolean = localWhisperSupported(),
-    private val download: suspend (LocalWhisperModelStore, (Long, Long) -> Unit) -> Unit = ::downloadWhisperModel,
+    private val download: suspend (
+        LocalWhisperModel,
+        LocalWhisperModelStore,
+        (Long, Long) -> Unit,
+    ) -> Unit = ::downloadWhisperModel,
     private val createEngine: (Path) -> LocalWhisperEngine = ::WhisperJniEngine,
 ) : LocalSpeechRecognizer {
+    internal constructor(
+        store: LocalWhisperModelStore,
+        supported: Boolean = localWhisperSupported(),
+        download: suspend (LocalWhisperModelStore, (Long, Long) -> Unit) -> Unit = { cache, progress ->
+            downloadWhisperModel(LocalWhisperModel.SMALL_Q5_1, cache, progress)
+        },
+        createEngine: (Path) -> LocalWhisperEngine = ::WhisperJniEngine,
+    ) : this(
+        stores = mapOf(LocalWhisperModel.SMALL_Q5_1 to store),
+        supported = supported,
+        download = { _, cache, progress -> download(cache, progress) },
+        createEngine = createEngine,
+    )
+
     // Loading, inference and disposal share a lock: microphone and system audio may overlap.
     private val mutex = Mutex()
-    private val downloadMutex = Mutex()
-    private val mutableStatus = MutableStateFlow<LocalSpeechModelStatus>(LocalSpeechModelStatus.Missing)
-    override val status = mutableStatus.asStateFlow()
+    private val downloadMutexes = LocalWhisperModel.entries.associateWith { Mutex() }
+    private val statuses = LocalWhisperModel.entries.associateWith {
+        MutableStateFlow<LocalSpeechModelStatus>(LocalSpeechModelStatus.Missing)
+    }
     private var engine: LocalWhisperEngine? = null
+    private var loadedModel: LocalWhisperModel? = null
 
-    override suspend fun downloadModel(): Boolean = withContext(Dispatchers.IO) {
-        if (!supported || !downloadMutex.tryLock()) return@withContext false
+    override fun status(model: LocalWhisperModel) = statuses.getValue(model).asStateFlow()
+
+    override suspend fun downloadModel(model: LocalWhisperModel): Boolean = withContext(Dispatchers.IO) {
+        if (!supported) return@withContext false
+        val store = stores[model] ?: return@withContext false
+        val downloadMutex = downloadMutexes.getValue(model)
+        if (!downloadMutex.tryLock()) return@withContext false
+        val modelStatus = statuses.getValue(model)
         try {
-            mutex.withLock {
-                if (engine != null) return@withContext true
-                mutableStatus.value = LocalSpeechModelStatus.Downloading(0, whisperModelSize)
-                if (store.isValid()) {
-                    mutableStatus.value = LocalSpeechModelStatus.Downloaded
-                    return@withContext true
+            val alreadyLoaded = mutex.withLock {
+                (engine != null && loadedModel == model).also { loaded ->
+                    if (!loaded) {
+                        modelStatus.value = LocalSpeechModelStatus.Downloading(0, store.expectedSize)
+                    }
                 }
             }
+            if (alreadyLoaded) return@withContext true
+            if (store.isValid()) {
+                mutex.withLock { modelStatus.value = cachedStatus(model) }
+                return@withContext true
+            }
             // Network IO never holds the inference lock; service changes may release the engine.
-            download(store) { received, total ->
-                mutableStatus.value = LocalSpeechModelStatus.Downloading(received, total)
+            download(model, store) { received, total ->
+                modelStatus.value = LocalSpeechModelStatus.Downloading(received, total)
             }
             currentCoroutineContext().ensureActive()
-            mutex.withLock { mutableStatus.value = LocalSpeechModelStatus.Downloaded }
+            mutex.withLock { modelStatus.value = cachedStatus(model) }
             true
         } catch (error: CancellationException) {
             withContext(NonCancellable) {
+                val valid = store.isValid()
                 mutex.withLock {
-                    mutableStatus.value = if (store.isValid()) LocalSpeechModelStatus.Downloaded
-                        else LocalSpeechModelStatus.Missing
+                    modelStatus.value = when {
+                        engine != null && loadedModel == model -> LocalSpeechModelStatus.Ready
+                        valid -> LocalSpeechModelStatus.Downloaded
+                        else -> LocalSpeechModelStatus.Missing
+                    }
                 }
             }
             throw error
         } catch (error: Exception) {
             mutex.withLock {
-                mutableStatus.value = LocalSpeechModelStatus.Failed(error.message?.take(300).orEmpty())
+                modelStatus.value = LocalSpeechModelStatus.Failed(error.message?.take(300).orEmpty())
             }
             false
         } finally {
@@ -89,48 +140,65 @@ internal class DesktopLocalSpeechRecognizer(
         }
     }
 
-    override suspend fun prepare(): Boolean = withContext(Dispatchers.IO) {
+    override suspend fun prepare(model: LocalWhisperModel): Boolean = withContext(Dispatchers.IO) {
         mutex.withLock {
             if (!supported) return@withLock false
-            if (mutableStatus.value == LocalSpeechModelStatus.Ready) return@withLock true
-            if (mutableStatus.value is LocalSpeechModelStatus.Downloading) return@withLock false
-            mutableStatus.value = LocalSpeechModelStatus.Preparing
+            val modelStatus = statuses.getValue(model)
+            if (
+                engine != null && loadedModel == model &&
+                modelStatus.value == LocalSpeechModelStatus.Ready
+            ) return@withLock true
+            if (modelStatus.value is LocalSpeechModelStatus.Downloading) return@withLock false
+            if (engine != null) closeEngine()
+            val store = stores[model]
+            if (store == null) {
+                modelStatus.value = LocalSpeechModelStatus.Missing
+                return@withLock false
+            }
+            modelStatus.value = LocalSpeechModelStatus.Preparing
             var cached = false
             try {
                 if (!store.isValid()) {
-                    mutableStatus.value = LocalSpeechModelStatus.Missing
+                    modelStatus.value = LocalSpeechModelStatus.Missing
                     return@withLock false
                 }
                 cached = true
                 currentCoroutineContext().ensureActive()
-                mutableStatus.value = LocalSpeechModelStatus.Preparing
+                modelStatus.value = LocalSpeechModelStatus.Preparing
                 engine = createEngine(store.path)
+                loadedModel = model
                 currentCoroutineContext().ensureActive()
-                mutableStatus.value = LocalSpeechModelStatus.Ready
+                modelStatus.value = LocalSpeechModelStatus.Ready
                 true
             } catch (error: CancellationException) {
                 closeEngine()
-                mutableStatus.value = if (cached) LocalSpeechModelStatus.Downloaded else LocalSpeechModelStatus.Missing
+                modelStatus.value = if (cached) LocalSpeechModelStatus.Downloaded else LocalSpeechModelStatus.Missing
                 throw error
             } catch (error: Exception) {
-                preparationFailed(error)
+                preparationFailed(model, error)
             } catch (error: LinkageError) {
-                preparationFailed(error)
+                preparationFailed(model, error)
             }
         }
     }
 
-    private fun preparationFailed(error: Throwable): Boolean {
+    private fun preparationFailed(model: LocalWhisperModel, error: Throwable): Boolean {
         closeEngine()
-        mutableStatus.value = LocalSpeechModelStatus.Failed(error.message?.take(300).orEmpty())
+        statuses.getValue(model).value = LocalSpeechModelStatus.Failed(error.message?.take(300).orEmpty())
         return false
     }
 
-    override suspend fun transcribe(wav: ByteArray, language: String): VoiceTranscriptionResult =
+    override suspend fun transcribe(
+        model: LocalWhisperModel,
+        wav: ByteArray,
+        language: String,
+    ): VoiceTranscriptionResult =
         withContext(Dispatchers.IO) {
             mutex.withLock {
                 if (!supported) return@withLock VoiceTranscriptionResult.Failure(reason = VoiceTranscriptionFailureReason.LOCAL_UNSUPPORTED)
-                val loaded = engine.takeIf { mutableStatus.value == LocalSpeechModelStatus.Ready }
+                val loaded = engine.takeIf {
+                    loadedModel == model && statuses.getValue(model).value == LocalSpeechModelStatus.Ready
+                }
                     ?: return@withLock VoiceTranscriptionResult.Failure(reason = VoiceTranscriptionFailureReason.LOCAL_MODEL_NOT_READY)
                 if (wav.size <= 44) return@withLock VoiceTranscriptionResult.Failure(reason = VoiceTranscriptionFailureReason.NO_AUDIO)
                 try {
@@ -153,16 +221,22 @@ internal class DesktopLocalSpeechRecognizer(
 
     override suspend fun release() = withContext(Dispatchers.IO) {
         mutex.withLock {
-            if (engine != null) {
-                closeEngine()
-                mutableStatus.value = LocalSpeechModelStatus.Downloaded
-            }
+            if (engine != null) closeEngine()
         }
     }
 
+    private fun cachedStatus(model: LocalWhisperModel): LocalSpeechModelStatus =
+        if (engine != null && loadedModel == model) LocalSpeechModelStatus.Ready
+        else LocalSpeechModelStatus.Downloaded
+
     private fun closeEngine() {
         val previous = engine
+        val previousModel = loadedModel
         engine = null
+        loadedModel = null
+        if (previousModel != null && statuses.getValue(previousModel).value == LocalSpeechModelStatus.Ready) {
+            statuses.getValue(previousModel).value = LocalSpeechModelStatus.Downloaded
+        }
         previous?.close()
     }
 }
@@ -173,7 +247,7 @@ private class WhisperJniEngine(model: Path) : LocalWhisperEngine {
         WhisperJNI.setLibraryLogger(null)
     }
     private val context = checkNotNull(whisper.init(model, WhisperContextParams().apply { useGPU = false })) {
-        "Could not load Whisper Small"
+        "Could not load local Whisper model"
     }
 
     override fun transcribe(samples: FloatArray, language: String): String {

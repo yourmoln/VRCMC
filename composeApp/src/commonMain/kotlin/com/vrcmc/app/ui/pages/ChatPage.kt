@@ -60,7 +60,10 @@ fun ChatPage(
     var managedVoiceRestartToken by remember { mutableIntStateOf(0) }
     val streamingMerger = remember { StreamingTextMerger() }
     val audioRecorder = remember { createAudioRecorder() }
-    val localSpeechStatus by localSpeechRecognizer.status.collectAsState()
+    val localSpeechStatusFlow = remember(state.voiceInputConfig.localWhisperModel) {
+        localSpeechRecognizer.status(state.voiceInputConfig.localWhisperModel)
+    }
+    val localSpeechStatus by localSpeechStatusFlow.collectAsState()
     val voiceServiceReady = state.voiceInputConfig.enabled && state.voiceInputConfig.hasServiceConfiguration() &&
         (state.voiceInputConfig.provider != VoiceInputProvider.LOCAL_WHISPER || localSpeechStatus == LocalSpeechModelStatus.Ready)
     val scope = rememberCoroutineScope()
