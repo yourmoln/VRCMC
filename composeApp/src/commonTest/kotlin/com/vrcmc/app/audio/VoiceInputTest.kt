@@ -159,6 +159,41 @@ class VoiceInputTest {
     }
 
     @Test
+    fun continuousCaptureEmitsEachUtteranceWithoutStopping() {
+        val chunks = mutableListOf<VoiceAudioChunk>()
+        val states = mutableListOf<Boolean>()
+        var autoStops = 0
+        val config = VoiceInputConfig(
+            tailSilenceMillis = 300,
+            vadActivationMillis = 200,
+            vadMinRms = 0.008,
+            vadSpeechRatio = 0.6,
+            partialMinSpeechMillis = 450,
+        )
+        val processor = VoiceCaptureProcessor(
+            config,
+            states::add,
+            {},
+            {},
+            {},
+            { autoStops++ },
+            continuous = true,
+            emitPartials = false,
+            onChunk = chunks::add,
+        )
+
+        repeat(4) { processor.accept(pcmFrame(config.sampleRate, amplitude = 0.25)) }
+        repeat(12) { processor.accept(pcmFrame(config.sampleRate, amplitude = 0.0)) }
+        repeat(4) { processor.accept(pcmFrame(config.sampleRate, amplitude = 0.25)) }
+        repeat(12) { processor.accept(pcmFrame(config.sampleRate, amplitude = 0.0)) }
+
+        assertEquals(listOf(true, false, true, false), states)
+        assertEquals(2, chunks.count { it.isFinal })
+        assertTrue(chunks.all { it.wav != null })
+        assertEquals(0, autoStops)
+    }
+
+    @Test
     fun ignoresLowLevelNoise() {
         var noSpeech = false
         var finalCount = 0

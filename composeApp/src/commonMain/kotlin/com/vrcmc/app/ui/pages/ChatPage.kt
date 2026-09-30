@@ -32,6 +32,12 @@ private data class LiveOscBarrier(val completed: CompletableDeferred<Unit>) : Li
 
 private data class TypingOscUpdate(val device: Device, val typing: Boolean)
 
+private data class ManagedVoiceChunk(
+    val generation: Int,
+    val config: VoiceInputConfig,
+    val chunk: VoiceAudioChunk,
+)
+
 @Composable
 fun ChatPage(
     state: AppState,
@@ -80,6 +86,7 @@ fun ChatPage(
     val clipboard = LocalClipboard.current
     val liveOriginalUpdates = remember { Channel<LiveOscAction>(Channel.UNLIMITED) }
     val typingUpdates = remember { Channel<TypingOscUpdate>(Channel.CONFLATED) }
+    val managedVoiceChunks = remember { Channel<ManagedVoiceChunk>(Channel.UNLIMITED) }
     val timestampVisibility = chatTimestampVisibility(messages.map(ChatMessage::timestamp))
     LaunchedEffect(maxInputCharacters) {
         if (state.chatDraft.length > maxInputCharacters) {
@@ -95,6 +102,7 @@ fun ChatPage(
     DisposableEffect(audioRecorder) {
         onDispose {
             activeVoiceRequestJob?.cancel()
+            managedVoiceChunks.close()
             audioRecorder.release()
         }
     }
@@ -179,6 +187,7 @@ fun ChatPage(
 
     fun startVoiceInput(stopOnSilence: Boolean = true, managed: Boolean = false) {
         val config = state.voiceInputConfig
+        val continuous = managed && state.isAlwaysInterpretationActive
         val readinessFailure = voiceInputReadinessFailure(config)
         if (readinessFailure != null) {
             error = strings.voiceTranscriptionFailureMessage(readinessFailure)
@@ -212,7 +221,7 @@ fun ChatPage(
                     }
                 },
                 onFinal = { wav ->
-                    scope.launch {
+                    if (!continuous) scope.launch {
                         if (generation == voiceGeneration) {
                             voiceRecording = false
                             voiceSpeaking = false
@@ -221,7 +230,7 @@ fun ChatPage(
                     }
                 },
                 onNoSpeech = {
-                    scope.launch {
+                    if (!continuous) scope.launch {
                         if (generation == voiceGeneration) {
                             voiceRecording = false
                             voiceSpeaking = false
@@ -238,19 +247,28 @@ fun ChatPage(
                         }
                     }
                 },
-                onAutoStop = audioRecorder::stop,
+                onAutoStop = { if (!continuous) audioRecorder.stop() },
                 stopOnSilence = stopOnSilence,
-                emitPartials = config.provider != VoiceInputProvider.LOCAL_WHISPER,
+                continuous = continuous,
+                emitPartials = !continuous && config.provider != VoiceInputProvider.LOCAL_WHISPER,
+                onChunk = if (continuous) {
+                    { chunk -> managedVoiceChunks.trySend(ManagedVoiceChunk(generation, config, chunk)) }
+                } else null,
             )
         audioRecorder.start(
             sampleRate = config.sampleRate,
-            maxDurationSeconds = (config.maxSegmentSeconds + 30).coerceAtMost(60),
+            maxDurationSeconds = if (continuous) 0 else (config.maxSegmentSeconds + 30).coerceAtMost(60),
             microphoneId = config.microphoneId,
             onPcmData = processor::accept,
             onStopped = {
                 processor.finish()
                 scope.launch {
-                    if (generation == voiceGeneration) voiceRecording = false
+                    if (generation == voiceGeneration) {
+                        voiceRecording = false
+                        if (continuous && managedVoiceCapture && state.isAlwaysInterpretationActive) {
+                            managedVoiceRestartToken++
+                        }
+                    }
                 }
             },
             onError = { message ->
@@ -258,6 +276,9 @@ fun ChatPage(
                     voiceRecording = false
                     voiceTranscribing = false
                     error = message
+                    if (generation == voiceGeneration && continuous && managedVoiceCapture) {
+                        managedVoiceRestartToken++
+                    }
                 }
             },
         )
@@ -278,6 +299,7 @@ fun ChatPage(
         activeVoiceRequestJob = null
         pendingPartialAudio = null
         pendingManagedSendText = null
+        while (managedVoiceChunks.tryReceive().isSuccess) { }
         audioRecorder.stop()
         voiceRecording = false
         voiceSpeaking = false
@@ -362,7 +384,7 @@ fun ChatPage(
         return result == ChatboxSendResult.SENT || result == ChatboxSendResult.SENT_OVER_LIMIT
     }
 
-    fun sendMessage(rawText: String, clearDraft: Boolean) {
+    fun sendMessage(rawText: String, clearDraft: Boolean): Job? {
         val original = state.hotwordDictionary.process(rawText)
         if (original == null) {
             if (clearDraft) state.chatDraft = ""
@@ -370,19 +392,19 @@ fun ChatPage(
             if (blockedNotificationJob?.isActive != true) {
                 blockedNotificationJob = scope.launch { blockedSnackbar.showSnackbar(strings.sentenceBlocked) }
             }
-            return
+            return null
         }
-        val target = state.activeDevice() ?: return
+        val target = state.activeDevice() ?: return null
         cancelActiveTranslation()
         if (original.isBlank()) {
             if (clearDraft) state.chatDraft = ""
             error = null
-            return
+            return null
         }
         val shouldTranslate = state.translate && !shouldSkipTranslation(original)
         if (shouldTranslate && !state.isTranslationApiConfigured) {
             error = strings.apiNotConfiguredTranslation
-            return
+            return null
         }
         val targetLanguages = state.languages.toList()
         val outputOrder = state.outputOrder.toList()
@@ -508,6 +530,51 @@ fun ChatPage(
             }
         if (shouldTranslate) activeTranslationJob = job
         job.start()
+        return job
+    }
+
+    LaunchedEffect(managedVoiceChunks) {
+        var generation = -1
+        var assembler = SentenceTextAssembler()
+        for (managedChunk in managedVoiceChunks) {
+            if (managedChunk.generation != generation) {
+                generation = managedChunk.generation
+                assembler = SentenceTextAssembler()
+            }
+            if (
+                managedChunk.generation != voiceGeneration ||
+                    !managedVoiceCapture ||
+                    !state.isAlwaysInterpretationActive
+            ) continue
+
+            val chunk = managedChunk.chunk
+            val completedTexts = mutableListOf<String>()
+            val wav = chunk.wav
+            if (wav != null) {
+                voiceTranscribing = true
+                when (val result = transcribeVoiceAudio(managedChunk.config, wav, state::addErrorLog)) {
+                    is VoiceTranscriptionResult.Success ->
+                        completedTexts += assembler.append(result.text, chunk.overlapSamples > 0)
+                    is VoiceTranscriptionResult.Failure -> {
+                        error = strings.voiceTranscriptionFailureMessage(result)
+                        assembler = SentenceTextAssembler()
+                    }
+                }
+            }
+            if (chunk.isFinal) completedTexts += assembler.finish()
+
+            for (text in completedTexts) {
+                if (
+                    text.isNotBlank() &&
+                        managedChunk.generation == voiceGeneration &&
+                        managedVoiceCapture &&
+                        state.isAlwaysInterpretationActive
+                ) {
+                    sendMessage(text, clearDraft = true)?.join()
+                }
+            }
+            if (managedChunk.generation == voiceGeneration) voiceTranscribing = false
+        }
     }
 
     LaunchedEffect(pendingManagedSendText) {

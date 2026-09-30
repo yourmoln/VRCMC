@@ -152,7 +152,7 @@ internal class VoiceCaptureProcessor(
         inSpeech = false
         onSpeechState(false)
         if (onChunk != null) {
-            val valid = speechSamples >= minimumSpeechSamples || (hasEmittedChunks && speechSamples > 0)
+            val valid = speechSamples >= minimumFinalSpeechSamples || (hasEmittedChunks && speechSamples > 0)
             if (valid || hasEmittedChunks) {
                 // A pause immediately after a duration boundary closes the sentence without
                 // resending only overlap/silence to ASR.

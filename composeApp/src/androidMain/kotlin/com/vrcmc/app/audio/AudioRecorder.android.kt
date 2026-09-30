@@ -25,10 +25,10 @@ private class AndroidAudioRecorder : AudioRecorder {
             recorder = audio
             worker = Thread {
                 val buffer = ByteArray((sampleRate / 5).coerceAtLeast(1024))
-                val maxBytes = sampleRate * 2 * maxDurationSeconds.coerceIn(1, 60)
-                var capturedBytes = 0
+                val maxBytes = maxDurationSeconds.takeIf { it > 0 }?.let { sampleRate.toLong() * 2L * it }
+                var capturedBytes = 0L
                 try {
-                    while (recorder === audio && capturedBytes < maxBytes) {
+                    while (recorder === audio && (maxBytes == null || capturedBytes < maxBytes)) {
                         val count = audio.read(buffer, 0, buffer.size)
                         if (count > 0) {
                             capturedBytes += count
