@@ -22,6 +22,7 @@ internal fun MessageBubble(
     showJapaneseRomaji: Boolean,
     onCopy: () -> Unit,
     onResend: () -> Unit,
+    animationTimeNanos: State<Long>? = null,
 ) {
     val user = message.role == MessageRole.USER
     val bubbleColor =
@@ -65,7 +66,11 @@ internal fun MessageBubble(
                         }
                         if (message.isLoading) {
                             Row(verticalAlignment = Alignment.CenterVertically) {
-                                CircularProgressIndicator(Modifier.size(16.dp), strokeWidth = 2.dp)
+                                ChatCircularProgressIndicator(
+                                    animationTimeNanos ?: rememberChatAnimationTime(active = true),
+                                    Modifier.size(16.dp),
+                                    strokeWidth = 2.dp,
+                                )
                                 Spacer(Modifier.width(9.dp))
                                 Text(
                                     if (retryAttempt > 0)

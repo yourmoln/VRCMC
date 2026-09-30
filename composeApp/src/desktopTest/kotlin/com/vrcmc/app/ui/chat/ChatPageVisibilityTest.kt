@@ -33,7 +33,7 @@ class ChatPageVisibilityTest {
 
         repeat(2) {
             settleFrames()
-            runOnUiThread { assertTrue(scene.hasInvalidations()) }
+            onNodeWithText(LocaleStringsEn.translating).assertExists()
 
             runOnUiThread { visible = false }
             settleFrames()
@@ -84,19 +84,55 @@ class ChatPageVisibilityTest {
         onNode(hasSetTextAction()).assertIsNotFocused()
     }
 
+    @Test
+    fun minimizedPageStopsAnimationButKeepsLoadingState() = runSkikoComposeUiTest {
+        val state = emptyChatState()
+        state.messages.add(ChatMessage("", MessageRole.ASSISTANT, timestamp = 1, isLoading = true))
+        var minimized by mutableStateOf(true)
+        showChatPage(state, visible = { true }, animationsEnabled = { !minimized })
+
+        settleFrames()
+        onNodeWithText(LocaleStringsEn.translating).assertExists()
+        runOnUiThread {
+            assertFalse(scene.hasInvalidations())
+            assertTrue(state.messages.single().isLoading)
+        }
+
+        runOnUiThread { minimized = false }
+        mainClock.advanceTimeByFrame()
+        waitForIdle()
+        runOnUiThread { assertTrue(scene.hasInvalidations()) }
+
+        runOnUiThread { minimized = true }
+        settleFrames()
+        runOnUiThread {
+            assertFalse(scene.hasInvalidations())
+            assertTrue(state.messages.single().isLoading)
+        }
+    }
+
     private fun emptyChatState() = AppState().apply {
         devices.clear()
         messages.clear()
     }
 
-    private fun SkikoComposeUiTest.showChatPage(state: AppState, visible: () -> Boolean) {
+    private fun SkikoComposeUiTest.showChatPage(
+        state: AppState,
+        visible: () -> Boolean,
+        animationsEnabled: () -> Boolean = { true },
+    ) {
         mainClock.autoAdvance = false
         setContent {
             CompositionLocalProvider(LocalWindowInfo provides object : WindowInfo {
                 override val isWindowFocused = true
             }) {
                 MaterialTheme {
-                    ChatPage(state = state, strings = LocaleStringsEn, visible = visible())
+                    ChatPage(
+                        state = state,
+                        strings = LocaleStringsEn,
+                        visible = visible(),
+                        animationsEnabled = animationsEnabled(),
+                    )
                 }
             }
         }

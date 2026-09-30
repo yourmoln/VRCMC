@@ -30,7 +30,10 @@ fun main() {
             icon = painterResource(Res.drawable.logo),
             resizable = true,
         ) {
-            VrcmcApp { dark -> setWindowsTitleBar(window, dark) }
+            VrcmcApp(
+                onDarkThemeChanged = { dark -> setWindowsTitleBar(window, dark) },
+                windowMinimized = state.isMinimized,
+            )
         }
     }
 }

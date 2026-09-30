@@ -38,6 +38,7 @@ fun ChatPage(
     strings: LocaleStrings,
     onReadAloud: (String, ReadAloudConfig) -> Unit = { _, _ -> },
     visible: Boolean = true,
+    animationsEnabled: Boolean = true,
 ) {
     var error by remember { mutableStateOf<String?>(null) }
     var sending by remember { mutableStateOf(false) }
@@ -665,6 +666,13 @@ fun ChatPage(
     val historyListState = rememberChatHistoryListState(messages)
     if (!visible) return
 
+    val interpreting = state.isSimultaneousInterpretationActive || state.isAlwaysInterpretationActive
+    val animationTimeNanos = rememberChatAnimationTime(
+        active = animationsEnabled &&
+            (interpreting || sending || (state.voiceInputConfig.enabled && voiceTranscribing) ||
+                messages.any { it.isLoading })
+    )
+
     Column(Modifier.fillMaxSize().imePadding()) {
         ChatHistoryList(
             messages = messages,
@@ -723,6 +731,7 @@ fun ChatPage(
                         }
                     },
                     onResend = { sendMessage(message.text, clearDraft = false) },
+                    animationTimeNanos = animationTimeNanos,
                 )
             }
         }
@@ -740,8 +749,7 @@ fun ChatPage(
             input = state.chatDraft,
             sending = sending,
             enabled = active != null,
-            interpreting =
-                state.isSimultaneousInterpretationActive || state.isAlwaysInterpretationActive,
+            interpreting = interpreting,
             alwaysInterpretationEnabled = state.alwaysInterpretationEnabled,
             alwaysInterpretationActive = state.isAlwaysInterpretationActive,
             voiceInputEnabled = state.voiceInputConfig.enabled,
@@ -798,6 +806,7 @@ fun ChatPage(
                 if (stopping) stopManagedAlwaysCapture()
             },
             onToggleVoiceInput = ::toggleVoiceInput,
+            animationTimeNanos = animationTimeNanos,
         )
     }
 }

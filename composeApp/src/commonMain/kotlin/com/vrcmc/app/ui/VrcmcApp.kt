@@ -25,7 +25,10 @@ internal enum class ThemeMode {
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalComposeUiApi::class)
 @Composable
-fun VrcmcApp(onDarkThemeChanged: (Boolean) -> Unit = {}) {
+fun VrcmcApp(
+    onDarkThemeChanged: (Boolean) -> Unit = {},
+    windowMinimized: Boolean = false,
+) {
     val state = remember { AppState() }
     var screen by remember { mutableStateOf(AppScreen.CHAT) }
     var theme by remember { mutableStateOf(ThemeMode.SYSTEM) }
@@ -205,6 +208,7 @@ fun VrcmcApp(onDarkThemeChanged: (Boolean) -> Unit = {}) {
                                     strings = strings,
                                     onReadAloud = readAloud::enqueue,
                                     visible = screen == AppScreen.CHAT,
+                                    animationsEnabled = !windowMinimized,
                                 )
                                 if (screen != AppScreen.CHAT) {
                                     Surface(

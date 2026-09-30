@@ -18,22 +18,18 @@ import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.geometry.CornerRadius
-import androidx.compose.ui.geometry.Offset
-import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.PathEffect
 import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.input.key.onPreviewKeyEvent
 import androidx.compose.ui.text.input.TextFieldValue
 import androidx.compose.ui.unit.dp
-import kotlin.math.cos
-import kotlin.math.sin
-import kotlinx.coroutines.delay
-import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.yield
 
-private const val interpretationBorderFrameIntervalNanos = 1_000_000_000L / 5
 private const val interpretationBorderRotationDurationNanos = 5_600_000_000L
+private const val interpretationBorderHighlightFraction = .2f
 
 @Composable
 internal fun ChatComposer(
@@ -53,50 +49,51 @@ internal fun ChatComposer(
     onSend: () -> Unit,
     onToggleAlwaysInterpretation: () -> Unit,
     onToggleVoiceInput: () -> Unit,
+    animationTimeNanos: State<Long>? = null,
 ) {
     val focusRequester = remember { FocusRequester() }
     val scope = rememberCoroutineScope()
     val primary = MaterialTheme.colorScheme.primary
     val outline = MaterialTheme.colorScheme.outlineVariant
+    val animationTime = animationTimeNanos ?: rememberChatAnimationTime(
+        active = interpreting || sending || (voiceInputEnabled && voiceTranscribing)
+    )
     val animatedBorder =
         if (interpreting) {
-            val borderAngle = remember { mutableFloatStateOf(0f) }
-            LaunchedEffect(Unit) {
-                borderAngle.floatValue = 0f
-                val startedNanos = withFrameNanos { it }
-                var elapsedNanos = 0L
-                while (isActive) {
-                    val remainingNanos =
-                        interpretationBorderFrameIntervalNanos -
-                            elapsedNanos % interpretationBorderFrameIntervalNanos
-                    delay((remainingNanos + 999_999L) / 1_000_000L)
-                    elapsedNanos = withFrameNanos { it - startedNanos }
-                    borderAngle.floatValue =
-                        (elapsedNanos % interpretationBorderRotationDurationNanos).toFloat() /
-                            interpretationBorderRotationDurationNanos * 360f
+            Modifier
+                .graphicsLayer {}
+                .drawWithCache {
+                    val borderWidth = 2.dp.toPx()
+                    val cornerRadiusValue = 20.dp.toPx().coerceAtMost(size.minDimension / 2f)
+                    val cornerRadius = CornerRadius(cornerRadiusValue)
+                    val perimeter =
+                        (2f * (size.width + size.height - 4f * cornerRadiusValue) +
+                                2f * kotlin.math.PI.toFloat() * cornerRadiusValue)
+                            .coerceAtLeast(1f)
+                    val highlightLength =
+                        (perimeter * interpretationBorderHighlightFraction).coerceAtLeast(borderWidth)
+                    val gapLength = (perimeter - highlightLength).coerceAtLeast(1f)
+                    onDrawBehind {
+                        val phase =
+                            chatAnimationFraction(
+                                animationTime.value,
+                                interpretationBorderRotationDurationNanos,
+                            ) * perimeter
+                        drawRoundRect(
+                            color = primary,
+                            cornerRadius = cornerRadius,
+                            style =
+                                Stroke(
+                                    width = borderWidth,
+                                    pathEffect =
+                                        PathEffect.Companion.dashPathEffect(
+                                            floatArrayOf(highlightLength, gapLength),
+                                            -phase,
+                                        ),
+                                ),
+                        )
+                    }
                 }
-            }
-            Modifier.drawWithCache {
-                val radius = size.maxDimension
-                val colors = listOf(primary.copy(alpha = .18f), primary, primary.copy(alpha = .18f))
-                val cornerRadius = CornerRadius(20.dp.toPx())
-                val stroke = Stroke(width = 2.dp.toPx())
-                onDrawBehind {
-                    val radians = borderAngle.floatValue * (kotlin.math.PI.toFloat() / 180f)
-                    val directionX = cos(radians) * radius
-                    val directionY = sin(radians) * radius
-                    drawRoundRect(
-                        brush =
-                            Brush.linearGradient(
-                                colors = colors,
-                                start = Offset(center.x - directionX, center.y - directionY),
-                                end = Offset(center.x + directionX, center.y + directionY),
-                            ),
-                        cornerRadius = cornerRadius,
-                        style = stroke,
-                    )
-                }
-            }
         } else Modifier
 
     fun sendAndKeepFocus() {
@@ -109,87 +106,92 @@ internal fun ChatComposer(
 
     Surface(
         modifier =
-            Modifier.fillMaxWidth()
-                .padding(horizontal = 12.dp, vertical = 10.dp)
-                .then(animatedBorder),
+            Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 10.dp),
         shape = RoundedCornerShape(20.dp),
         color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = .45f),
-        border = if (interpreting) null else BorderStroke(1.dp, outline),
+        border =
+            BorderStroke(
+                1.dp,
+                if (interpreting) primary.copy(alpha = .18f) else outline,
+            ),
     ) {
-        Column {
-            if (sending) LinearProgressIndicator(Modifier.fillMaxWidth())
-            Row(
-                modifier =
-                    Modifier.fillMaxWidth()
-                        .heightIn(min = 56.dp)
-                        .padding(start = 6.dp, end = 6.dp),
-                verticalAlignment = Alignment.CenterVertically,
-            ) {
-                if (voiceInputEnabled) {
-                    FilledTonalIconButton(
-                        enabled = enabled && !sending && !voiceTranscribing,
-                        onClick = onToggleVoiceInput,
-                        modifier = Modifier.size(44.dp),
-                        colors =
-                            if (voiceSpeaking)
-                                IconButtonDefaults.filledTonalIconButtonColors(
-                                    containerColor = MaterialTheme.colorScheme.errorContainer,
-                                    contentColor = MaterialTheme.colorScheme.onErrorContainer,
+        Box {
+            Column {
+                if (sending) ChatLinearProgressIndicator(animationTime, Modifier.fillMaxWidth())
+                Row(
+                    modifier =
+                        Modifier.fillMaxWidth()
+                            .heightIn(min = 56.dp)
+                            .padding(start = 6.dp, end = 6.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    if (voiceInputEnabled) {
+                        FilledTonalIconButton(
+                            enabled = enabled && !sending && !voiceTranscribing,
+                            onClick = onToggleVoiceInput,
+                            modifier = Modifier.size(44.dp),
+                            colors =
+                                if (voiceSpeaking)
+                                    IconButtonDefaults.filledTonalIconButtonColors(
+                                        containerColor = MaterialTheme.colorScheme.errorContainer,
+                                        contentColor = MaterialTheme.colorScheme.onErrorContainer,
+                                    )
+                                else IconButtonDefaults.filledTonalIconButtonColors(),
+                        ) {
+                            if (voiceTranscribing) {
+                                ChatCircularProgressIndicator(animationTime, Modifier.size(20.dp), strokeWidth = 2.dp)
+                            } else {
+                                Icon(
+                                    if (voiceRecording) Icons.Default.Stop else Icons.Default.Mic,
+                                    if (voiceRecording) strings.stopVoiceInput else strings.startVoiceInput,
                                 )
-                            else IconButtonDefaults.filledTonalIconButtonColors(),
-                    ) {
-                        if (voiceTranscribing) {
-                            CircularProgressIndicator(Modifier.size(20.dp), strokeWidth = 2.dp)
-                        } else {
+                            }
+                        }
+                        Spacer(Modifier.width(10.dp))
+                    }
+                    ChatComposerTextInput(
+                        input = input,
+                        onInputChange = { onInputChange(it.take(maxInputCharacters)) },
+                        enabled = enabled,
+                        strings = strings,
+                        onSend = ::sendAndKeepFocus,
+                        modifier =
+                            Modifier.weight(1f)
+                                .focusRequester(focusRequester)
+                                .padding(vertical = 14.dp),
+                    )
+                    Spacer(Modifier.width(10.dp))
+                    if (alwaysInterpretationEnabled) {
+                        FilledIconButton(
+                            enabled = enabled && (!sending || alwaysInterpretationActive),
+                            onClick = {
+                                onToggleAlwaysInterpretation()
+                                scope.launch {
+                                    yield()
+                                    focusRequester.requestFocus()
+                                }
+                            },
+                            modifier = Modifier.size(44.dp),
+                        ) {
                             Icon(
-                                if (voiceRecording) Icons.Default.Stop else Icons.Default.Mic,
-                                if (voiceRecording) strings.stopVoiceInput else strings.startVoiceInput,
+                                if (alwaysInterpretationActive) Icons.Default.Stop
+                                else Icons.Default.PlayArrow,
+                                if (alwaysInterpretationActive) strings.stopAlwaysInterpretation
+                                else strings.startAlwaysInterpretation,
                             )
                         }
-                    }
-                    Spacer(Modifier.width(10.dp))
-                }
-                ChatComposerTextInput(
-                    input = input,
-                    onInputChange = { onInputChange(it.take(maxInputCharacters)) },
-                    enabled = enabled,
-                    strings = strings,
-                    onSend = ::sendAndKeepFocus,
-                    modifier =
-                        Modifier.weight(1f)
-                            .focusRequester(focusRequester)
-                            .padding(vertical = 14.dp),
-                )
-                Spacer(Modifier.width(10.dp))
-                if (alwaysInterpretationEnabled) {
-                    FilledIconButton(
-                        enabled = enabled && (!sending || alwaysInterpretationActive),
-                        onClick = {
-                            onToggleAlwaysInterpretation()
-                            scope.launch {
-                                yield()
-                                focusRequester.requestFocus()
-                            }
-                        },
-                        modifier = Modifier.size(44.dp),
-                    ) {
-                        Icon(
-                            if (alwaysInterpretationActive) Icons.Default.Stop
-                            else Icons.Default.PlayArrow,
-                            if (alwaysInterpretationActive) strings.stopAlwaysInterpretation
-                            else strings.startAlwaysInterpretation,
-                        )
-                    }
-                } else {
-                    FilledIconButton(
-                        enabled = input.isNotBlank() && enabled,
-                        onClick = ::sendAndKeepFocus,
-                        modifier = Modifier.size(44.dp),
-                    ) {
-                        Icon(Icons.AutoMirrored.Filled.Send, strings.send)
+                    } else {
+                        FilledIconButton(
+                            enabled = input.isNotBlank() && enabled,
+                            onClick = ::sendAndKeepFocus,
+                            modifier = Modifier.size(44.dp),
+                        ) {
+                            Icon(Icons.AutoMirrored.Filled.Send, strings.send)
+                        }
                     }
                 }
             }
+            if (interpreting) Spacer(Modifier.matchParentSize().then(animatedBorder))
         }
     }
 }
