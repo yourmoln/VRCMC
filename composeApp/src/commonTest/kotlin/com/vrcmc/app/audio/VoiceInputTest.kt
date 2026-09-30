@@ -19,6 +19,11 @@ class VoiceInputTest {
         assertEquals(config.copy(apiKey = ""), storedTranslationSettingsFromJson(json).voiceInput)
         assertEquals(VoiceInputProvider.QWEN, storedTranslationSettingsFromJson("""{"voiceInput":{"enabled":true}}""").voiceInput.provider)
         assertEquals(VoiceInputProvider.QWEN, storedTranslationSettingsFromJson("""{"voiceInput":{"provider":"unknown"}}""").voiceInput.provider)
+        assertEquals(0.008, VoiceInputConfig().vadMinRms)
+        assertEquals(
+            0.008,
+            storedTranslationSettingsFromJson("""{"voiceInput":{"enabled":true}}""").voiceInput.vadMinRms,
+        )
         assertEquals(
             LocalWhisperModel.SMALL_Q5_1,
             storedTranslationSettingsFromJson("""{"voiceInput":{"provider":"LOCAL_WHISPER"}}""")

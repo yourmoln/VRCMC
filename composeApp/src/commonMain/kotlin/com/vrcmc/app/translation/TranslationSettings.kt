@@ -38,7 +38,7 @@ data class VoiceInputConfig(
     val maxSegmentSeconds: Int = 6,
     val tailSilenceMillis: Int = 700,
     val vadActivationMillis: Int = 200,
-    val vadMinRms: Double = 0.012,
+    val vadMinRms: Double = 0.008,
     val vadSpeechRatio: Double = 0.6,
     val partialIntervalMillis: Int = 500,
     val partialMinSpeechMillis: Int = 450,
@@ -255,7 +255,7 @@ fun storedTranslationSettingsFromJson(value: String): StoredTranslationSettings 
                                 (obj["vadActivationMillis"]?.jsonPrimitive?.intOrNull ?: 200)
                                     .coerceIn(60, 1_000),
                             vadMinRms =
-                                (obj["vadMinRms"]?.jsonPrimitive?.doubleOrNull ?: 0.012)
+                                (obj["vadMinRms"]?.jsonPrimitive?.doubleOrNull ?: 0.008)
                                     .coerceIn(0.001, 0.5),
                             vadSpeechRatio =
                                 (obj["vadSpeechRatio"]?.jsonPrimitive?.doubleOrNull ?: 0.6)

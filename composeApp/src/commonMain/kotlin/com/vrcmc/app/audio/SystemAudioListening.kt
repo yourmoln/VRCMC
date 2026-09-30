@@ -61,7 +61,7 @@ internal class SystemAudioListeningSession(
         val voice = settings.voice.copy(
             sampleRate = 16_000,
             maxSegmentSeconds = settings.voice.maxSegmentSeconds.coerceIn(1, 6),
-            vadMinRms = settings.voice.vadMinRms.takeIf { it.isFinite() }?.coerceAtLeast(0.004) ?: 0.012,
+            vadMinRms = settings.voice.vadMinRms.takeIf { it.isFinite() }?.coerceAtLeast(0.004) ?: 0.008,
             vadActivationMillis = settings.voice.vadActivationMillis.coerceAtLeast(160),
             vadSpeechRatio = settings.voice.vadSpeechRatio.takeIf { it.isFinite() }?.coerceAtLeast(0.6) ?: 0.6,
             partialMinSpeechMillis = settings.voice.partialMinSpeechMillis.coerceAtLeast(256),
