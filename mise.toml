@@ -1,0 +1,26 @@
+[tools]
+java = "temurin-21.0.11+10.0.LTS"
+
+[tasks.doctor]
+run = "./gradlew --version"
+run_windows = '.\gradlew.bat --version'
+
+[tasks.build]
+run = "./gradlew :composeApp:desktopJar"
+run_windows = '.\gradlew.bat :composeApp:desktopJar'
+
+[tasks.test]
+run = "./gradlew :composeApp:desktopTest"
+run_windows = '.\gradlew.bat :composeApp:desktopTest'
+
+[tasks.dev]
+run = "./gradlew :composeApp:run"
+run_windows = '.\gradlew.bat :composeApp:run'
+
+[tasks.android]
+run = "./gradlew :composeApp:assembleDebug"
+run_windows = '.\gradlew.bat :composeApp:assembleDebug'
+
+[tasks.package]
+run = "./gradlew :composeApp:createReleaseDistributable"
+run_windows = '.\gradlew.bat :composeApp:createReleaseDistributable'

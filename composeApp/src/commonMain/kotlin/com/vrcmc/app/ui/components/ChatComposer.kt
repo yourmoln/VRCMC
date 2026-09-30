@@ -28,6 +28,7 @@ import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.input.key.onPreviewKeyEvent
+import androidx.compose.ui.platform.LocalWindowInfo
 import androidx.compose.ui.text.input.TextFieldValue
 import androidx.compose.ui.unit.dp
 import kotlin.math.cos
@@ -56,17 +57,20 @@ internal fun ChatComposer(
 ) {
     val focusRequester = remember { FocusRequester() }
     val scope = rememberCoroutineScope()
-    val transition = rememberInfiniteTransition()
-    val borderAngle by
-        transition.animateFloat(
-            initialValue = 0f,
-            targetValue = 360f,
-            animationSpec = infiniteRepeatable(tween(1400, easing = LinearEasing)),
-        )
     val primary = MaterialTheme.colorScheme.primary
     val outline = MaterialTheme.colorScheme.outlineVariant
     val animatedBorder =
         if (interpreting) {
+            val borderAngle by
+                if (LocalWindowInfo.current.isWindowFocused) {
+                    rememberInfiniteTransition().animateFloat(
+                        initialValue = 0f,
+                        targetValue = 360f,
+                        animationSpec = infiniteRepeatable(tween(1400, easing = LinearEasing)),
+                    )
+                } else {
+                    remember { mutableFloatStateOf(0f) }
+                }
             Modifier.drawBehind {
                 val radians = borderAngle * (kotlin.math.PI.toFloat() / 180f)
                 val radius = size.maxDimension

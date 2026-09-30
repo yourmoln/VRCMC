@@ -37,6 +37,7 @@ fun ChatPage(
     state: AppState,
     strings: LocaleStrings,
     onReadAloud: (String, ReadAloudConfig) -> Unit = { _, _ -> },
+    visible: Boolean = true,
 ) {
     var error by remember { mutableStateOf<String?>(null) }
     var sending by remember { mutableStateOf(false) }
@@ -661,9 +662,13 @@ fun ChatPage(
         }
     }
 
+    val historyListState = rememberChatHistoryListState(messages)
+    if (!visible) return
+
     Column(Modifier.fillMaxSize().imePadding()) {
         ChatHistoryList(
             messages = messages,
+            listState = historyListState,
             modifier = Modifier.weight(1f).fillMaxWidth(),
             emptyContent = {
                 Box(Modifier.fillParentMaxSize(), contentAlignment = Alignment.Center) {

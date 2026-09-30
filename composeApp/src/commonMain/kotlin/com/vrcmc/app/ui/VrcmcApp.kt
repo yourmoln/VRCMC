@@ -200,7 +200,12 @@ fun VrcmcApp(onDarkThemeChanged: (Boolean) -> Unit = {}) {
                                     .widthIn(max = 1200.dp)
                                     .align(Alignment.Center),
                             ) {
-                                ChatPage(state, strings, readAloud::enqueue)
+                                ChatPage(
+                                    state = state,
+                                    strings = strings,
+                                    onReadAloud = readAloud::enqueue,
+                                    visible = screen == AppScreen.CHAT,
+                                )
                                 if (screen != AppScreen.CHAT) {
                                     Surface(
                                         modifier = Modifier.fillMaxSize(),

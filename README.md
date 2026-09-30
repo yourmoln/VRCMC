@@ -78,6 +78,23 @@ VRCMC/
 └── LICENSE
 ```
 
+## 开发环境（mise）
+
+项目根目录的 `mise.toml` 固定 Temurin JDK 21，Gradle 使用仓库自带的 Wrapper，无需另行安装 Kotlin 或 Gradle。安装 mise 后执行：
+
+```powershell
+mise trust
+mise install
+mise run doctor
+mise run build
+mise run test
+mise run dev
+```
+
+`mise run` 自动使用项目 JDK，无需修改系统 `JAVA_HOME`。Android 开发还需 Android SDK（Platform 36），通过 `ANDROID_HOME` 或未纳入版本控制的 `local.properties` 中的 `sdk.dir` 指定路径，再运行 `mise run android`。iOS 开发需要 macOS 和 Xcode，无法在 Windows 上构建。
+
+Windows 发布目录使用 `mise run package` 生成；安装包的额外要求和可选语音集成测试依赖见 [WINDOWS_EXE_PACKAGING.md](WINDOWS_EXE_PACKAGING.md)。
+
 ## 参与贡献
 
 欢迎提交 Issue 与 Pull Request。提交改动前，请尽量保持平台实现的一致性，并运行与改动范围对应的测试。涉及 OSC、翻译请求或配置存储时，建议同时补充共享逻辑测试。

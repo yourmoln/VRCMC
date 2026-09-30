@@ -18,6 +18,7 @@ class ChatHistoryLayoutTest {
     @get:Rule val compose = createComposeRule()
     private var height by mutableStateOf(600.dp)
     private var messageHeight by mutableStateOf(60.dp)
+    private var visible by mutableStateOf(true)
     private var messages by mutableStateOf(
         List(20) { ChatMessage("message-$it", MessageRole.USER, timestamp = it.toLong()) }
     )
@@ -26,15 +27,19 @@ class ChatHistoryLayoutTest {
         compose.setContent {
             CompositionLocalProvider(LocalDensity provides Density(1f)) {
                 Box(Modifier.size(390.dp, height)) {
-                    ChatHistoryList(
-                        messages = messages,
-                        modifier = Modifier.fillMaxSize().testTag("history"),
-                        emptyContent = { Box(Modifier.fillParentMaxSize().testTag("empty")) },
-                    ) { index, message ->
-                        check(messages[index] == message)
-                        val rememberedText = remember { message.text }
-                        Box(Modifier.fillMaxWidth().height(messageHeight).testTag(message.text)) {
-                            Box(Modifier.fillMaxSize().testTag("remembered-$rememberedText"))
+                    val listState = rememberChatHistoryListState(messages)
+                    if (visible) {
+                        ChatHistoryList(
+                            messages = messages,
+                            listState = listState,
+                            modifier = Modifier.fillMaxSize().testTag("history"),
+                            emptyContent = { Box(Modifier.fillParentMaxSize().testTag("empty")) },
+                        ) { index, message ->
+                            check(messages[index] == message)
+                            val rememberedText = remember { message.text }
+                            Box(Modifier.fillMaxWidth().height(messageHeight).testTag(message.text)) {
+                                Box(Modifier.fillMaxSize().testTag("remembered-$rememberedText"))
+                            }
                         }
                     }
                 }
@@ -91,6 +96,33 @@ class ChatHistoryLayoutTest {
         compose.runOnIdle {
             messages = messages + ChatMessage("new-message", MessageRole.USER, timestamp = 21)
         }
+        assertLatestAtBottom()
+    }
+
+    @Test fun hidingAndShowingHistoryPreservesScrollPosition() {
+        showHistory()
+        compose.onNodeWithTag("history").performScrollToIndex(10)
+        val before = compose.onNodeWithTag("message-9").getUnclippedBoundsInRoot()
+        compose.onNodeWithTag("message-19").assertDoesNotExist()
+
+        compose.runOnIdle { visible = false }
+        compose.onNodeWithTag("history").assertDoesNotExist()
+        compose.runOnIdle { visible = true }
+
+        assertEquals(before, compose.onNodeWithTag("message-9").getUnclippedBoundsInRoot())
+        compose.onNodeWithTag("message-19").assertDoesNotExist()
+    }
+
+    @Test fun messagesReceivedWhileHiddenAreVisibleWhenHistoryReturns() {
+        showHistory()
+        compose.onNodeWithTag("history").performScrollToIndex(10)
+        compose.runOnIdle {
+            visible = false
+            messages = messages + ChatMessage("new-message", MessageRole.USER, timestamp = 100)
+        }
+        compose.onNodeWithTag("history").assertDoesNotExist()
+        compose.runOnIdle { visible = true }
+
         assertLatestAtBottom()
     }
 

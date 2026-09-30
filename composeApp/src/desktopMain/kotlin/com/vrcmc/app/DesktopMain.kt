@@ -14,22 +14,30 @@ import com.vrcmc.app.generated.resources.Res
 import com.vrcmc.app.generated.resources.logo
 import org.jetbrains.compose.resources.painterResource
 
-fun main() = application {
-    val state =
-        rememberWindowState(
-            width = 1100.dp,
-            height = 760.dp,
-            position = WindowPosition.Aligned(Alignment.Center),
-        )
-    Window(
-        state = state,
-        onCloseRequest = ::exitApplication,
-        title = "VRCMC",
-        icon = painterResource(Res.drawable.logo),
-        resizable = true,
-    ) {
-        VrcmcApp { dark -> setWindowsTitleBar(window, dark) }
+fun main() {
+    configureDesktopVsync()
+    application {
+        val state =
+            rememberWindowState(
+                width = 1100.dp,
+                height = 760.dp,
+                position = WindowPosition.Aligned(Alignment.Center),
+            )
+        Window(
+            state = state,
+            onCloseRequest = ::exitApplication,
+            title = "VRCMC",
+            icon = painterResource(Res.drawable.logo),
+            resizable = true,
+        ) {
+            VrcmcApp { dark -> setWindowsTitleBar(window, dark) }
+        }
     }
+}
+
+internal fun configureDesktopVsync() {
+    System.setProperty("skiko.vsync.enabled", "true")
+    System.setProperty("skiko.rendering.windows.waitForFrameVsyncOnRedrawImmediately", "true")
 }
 
 private interface DwmApi : StdCallLibrary {
