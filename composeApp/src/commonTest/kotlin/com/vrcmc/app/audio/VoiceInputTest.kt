@@ -130,6 +130,35 @@ class VoiceInputTest {
     }
 
     @Test
+    fun acceptsShortUtterancesAfterVadActivation() {
+        val states = mutableListOf<Boolean>()
+        val finals = mutableListOf<ByteArray>()
+        var noSpeech = false
+        val config = VoiceInputConfig(
+            tailSilenceMillis = 300,
+            vadActivationMillis = 200,
+            vadMinRms = 0.008,
+            vadSpeechRatio = 0.6,
+            partialMinSpeechMillis = 450,
+        )
+        val processor = VoiceCaptureProcessor(
+            config,
+            states::add,
+            {},
+            finals::add,
+            { noSpeech = true },
+            {},
+        )
+
+        repeat(4) { processor.accept(pcmFrame(config.sampleRate, amplitude = 0.25)) }
+        repeat(12) { processor.accept(pcmFrame(config.sampleRate, amplitude = 0.0)) }
+
+        assertEquals(listOf(true, false), states)
+        assertEquals(1, finals.size)
+        assertFalse(noSpeech)
+    }
+
+    @Test
     fun ignoresLowLevelNoise() {
         var noSpeech = false
         var finalCount = 0

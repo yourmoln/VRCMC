@@ -3,6 +3,8 @@ package com.vrcmc.app
 import kotlin.math.max
 import kotlin.math.sqrt
 
+private const val minimumFinalSpeechMillis = 120
+
 internal data class VoiceAudioChunk(
     val wav: ByteArray?,
     val overlapSamples: Int,
@@ -30,6 +32,7 @@ internal class VoiceCaptureProcessor(
     // Keep a longer lead-in so the first syllable is retained while VAD activates.
     private val preRollFrameCount = max(1, 600 / frameDurationMillis)
     private val minimumSpeechSamples = sampleRate * config.partialMinSpeechMillis / 1_000
+    private val minimumFinalSpeechSamples = sampleRate * minimumFinalSpeechMillis / 1_000
     private val partialIntervalFrames = max(1, config.partialIntervalMillis / frameDurationMillis)
     private val maxSegmentFrames = max(1, config.maxSegmentSeconds * 1_000 / frameDurationMillis)
     private val overlapFrames = minOf(640 / frameDurationMillis, maxSegmentFrames / 2)
@@ -155,7 +158,7 @@ internal class VoiceCaptureProcessor(
                 // resending only overlap/silence to ASR.
                 onChunk.invoke(VoiceAudioChunk(if (valid) currentWav() else null, chunkOverlapSamples, isFinal = true))
             } else onNoSpeech()
-        } else if (speechSamples >= minimumSpeechSamples && segment.isNotEmpty()) {
+        } else if (speechSamples >= minimumFinalSpeechSamples && segment.isNotEmpty()) {
             onFinal(currentWav())
         } else {
             onNoSpeech()
