@@ -1,10 +1,5 @@
 package com.vrcmc.app
 
-import androidx.compose.animation.core.LinearEasing
-import androidx.compose.animation.core.animateFloat
-import androidx.compose.animation.core.infiniteRepeatable
-import androidx.compose.animation.core.rememberInfiniteTransition
-import androidx.compose.animation.core.tween
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -18,7 +13,7 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.drawBehind
+import androidx.compose.ui.draw.drawWithCache
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.focus.onFocusChanged
@@ -28,13 +23,17 @@ import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.input.key.onPreviewKeyEvent
-import androidx.compose.ui.platform.LocalWindowInfo
 import androidx.compose.ui.text.input.TextFieldValue
 import androidx.compose.ui.unit.dp
 import kotlin.math.cos
 import kotlin.math.sin
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.yield
+
+private const val interpretationBorderFrameIntervalNanos = 1_000_000_000L / 5
+private const val interpretationBorderRotationDurationNanos = 5_600_000_000L
 
 @Composable
 internal fun ChatComposer(
@@ -61,36 +60,42 @@ internal fun ChatComposer(
     val outline = MaterialTheme.colorScheme.outlineVariant
     val animatedBorder =
         if (interpreting) {
-            val borderAngle by
-                if (LocalWindowInfo.current.isWindowFocused) {
-                    rememberInfiniteTransition().animateFloat(
-                        initialValue = 0f,
-                        targetValue = 360f,
-                        animationSpec = infiniteRepeatable(tween(1400, easing = LinearEasing)),
-                    )
-                } else {
-                    remember { mutableFloatStateOf(0f) }
+            val borderAngle = remember { mutableFloatStateOf(0f) }
+            LaunchedEffect(Unit) {
+                borderAngle.floatValue = 0f
+                val startedNanos = withFrameNanos { it }
+                var elapsedNanos = 0L
+                while (isActive) {
+                    val remainingNanos =
+                        interpretationBorderFrameIntervalNanos -
+                            elapsedNanos % interpretationBorderFrameIntervalNanos
+                    delay((remainingNanos + 999_999L) / 1_000_000L)
+                    elapsedNanos = withFrameNanos { it - startedNanos }
+                    borderAngle.floatValue =
+                        (elapsedNanos % interpretationBorderRotationDurationNanos).toFloat() /
+                            interpretationBorderRotationDurationNanos * 360f
                 }
-            Modifier.drawBehind {
-                val radians = borderAngle * (kotlin.math.PI.toFloat() / 180f)
+            }
+            Modifier.drawWithCache {
                 val radius = size.maxDimension
-                val directionX = cos(radians) * radius
-                val directionY = sin(radians) * radius
-                drawRoundRect(
-                    brush =
-                        Brush.linearGradient(
-                            colors =
-                                listOf(
-                                    primary.copy(alpha = .18f),
-                                    primary,
-                                    primary.copy(alpha = .18f),
-                                ),
-                            start = Offset(center.x - directionX, center.y - directionY),
-                            end = Offset(center.x + directionX, center.y + directionY),
-                        ),
-                    cornerRadius = CornerRadius(20.dp.toPx()),
-                    style = Stroke(width = 2.dp.toPx()),
-                )
+                val colors = listOf(primary.copy(alpha = .18f), primary, primary.copy(alpha = .18f))
+                val cornerRadius = CornerRadius(20.dp.toPx())
+                val stroke = Stroke(width = 2.dp.toPx())
+                onDrawBehind {
+                    val radians = borderAngle.floatValue * (kotlin.math.PI.toFloat() / 180f)
+                    val directionX = cos(radians) * radius
+                    val directionY = sin(radians) * radius
+                    drawRoundRect(
+                        brush =
+                            Brush.linearGradient(
+                                colors = colors,
+                                start = Offset(center.x - directionX, center.y - directionY),
+                                end = Offset(center.x + directionX, center.y + directionY),
+                            ),
+                        cornerRadius = cornerRadius,
+                        style = stroke,
+                    )
+                }
             }
         } else Modifier
 
