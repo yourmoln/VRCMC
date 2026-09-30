@@ -3,7 +3,6 @@ package com.vrcmc.app
 import androidx.compose.foundation.layout.Box
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.CompositionLocalProvider
-import androidx.compose.runtime.SideEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
@@ -18,20 +17,16 @@ import androidx.compose.ui.test.hasSetTextAction
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.runSkikoComposeUiTest
 import org.junit.Test
-import kotlin.test.assertEquals
 import kotlin.test.assertFalse
-import kotlin.test.assertTrue
 
 @OptIn(ExperimentalTestApi::class, InternalComposeUiApi::class)
 class ChatComposerAnimationTest {
     @Test
-    fun interpretationBorderUpdatesAtSixtyFramesPerSecond() = runSkikoComposeUiTest {
-        val samples = mutableListOf<Long>()
-        showComposer(TestWindowInfo(), interpreting = { true }, animationSamples = samples)
+    fun interpretationBorderDoesNotRequestAnimationFrames() = runSkikoComposeUiTest {
+        showComposer(TestWindowInfo(), interpreting = { true })
         settleFrames()
 
-        val animationFrameCount = countAnimationSamples(samples)
-        assertTrue(animationFrameCount in 55..60, "Border updated $animationFrameCount times in 960 ms")
+        runOnUiThread { assertFalse(scene.hasInvalidations()) }
     }
 
     @Test
@@ -48,7 +43,7 @@ class ChatComposerAnimationTest {
     }
 
     @Test
-    fun idleComposerDoesNotRequestFramesAndStoppingInterpretationCancelsAnimation() = runSkikoComposeUiTest {
+    fun interpretationStateChangesDoNotStartAnimationFrames() = runSkikoComposeUiTest {
         var interpreting by mutableStateOf(false)
         showComposer(TestWindowInfo(), interpreting = { interpreting })
 
@@ -58,7 +53,7 @@ class ChatComposerAnimationTest {
         runOnUiThread { interpreting = true }
         mainClock.advanceTimeByFrame()
         waitForIdle()
-        runOnUiThread { assertTrue(scene.hasInvalidations()) }
+        runOnUiThread { assertFalse(scene.hasInvalidations()) }
 
         runOnUiThread { interpreting = false }
         settleFrames()
@@ -66,23 +61,22 @@ class ChatComposerAnimationTest {
     }
 
     @Test
-    fun interpretationAnimationKeepsRunningWhenWindowIsUnfocused() = runSkikoComposeUiTest {
+    fun interpretationBorderStaysStaticWhenWindowIsUnfocused() = runSkikoComposeUiTest {
         val windowInfo = TestWindowInfo(focused = false)
         var interpreting by mutableStateOf(true)
-        val samples = mutableListOf<Long>()
-        showComposer(windowInfo, interpreting = { interpreting }, animationSamples = samples)
+        showComposer(windowInfo, interpreting = { interpreting })
 
         settleFrames()
-        assertTrue(countAnimationSamples(samples) in 55..60)
+        runOnUiThread { assertFalse(scene.hasInvalidations()) }
 
         repeat(2) {
             runOnUiThread { windowInfo.isWindowFocused = true }
             settleFrames()
-            assertTrue(countAnimationSamples(samples) in 55..60)
+            runOnUiThread { assertFalse(scene.hasInvalidations()) }
 
             runOnUiThread { windowInfo.isWindowFocused = false }
             settleFrames()
-            assertTrue(countAnimationSamples(samples) in 55..60)
+            runOnUiThread { assertFalse(scene.hasInvalidations()) }
         }
 
         runOnUiThread { interpreting = false }
@@ -111,15 +105,11 @@ class ChatComposerAnimationTest {
         windowInfo: WindowInfo,
         interpreting: () -> Boolean,
         input: () -> String = { "" },
-        animationSamples: MutableList<Long>? = null,
     ) {
         mainClock.autoAdvance = false
         setContent {
             CompositionLocalProvider(LocalWindowInfo provides windowInfo) {
                 MaterialTheme {
-                    val sampledAnimationTime = animationSamples?.let { rememberChatAnimationTime(active = true) }
-                    val sampledValue = sampledAnimationTime?.value
-                    if (sampledValue != null) SideEffect { animationSamples += sampledValue }
                     Box {
                         ChatComposer(
                             input = input(),
@@ -138,7 +128,6 @@ class ChatComposerAnimationTest {
                             onSend = {},
                             onToggleAlwaysInterpretation = {},
                             onToggleVoiceInput = {},
-                            animationTimeNanos = sampledAnimationTime,
                         )
                     }
                 }
@@ -149,15 +138,6 @@ class ChatComposerAnimationTest {
     private fun SkikoComposeUiTest.settleFrames() {
         mainClock.advanceTimeBy(1600)
         waitForIdle()
-    }
-
-    private fun SkikoComposeUiTest.countAnimationSamples(samples: List<Long>): Int {
-        val initialSampleCount = samples.distinct().size
-        repeat(60) {
-            mainClock.advanceTimeByFrame()
-            waitForIdle()
-        }
-        return samples.distinct().size - initialSampleCount
     }
 
     private class TestWindowInfo(focused: Boolean = true) : WindowInfo {

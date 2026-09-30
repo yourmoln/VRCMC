@@ -668,8 +668,8 @@ fun ChatPage(
 
     val interpreting = state.isSimultaneousInterpretationActive || state.isAlwaysInterpretationActive
     val animationTimeNanos = rememberChatAnimationTime(
-        active = animationsEnabled &&
-            (interpreting || sending || (state.voiceInputConfig.enabled && voiceTranscribing) ||
+        active = animationsEnabled && !state.isAlwaysInterpretationActive &&
+            (sending || (state.voiceInputConfig.enabled && voiceTranscribing) ||
                 messages.any { it.isLoading })
     )
 

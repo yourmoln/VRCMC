@@ -13,23 +13,15 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.drawWithCache
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.focus.onFocusChanged
-import androidx.compose.ui.geometry.CornerRadius
-import androidx.compose.ui.graphics.PathEffect
 import androidx.compose.ui.graphics.SolidColor
-import androidx.compose.ui.graphics.drawscope.Stroke
-import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.input.key.onPreviewKeyEvent
 import androidx.compose.ui.text.input.TextFieldValue
 import androidx.compose.ui.unit.dp
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.yield
-
-private const val interpretationBorderRotationDurationNanos = 5_600_000_000L
-private const val interpretationBorderHighlightFraction = .2f
 
 @Composable
 internal fun ChatComposer(
@@ -56,45 +48,8 @@ internal fun ChatComposer(
     val primary = MaterialTheme.colorScheme.primary
     val outline = MaterialTheme.colorScheme.outlineVariant
     val animationTime = animationTimeNanos ?: rememberChatAnimationTime(
-        active = interpreting || sending || (voiceInputEnabled && voiceTranscribing)
+        active = !alwaysInterpretationActive && (sending || (voiceInputEnabled && voiceTranscribing))
     )
-    val animatedBorder =
-        if (interpreting) {
-            Modifier
-                .graphicsLayer {}
-                .drawWithCache {
-                    val borderWidth = 2.dp.toPx()
-                    val cornerRadiusValue = 20.dp.toPx().coerceAtMost(size.minDimension / 2f)
-                    val cornerRadius = CornerRadius(cornerRadiusValue)
-                    val perimeter =
-                        (2f * (size.width + size.height - 4f * cornerRadiusValue) +
-                                2f * kotlin.math.PI.toFloat() * cornerRadiusValue)
-                            .coerceAtLeast(1f)
-                    val highlightLength =
-                        (perimeter * interpretationBorderHighlightFraction).coerceAtLeast(borderWidth)
-                    val gapLength = (perimeter - highlightLength).coerceAtLeast(1f)
-                    onDrawBehind {
-                        val phase =
-                            chatAnimationFraction(
-                                animationTime.value,
-                                interpretationBorderRotationDurationNanos,
-                            ) * perimeter
-                        drawRoundRect(
-                            color = primary,
-                            cornerRadius = cornerRadius,
-                            style =
-                                Stroke(
-                                    width = borderWidth,
-                                    pathEffect =
-                                        PathEffect.Companion.dashPathEffect(
-                                            floatArrayOf(highlightLength, gapLength),
-                                            -phase,
-                                        ),
-                                ),
-                        )
-                    }
-                }
-        } else Modifier
 
     fun sendAndKeepFocus() {
         onSend()
@@ -108,16 +63,21 @@ internal fun ChatComposer(
         modifier =
             Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 10.dp),
         shape = RoundedCornerShape(20.dp),
-        color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = .45f),
+        color =
+            if (interpreting)
+                MaterialTheme.colorScheme.primaryContainer.copy(alpha = .28f)
+            else MaterialTheme.colorScheme.surfaceVariant.copy(alpha = .45f),
         border =
             BorderStroke(
-                1.dp,
-                if (interpreting) primary.copy(alpha = .18f) else outline,
+                if (interpreting) 2.dp else 1.dp,
+                if (interpreting) primary.copy(alpha = .34f) else outline,
             ),
     ) {
         Box {
             Column {
-                if (sending) ChatLinearProgressIndicator(animationTime, Modifier.fillMaxWidth())
+                if (sending && !alwaysInterpretationActive) {
+                    ChatLinearProgressIndicator(animationTime, Modifier.fillMaxWidth())
+                }
                 Row(
                     modifier =
                         Modifier.fillMaxWidth()
@@ -139,7 +99,15 @@ internal fun ChatComposer(
                                 else IconButtonDefaults.filledTonalIconButtonColors(),
                         ) {
                             if (voiceTranscribing) {
-                                ChatCircularProgressIndicator(animationTime, Modifier.size(20.dp), strokeWidth = 2.dp)
+                                if (alwaysInterpretationActive) {
+                                    Icon(Icons.Default.Mic, strings.startVoiceInput, tint = primary)
+                                } else {
+                                    ChatCircularProgressIndicator(
+                                        animationTime,
+                                        Modifier.size(20.dp),
+                                        strokeWidth = 2.dp,
+                                    )
+                                }
                             } else {
                                 Icon(
                                     if (voiceRecording) Icons.Default.Stop else Icons.Default.Mic,
@@ -191,7 +159,6 @@ internal fun ChatComposer(
                     }
                 }
             }
-            if (interpreting) Spacer(Modifier.matchParentSize().then(animatedBorder))
         }
     }
 }
