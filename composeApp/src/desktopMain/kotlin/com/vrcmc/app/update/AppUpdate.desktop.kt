@@ -36,14 +36,32 @@ actual suspend fun installAppUpdate(
             ?: Path.of(System.getProperty("user.home"), ".vrcmc")).resolve("updates")
         val installer = downloadWindowsUpdate(downloadUrl, release, directory, onProgress)
         currentCoroutineContext().ensureActive()
-        // Open through the Windows shell so the installer can request elevation if needed.
-        Desktop.getDesktop().open(installer.toFile())
+        launchWindowsInstaller(installer)
     }
     Result.success(Unit)
 } catch (error: CancellationException) {
     throw error
 } catch (error: Exception) {
     Result.failure(error)
+}
+
+private fun launchWindowsInstaller(installer: Path) {
+    if (System.getProperty("os.name").startsWith("Windows", ignoreCase = true)) {
+        // Desktop.open() can fail on Windows with "Unsupported URI content" for .exe files.
+        // Launch through cmd's start command so paths with spaces and the installer's UAC
+        // manifest are handled by the Windows shell.
+        val commandShell = System.getenv("ComSpec")?.takeIf(String::isNotBlank) ?: "cmd.exe"
+        ProcessBuilder(
+            commandShell,
+            "/d",
+            "/c",
+            "start",
+            "",
+            installer.toAbsolutePath().toString(),
+        ).directory(installer.parent.toFile()).start()
+    } else {
+        Desktop.getDesktop().open(installer.toFile())
+    }
 }
 
 internal suspend fun downloadWindowsUpdate(

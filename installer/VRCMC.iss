@@ -20,6 +20,11 @@ UninstallDisplayIcon={app}\VRCMC.exe
 Compression=lzma2/ultra64
 SolidCompression=yes
 WizardStyle=modern
+; Older versions keep running after launching Setup and may refuse Restart Manager's graceful shutdown.
+CloseApplications=force
+CloseApplicationsFilter=VRCMC.exe
+; The finish page launches the new version; avoid a second launch through Restart Manager.
+RestartApplications=no
 
 [Languages]
 Name: "english"; MessagesFile: "compiler:Default.isl"

@@ -33,6 +33,7 @@ fun main() {
             VrcmcApp(
                 onDarkThemeChanged = { dark -> setWindowsTitleBar(window, dark) },
                 windowMinimized = state.isMinimized,
+                onUpdateStarted = ::exitApplication,
             )
         }
     }

@@ -28,6 +28,7 @@ internal enum class ThemeMode {
 fun VrcmcApp(
     onDarkThemeChanged: (Boolean) -> Unit = {},
     windowMinimized: Boolean = false,
+    onUpdateStarted: () -> Unit = {},
 ) {
     val state = remember { AppState() }
     var screen by remember { mutableStateOf(AppScreen.CHAT) }
@@ -313,7 +314,10 @@ fun VrcmcApp(
                         scope.launch {
                             try {
                                 installAppUpdate(release) { updateProgress = it }
-                                    .onSuccess { availableUpdate = null }
+                                    .onSuccess {
+                                        availableUpdate = null
+                                        onUpdateStarted()
+                                    }
                                     .onFailure {
                                         state.addErrorLog("App update failed: ${it.message}")
                                         uriHandler.openUri(release.htmlUrl)
