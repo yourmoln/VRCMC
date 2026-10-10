@@ -242,7 +242,7 @@ object LocaleStringsEn : LocaleStrings {
     override val systemDefaultMicrophone = "System default microphone"
     override val enableVoiceInput = "Enable voice input"
     override val voiceInputHint = "Choose a cloud or local model to turn recordings into text"
-    override val qwenVoiceInputHint = "Use Qwen3-ASR to turn recordings into chat text"
+    override val qwenVoiceInputHint = "Use Fun-ASR to turn recordings into chat text"
     override val voiceInputProvider = "Recognition service"
     override val localWhisper = "Local Whisper"
     override val localModelHint = "Manually download the selected multilingual model for offline sentence recognition without an API key. Downloads continue when changing pages or services or disabling voice input; use Cancel download to stop. Translation still uses your configured service. Selecting a specific recognition language reduces latency."
@@ -257,7 +257,7 @@ object LocaleStringsEn : LocaleStrings {
     override val localModelUnsupported = "Requires Windows x64 and an AVX2-capable processor"
     override val localModelNotReady = "Select Local Whisper under API → Voice input service, click Download model, then enable voice input once it finishes."
     override val localRecognitionFailed = "Local speech recognition failed"
-    override val qwenApiKey = "Qwen API Key"
+    override val qwenApiKey = "DashScope API Key"
     override val qwenRegion = "Region"
     override val qwenLanguage = "Recognition language"
     override val qwenModel = "Model"
@@ -303,7 +303,7 @@ object LocaleStringsEn : LocaleStrings {
             VoiceTranscriptionFailureReason.LOCAL_RECOGNITION_FAILED ->
                 localRecognitionFailed + failure.message.takeIf(String::isNotBlank)?.let { ": $it" }.orEmpty()
             VoiceTranscriptionFailureReason.NO_AUDIO -> "No recognizable speech was recorded"
-            VoiceTranscriptionFailureReason.API_KEY_REQUIRED -> "Qwen API Key is required"
+            VoiceTranscriptionFailureReason.API_KEY_REQUIRED -> "DashScope API Key is required"
             VoiceTranscriptionFailureReason.BASE_URL_REQUIRED -> "Base URL is required"
             VoiceTranscriptionFailureReason.MODEL_REQUIRED -> "Model ID is required"
             VoiceTranscriptionFailureReason.INVALID_BASE_URL ->

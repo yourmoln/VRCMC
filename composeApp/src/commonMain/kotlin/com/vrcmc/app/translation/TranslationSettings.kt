@@ -30,8 +30,8 @@ data class VoiceInputConfig(
     val localWhisperModel: LocalWhisperModel = LocalWhisperModel.SMALL_Q5_1,
     val apiKey: String = "",
     val region: String = "singapore",
-    val baseUrl: String = "https://dashscope-intl.aliyuncs.com/compatible-mode/v1",
-    val model: String = "qwen3-asr-flash-2026-02-10",
+    val baseUrl: String = "https://dashscope-intl.aliyuncs.com/api/v1",
+    val model: String = "fun-asr",
     val language: String = "ja",
     val microphoneId: String = "",
     val sampleRate: Int = 16_000,
@@ -243,9 +243,8 @@ fun storedTranslationSettingsFromJson(value: String): StoredTranslationSettings 
                             ),
                             region = obj["region"]?.jsonPrimitive?.contentOrNull ?: "singapore",
                             baseUrl = obj["baseUrl"]?.jsonPrimitive?.contentOrNull
-                                ?: "https://dashscope-intl.aliyuncs.com/compatible-mode/v1",
-                            model = obj["model"]?.jsonPrimitive?.contentOrNull
-                                ?: "qwen3-asr-flash-2026-02-10",
+                                ?: "https://dashscope-intl.aliyuncs.com/api/v1",
+                            model = normalizeVoiceInputModel(obj["model"]?.jsonPrimitive?.contentOrNull),
                             language = obj["language"]?.jsonPrimitive?.contentOrNull ?: "ja",
                             microphoneId = obj["microphoneId"]?.jsonPrimitive?.contentOrNull.orEmpty(),
                             sampleRate = (obj["sampleRate"]?.jsonPrimitive?.intOrNull ?: 16_000)
@@ -290,6 +289,15 @@ fun storedTranslationSettingsFromJson(value: String): StoredTranslationSettings 
             )
         }
         .getOrDefault(StoredTranslationSettings())
+
+private fun normalizeVoiceInputModel(value: String?): String =
+    value?.trim().orEmpty().let { model ->
+        when {
+            model.isBlank() -> "fun-asr"
+            model == "qwen3-asr-flash-2026-02-10" || model == "qwen3-asr-flash" -> "fun-asr"
+            else -> model
+        }
+    }
 
 fun initialProviderConfigs(
     stored: Map<String, ProviderConfig>,

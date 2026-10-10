@@ -16,8 +16,8 @@ import androidx.compose.ui.unit.dp
 private data class AsrRegion(val id: String, val label: String, val baseUrl: String)
 
 private val asrRegions = listOf(
-    AsrRegion("singapore", "新加坡（国际）", "https://dashscope-intl.aliyuncs.com/compatible-mode/v1"),
-    AsrRegion("china_mainland", "中国大陆", "https://dashscope.aliyuncs.com/compatible-mode/v1"),
+    AsrRegion("singapore", "新加坡（国际）", "https://dashscope-intl.aliyuncs.com/api/v1"),
+    AsrRegion("china_mainland", "中国大陆", "https://dashscope.aliyuncs.com/api/v1"),
     AsrRegion("japan", "日本（工作空间端点）", ""),
     AsrRegion("custom", "自定义", ""),
 )
@@ -91,14 +91,14 @@ internal fun VoiceInputServiceSection(
                 ) {
                     Text(strings.voiceInputProvider, Modifier.weight(1f))
                     if (config.provider in availableProviders) {
-                        Text(if (config.provider == VoiceInputProvider.QWEN) "Qwen3-ASR" else strings.localWhisper)
+                        Text(if (config.provider == VoiceInputProvider.QWEN) "Fun-ASR" else strings.localWhisper)
                     }
                     Icon(Icons.Default.ArrowDropDown, null)
                 }
                 DropdownMenu(providerMenu, { providerMenu = false }) {
                     availableProviders.forEach { provider ->
                         DropdownMenuItem(
-                            text = { Text(if (provider == VoiceInputProvider.QWEN) "Qwen3-ASR" else strings.localWhisper) },
+                            text = { Text(if (provider == VoiceInputProvider.QWEN) "Fun-ASR" else strings.localWhisper) },
                             leadingIcon = { if (provider == config.provider) Icon(Icons.Default.Check, null) },
                             onClick = {
                                 onUpdate { it.copy(provider = provider) }
@@ -200,7 +200,7 @@ internal fun VoiceInputServiceSection(
                     shape = MaterialTheme.shapes.large,
                 )
                 DropdownMenu(qwenModelMenu, { qwenModelMenu = false }) {
-                    listOf("qwen3-asr-flash-2026-02-10", "qwen3-asr-flash").forEach { model ->
+                    listOf("fun-asr").forEach { model ->
                         DropdownMenuItem(
                             text = { Text(model) },
                             leadingIcon = { if (model == config.model) Icon(Icons.Default.Check, null) },
@@ -317,16 +317,6 @@ internal fun VoiceInputServiceSection(
                 shape = MaterialTheme.shapes.large,
             )
             if (config.provider == VoiceInputProvider.QWEN) {
-                OutlinedTextField(
-                    value = config.partialIntervalMillis.toString(),
-                    onValueChange = { value -> value.filter(Char::isDigit).toIntOrNull()?.let { interval -> onUpdate { it.copy(partialIntervalMillis = interval.coerceIn(250, 2_000)) } } },
-                    modifier = Modifier.fillMaxWidth(),
-                    singleLine = true,
-                    label = { Text(strings.qwenPartialInterval) },
-                    suffix = { Text("ms") },
-                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-                    shape = MaterialTheme.shapes.large,
-                )
                 OutlinedTextField(
                     value = config.timeoutSeconds.toString(),
                     onValueChange = { value -> value.filter(Char::isDigit).toIntOrNull()?.let { timeout -> onUpdate { it.copy(timeoutSeconds = timeout.coerceIn(3, 120)) } } },

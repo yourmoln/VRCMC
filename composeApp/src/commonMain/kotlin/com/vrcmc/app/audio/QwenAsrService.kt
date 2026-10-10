@@ -3,13 +3,25 @@ package com.vrcmc.app
 import io.ktor.client.call.body
 import io.ktor.client.plugins.timeout
 import io.ktor.client.request.bearerAuth
+import io.ktor.client.request.get
+import io.ktor.client.request.header
+import io.ktor.client.request.parameter
 import io.ktor.client.request.post
 import io.ktor.client.request.setBody
+import io.ktor.client.request.forms.FormBuilder
+import io.ktor.client.request.forms.append
+import io.ktor.client.request.forms.formData
+import io.ktor.client.request.forms.submitFormWithBinaryData
 import io.ktor.http.ContentType
+import io.ktor.http.Headers
+import io.ktor.http.HttpHeaders
 import io.ktor.http.contentType
 import io.ktor.http.isSuccess
 import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.withTimeoutOrNull
 import kotlinx.serialization.json.JsonObject
+import kotlinx.serialization.json.JsonPrimitive
 import kotlinx.serialization.json.buildJsonArray
 import kotlinx.serialization.json.buildJsonObject
 import kotlinx.serialization.json.contentOrNull
@@ -40,6 +52,32 @@ sealed interface VoiceTranscriptionResult {
     ) : VoiceTranscriptionResult
 }
 
+private const val funAsrModel = "fun-asr"
+private const val defaultPollIntervalMillis = 1_000L
+private const val maxPollIntervalMillis = 5_000L
+
+/**
+ * Converts the compatible-mode URL used by the settings UI to the DashScope HTTP API URL.
+ * Fun-ASR is not served by the OpenAI-compatible /chat/completions endpoint.
+ */
+internal fun funAsrApiBaseUrl(value: String): String? {
+    val base = value.trim().trimEnd('/')
+    if (!isSupportedHttpEndpoint(base)) return null
+    return when {
+        base.endsWith("/compatible-mode/v1", ignoreCase = true) ->
+            base.dropLast("/compatible-mode/v1".length) + "/api/v1"
+        base.endsWith("/compatible-mode", ignoreCase = true) ->
+            base.dropLast("/compatible-mode".length) + "/api/v1"
+        base.endsWith("/api/v1", ignoreCase = true) -> base
+        base.endsWith("/v1", ignoreCase = true) -> base
+        else -> "$base/api/v1"
+    }
+}
+
+/**
+ * Fun-ASR follows the DashScope file-transcription API. The SDK obtains a short-lived OSS
+ * upload policy first, uploads the bytes, then submits the returned oss:// URL as input.
+ */
 suspend fun transcribeQwenAudio(
     config: VoiceInputConfig,
     wav: ByteArray,
@@ -59,99 +97,281 @@ suspend fun transcribeQwenAudio(
         return VoiceTranscriptionResult.Failure(
             reason = VoiceTranscriptionFailureReason.MODEL_REQUIRED,
         )
-    if (!isSupportedHttpEndpoint(config.baseUrl))
-        return VoiceTranscriptionResult.Failure(
+    val apiBase = funAsrApiBaseUrl(config.baseUrl)
+        ?: return VoiceTranscriptionResult.Failure(
             reason = VoiceTranscriptionFailureReason.INVALID_BASE_URL,
         )
 
-    val endpoint = config.baseUrl.trim().trimEnd('/').let {
-        if (it.endsWith("/chat/completions")) it else "$it/chat/completions"
-    }
-    val body = buildJsonObject {
-        put("model", config.model.trim())
-        put("messages", buildJsonArray {
-            add(buildJsonObject {
-                put("role", "user")
-                put("content", buildJsonArray {
-                    add(buildJsonObject {
-                        put("type", "input_audio")
-                        put("input_audio", buildJsonObject {
-                            put("data", "data:audio/wav;base64,${encodeBase64(wav)}")
-                        })
-                    })
-                })
-            })
-        })
-        put("asr_options", buildJsonObject {
-            put("enable_itn", false)
-            if (config.language.isNotBlank() && config.language != "auto") {
-                put("language", config.language.trim())
-            }
-        })
-    }
     return try {
         val timeout = config.timeoutSeconds.coerceIn(3, 120) * 1_000L
-        val response = translationHttpClient.post(endpoint) {
-            timeout {
-                requestTimeoutMillis = timeout
-                connectTimeoutMillis = minOf(10_000L, timeout)
-                socketTimeoutMillis = timeout
-            }
-            contentType(ContentType.Application.Json)
-            bearerAuth(config.apiKey.trim())
-            setBody(body.toString())
-        }
-        val raw = response.body<String>()
-        if (!response.status.isSuccess()) {
-            onApiFailure(raw)
-            val failure = responseFailure(response.status.value, raw)
-            VoiceTranscriptionResult.Failure(failure.message)
-        } else {
-            val text = parseQwenAsrResponse(raw)
-            if (text.isNullOrBlank()) {
-                onApiFailure(raw)
-                VoiceTranscriptionResult.Failure(
-                    reason = VoiceTranscriptionFailureReason.EMPTY_RESPONSE,
-                )
-            } else VoiceTranscriptionResult.Success(text.trim())
-        }
+        val fileUrl = uploadFunAsrAudio(apiBase, config.apiKey.trim(), wav, timeout, onApiFailure)
+        val taskId = submitFunAsrTask(
+            apiBase = apiBase,
+            apiKey = config.apiKey.trim(),
+            fileUrl = fileUrl,
+            language = config.language,
+            timeoutMillis = timeout,
+            onApiFailure = onApiFailure,
+        ) ?: return VoiceTranscriptionResult.Failure(
+            reason = VoiceTranscriptionFailureReason.EMPTY_RESPONSE,
+        )
+        pollFunAsrTask(
+            apiBase = apiBase,
+            apiKey = config.apiKey.trim(),
+            taskId = taskId,
+            timeoutMillis = timeout,
+            onApiFailure = onApiFailure,
+        )
     } catch (error: CancellationException) {
         throw error
     } catch (error: Throwable) {
         VoiceTranscriptionResult.Failure(
-            message =
-                error.message?.takeIf(String::isNotBlank) ?: error::class.simpleName.orEmpty(),
+            message = error.message?.takeIf(String::isNotBlank) ?: error::class.simpleName.orEmpty(),
             reason = VoiceTranscriptionFailureReason.NETWORK_REQUEST_FAILED,
         )
     }
 }
 
-internal fun parseQwenAsrResponse(raw: String): String? =
-    runCatching {
-        val content = translationJson.parseToJsonElement(raw).jsonObject["choices"]
-            ?.jsonArray?.firstOrNull()?.jsonObject?.get("message")?.jsonObject?.get("content")
-            ?: return@runCatching null
-        when (content) {
-            is kotlinx.serialization.json.JsonPrimitive -> content.contentOrNull
-            is kotlinx.serialization.json.JsonArray -> content.mapNotNull { item ->
-                (item as? JsonObject)?.get("text")?.jsonPrimitive?.contentOrNull
-            }.joinToString("").ifBlank { null }
-            else -> null
+private suspend fun uploadFunAsrAudio(
+    apiBase: String,
+    apiKey: String,
+    wav: ByteArray,
+    timeoutMillis: Long,
+    onApiFailure: (String) -> Unit,
+): String {
+    val policyResponse = translationHttpClient.get("$apiBase/uploads") {
+        timeout {
+            requestTimeoutMillis = timeoutMillis
+            connectTimeoutMillis = minOf(10_000L, timeoutMillis)
+            socketTimeoutMillis = timeoutMillis
         }
-    }.getOrNull()
-
-internal fun encodeBase64(bytes: ByteArray): String {
-    val alphabet = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/"
-    val result = StringBuilder((bytes.size + 2) / 3 * 4)
-    var index = 0
-    while (index < bytes.size) {
-        val first = bytes[index++].toInt() and 0xff
-        val second = if (index < bytes.size) bytes[index++].toInt() and 0xff else -1
-        val third = if (index < bytes.size) bytes[index++].toInt() and 0xff else -1
-        result.append(alphabet[first ushr 2])
-        result.append(alphabet[((first and 3) shl 4) or if (second >= 0) second ushr 4 else 0])
-        result.append(if (second >= 0) alphabet[((second and 15) shl 2) or if (third >= 0) third ushr 6 else 0] else '=')
-        result.append(if (third >= 0) alphabet[third and 63] else '=')
+        bearerAuth(apiKey)
+        parameter("action", "getPolicy")
+        parameter("model", funAsrModel)
     }
-    return result.toString()
+    val policyRaw = policyResponse.body<String>()
+    if (!policyResponse.status.isSuccess()) {
+        onApiFailure(policyRaw)
+        error("HTTP ${policyResponse.status.value}: ${policyMessage(policyRaw)}")
+    }
+    val policy = parseUploadPolicy(policyRaw)
+        ?: error("DashScope upload policy was missing from the response")
+    val uploadHost = policy["upload_host"]?.jsonPrimitive?.contentOrNull
+        ?.takeIf(String::isNotBlank)
+        ?: error("DashScope upload policy did not contain upload_host")
+    val uploadDir = policy["upload_dir"]?.jsonPrimitive?.contentOrNull
+        ?.trimEnd('/')
+        ?.takeIf(String::isNotBlank)
+        ?: error("DashScope upload policy did not contain upload_dir")
+    val objectKey = "$uploadDir/vrcmc-${kotlin.random.Random.nextLong().toString(16)}.wav"
+    val uploadResponse = translationHttpClient.submitFormWithBinaryData(
+        url = uploadHost,
+        formData = formData {
+            appendPolicyField(policy, "OSSAccessKeyId", "oss_access_key_id")
+            appendPolicyField(policy, "Signature", "signature")
+            appendPolicyField(policy, "policy", "policy")
+            append("key", objectKey)
+            appendPolicyField(policy, "x-oss-object-acl", "x_oss_object_acl")
+            appendPolicyField(policy, "x-oss-forbid-overwrite", "x_oss_forbid_overwrite")
+            append("success_action_status", "200")
+            append("x-oss-content-type", "audio/wav")
+            append(
+                "file",
+                wav,
+                Headers.build {
+                    append(HttpHeaders.ContentType, ContentType.parse("audio/wav").toString())
+                    append(HttpHeaders.ContentDisposition, "filename=\"audio.wav\"")
+                },
+            )
+        },
+    ) {
+        timeout {
+            requestTimeoutMillis = timeoutMillis
+            connectTimeoutMillis = minOf(10_000L, timeoutMillis)
+            socketTimeoutMillis = timeoutMillis
+        }
+        header(HttpHeaders.Accept, ContentType.Application.Json.toString())
+    }
+    val uploadRaw = uploadResponse.body<String>()
+    if (!uploadResponse.status.isSuccess()) {
+        onApiFailure(uploadRaw)
+        error("OSS upload failed with HTTP ${uploadResponse.status.value}: ${policyMessage(uploadRaw)}")
+    }
+    return "oss://$objectKey"
 }
+
+private fun FormBuilder.appendPolicyField(
+    policy: JsonObject,
+    field: String,
+    policyKey: String,
+) {
+    append(field, policy[policyKey]?.jsonPrimitive?.contentOrNull.orEmpty())
+}
+
+private fun parseUploadPolicy(raw: String): JsonObject? = runCatching {
+    translationJson.parseToJsonElement(raw).jsonObject["output"]?.jsonObject
+}.getOrNull()
+
+private fun policyMessage(raw: String): String = runCatching {
+    val root = translationJson.parseToJsonElement(raw).jsonObject
+    root["message"]?.jsonPrimitive?.contentOrNull
+        ?: root["code"]?.jsonPrimitive?.contentOrNull
+        ?: raw.take(300)
+}.getOrDefault(raw.take(300))
+
+private suspend fun submitFunAsrTask(
+    apiBase: String,
+    apiKey: String,
+    fileUrl: String,
+    language: String,
+    timeoutMillis: Long,
+    onApiFailure: (String) -> Unit,
+): String? {
+    val body = buildFunAsrRequest(fileUrl, language)
+    val response = translationHttpClient.post("$apiBase/services/audio/asr/transcription") {
+        timeout {
+            requestTimeoutMillis = timeoutMillis
+            connectTimeoutMillis = minOf(10_000L, timeoutMillis)
+            socketTimeoutMillis = timeoutMillis
+        }
+        contentType(ContentType.Application.Json)
+        bearerAuth(apiKey)
+        header("X-DashScope-Async", "enable")
+        setBody(body)
+    }
+    val raw = response.body<String>()
+    if (!response.status.isSuccess()) {
+        onApiFailure(raw)
+        error("HTTP ${response.status.value}: ${policyMessage(raw)}")
+    }
+    return parseFunAsrTaskId(raw)
+}
+
+internal fun buildFunAsrRequest(fileUrl: String, language: String): String =
+    buildJsonObject {
+        put("model", funAsrModel)
+        put("input", buildJsonObject {
+            put("file_urls", buildJsonArray { add(JsonPrimitive(fileUrl)) })
+        })
+        put("parameters", buildJsonObject {
+            put("channel_id", buildJsonArray { add(JsonPrimitive(0)) })
+            if (language.isNotBlank() && !language.equals("auto", ignoreCase = true)) {
+                put("language_hints", buildJsonArray { add(JsonPrimitive(language.trim())) })
+            }
+        })
+    }.toString()
+
+internal fun parseFunAsrTaskId(raw: String): String? = runCatching {
+    val root = translationJson.parseToJsonElement(raw).jsonObject
+    root["output"]?.jsonObject?.get("task_id")?.jsonPrimitive?.contentOrNull
+        ?: root["task_id"]?.jsonPrimitive?.contentOrNull
+}.getOrNull()?.takeIf(String::isNotBlank)
+
+private suspend fun pollFunAsrTask(
+    apiBase: String,
+    apiKey: String,
+    taskId: String,
+    timeoutMillis: Long,
+    onApiFailure: (String) -> Unit,
+): VoiceTranscriptionResult = withTimeoutOrNull<VoiceTranscriptionResult>(timeoutMillis) {
+    var pollInterval = defaultPollIntervalMillis
+    while (true) {
+        val response = translationHttpClient.get("$apiBase/tasks/$taskId") {
+            timeout {
+                requestTimeoutMillis = minOf(timeoutMillis, 15_000L)
+                connectTimeoutMillis = minOf(10_000L, timeoutMillis)
+                socketTimeoutMillis = minOf(timeoutMillis, 15_000L)
+            }
+            bearerAuth(apiKey)
+        }
+        val raw = response.body<String>()
+        if (!response.status.isSuccess()) {
+            onApiFailure(raw)
+            return@withTimeoutOrNull VoiceTranscriptionResult.Failure(
+                message = "HTTP ${response.status.value}: ${policyMessage(raw)}",
+                reason = VoiceTranscriptionFailureReason.NETWORK_REQUEST_FAILED,
+            )
+        }
+        val task = parseFunAsrTask(raw)
+        when (task.status.uppercase()) {
+            "SUCCEEDED" -> {
+                val directText = parseFunAsrResponse(raw)
+                if (!directText.isNullOrBlank()) return@withTimeoutOrNull VoiceTranscriptionResult.Success(directText.trim())
+                val url = task.transcriptionUrl
+                    ?: return@withTimeoutOrNull VoiceTranscriptionResult.Failure(
+                        reason = VoiceTranscriptionFailureReason.EMPTY_RESPONSE,
+                    )
+                val resultResponse = translationHttpClient.get(url) {
+                    timeout {
+                        requestTimeoutMillis = minOf(timeoutMillis, 15_000L)
+                        connectTimeoutMillis = minOf(10_000L, timeoutMillis)
+                        socketTimeoutMillis = minOf(timeoutMillis, 15_000L)
+                    }
+                }
+                val resultRaw = resultResponse.body<String>()
+                if (!resultResponse.status.isSuccess()) {
+                    onApiFailure(resultRaw)
+                    return@withTimeoutOrNull VoiceTranscriptionResult.Failure(
+                        message = "HTTP ${resultResponse.status.value}: ${policyMessage(resultRaw)}",
+                        reason = VoiceTranscriptionFailureReason.NETWORK_REQUEST_FAILED,
+                    )
+                }
+                val text = parseFunAsrResponse(resultRaw)
+                return@withTimeoutOrNull if (text.isNullOrBlank()) {
+                    onApiFailure(resultRaw)
+                    VoiceTranscriptionResult.Failure(reason = VoiceTranscriptionFailureReason.EMPTY_RESPONSE)
+                } else {
+                    VoiceTranscriptionResult.Success(text.trim())
+                }
+            }
+            "FAILED", "CANCELED", "CANCELLED", "UNKNOWN" ->
+                return@withTimeoutOrNull VoiceTranscriptionResult.Failure(
+                    message = task.message,
+                    reason = VoiceTranscriptionFailureReason.CUSTOM,
+                )
+        }
+        delay(pollInterval)
+        pollInterval = (pollInterval * 2).coerceAtMost(maxPollIntervalMillis)
+    }
+    error("Fun-ASR polling exited unexpectedly")
+} ?: VoiceTranscriptionResult.Failure(
+    message = "Fun-ASR task timed out",
+    reason = VoiceTranscriptionFailureReason.NETWORK_REQUEST_FAILED,
+)
+
+private data class FunAsrTask(
+    val status: String,
+    val transcriptionUrl: String?,
+    val message: String,
+)
+
+private fun parseFunAsrTask(raw: String): FunAsrTask = runCatching {
+    val root = translationJson.parseToJsonElement(raw).jsonObject
+    val output = root["output"]?.jsonObject ?: root
+    val status = output["task_status"]?.jsonPrimitive?.contentOrNull
+        ?: root["task_status"]?.jsonPrimitive?.contentOrNull.orEmpty()
+    val results = output["results"]?.jsonArray.orEmpty()
+    val result = results.firstOrNull()?.jsonObject
+    FunAsrTask(
+        status = status,
+        transcriptionUrl = result?.get("transcription_url")?.jsonPrimitive?.contentOrNull,
+        message = output["message"]?.jsonPrimitive?.contentOrNull
+            ?: output["code"]?.jsonPrimitive?.contentOrNull
+            ?: "Fun-ASR task failed",
+    )
+}.getOrDefault(FunAsrTask("", null, "Fun-ASR returned an invalid task response"))
+
+/** Parses both the task response shortcut and the downloaded Fun-ASR transcript JSON. */
+internal fun parseFunAsrResponse(raw: String): String? = runCatching {
+    val root = translationJson.parseToJsonElement(raw).jsonObject
+    root["output"]?.jsonObject?.get("text")?.jsonPrimitive?.contentOrNull
+        ?: root["output"]?.jsonObject?.get("output")?.jsonObject?.get("sentence")?.jsonObject
+            ?.get("text")?.jsonPrimitive?.contentOrNull
+        ?: root["text"]?.jsonPrimitive?.contentOrNull
+        ?: root["transcripts"]?.jsonArray?.mapNotNull { transcript ->
+            transcript.jsonObject["text"]?.jsonPrimitive?.contentOrNull
+        }?.joinToString("")?.takeIf(String::isNotBlank)
+}.getOrNull()
+
+/** Kept as a source-compatible alias for callers from older builds. */
+internal fun parseQwenAsrResponse(raw: String): String? = parseFunAsrResponse(raw)

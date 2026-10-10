@@ -44,7 +44,7 @@ class VoiceInputServiceSectionTest {
         compose.onNodeWithText(LocalWhisperModel.SMALL_Q5_1.displayLabel).assertIsDisplayed()
         compose.runOnIdle { assertEquals(original.copy(provider = VoiceInputProvider.LOCAL_WHISPER), config) }
         compose.onNodeWithText(strings.voiceInputProvider).performClick()
-        compose.onNodeWithText("Qwen3-ASR").performClick()
+        compose.onNodeWithText("Fun-ASR").performClick()
         compose.onNodeWithText(strings.qwenApiKey).assertIsDisplayed()
         compose.runOnIdle { assertEquals(original, config) }
     }
@@ -156,7 +156,7 @@ class VoiceInputServiceSectionTest {
         compose.onNodeWithText(strings.localModelDownload).performClick()
         compose.onNodeWithText(strings.localModelCancelDownload).assertIsDisplayed()
         compose.onNodeWithText(strings.voiceInputProvider).performClick()
-        compose.onNodeWithText("Qwen3-ASR").performClick()
+        compose.onNodeWithText("Fun-ASR").performClick()
         compose.onNodeWithText(strings.localModelCancelDownload).assertIsDisplayed()
         compose.onNode(isToggleable()).performClick()
         compose.onNodeWithText(strings.localModelCancelDownload).assertIsDisplayed()

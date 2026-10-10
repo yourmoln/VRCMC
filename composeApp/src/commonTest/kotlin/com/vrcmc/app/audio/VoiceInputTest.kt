@@ -45,7 +45,7 @@ class VoiceInputTest {
                 apiKey = "secret",
                 region = "china_mainland",
                 baseUrl = "https://dashscope.aliyuncs.com/compatible-mode/v1",
-                model = "qwen3-asr-flash",
+                model = "fun-asr",
                 language = "zh",
                 maxSegmentSeconds = 9,
                 tailSilenceMillis = 800,
@@ -62,7 +62,7 @@ class VoiceInputTest {
         assertFalse(json.contains("secret"))
         assertTrue(restored.enabled)
         assertEquals("china_mainland", restored.region)
-        assertEquals("qwen3-asr-flash", restored.model)
+        assertEquals("fun-asr", restored.model)
         assertEquals("zh", restored.language)
         assertEquals(9, restored.maxSegmentSeconds)
         assertEquals(800, restored.tailSilenceMillis)
@@ -83,13 +83,33 @@ class VoiceInputTest {
     }
 
     @Test
-    fun base64AndQwenResponseParsing() {
-        assertEquals("AQIDBA==", encodeBase64(byteArrayOf(1, 2, 3, 4)))
+    fun funAsrRequestAndResponseParsing() {
+        assertTrue(buildFunAsrRequest("oss://audio.wav", "ja").contains("\"model\":\"fun-asr\""))
+        assertEquals("task-123", parseFunAsrTaskId("""{"output":{"task_id":"task-123"}}"""))
         assertEquals(
             "こんにちは",
-            parseQwenAsrResponse(
-                """{"choices":[{"message":{"content":"こんにちは"}}]}"""
+            parseFunAsrResponse(
+                """{"output":{"text":"こんにちは"}}"""
             ),
+        )
+        assertEquals("こんにちは", parseFunAsrResponse("""{"transcripts":[{"text":"こんにちは"}]}"""))
+        assertEquals("https://host/api/v1", funAsrApiBaseUrl("https://host/compatible-mode/v1"))
+        assertEquals("https://host/api/v1", funAsrApiBaseUrl("https://host/api/v1"))
+    }
+
+    @Test
+    fun oldQwenModelsMigrateToFunAsr() {
+        assertEquals(
+            "fun-asr",
+            storedTranslationSettingsFromJson(
+                """{"voiceInput":{"model":"qwen3-asr-flash-2026-02-10"}}""",
+            ).voiceInput.model,
+        )
+        assertEquals(
+            "fun-asr",
+            storedTranslationSettingsFromJson(
+                """{"voiceInput":{"model":"qwen3-asr-flash"}}""",
+            ).voiceInput.model,
         )
     }
 

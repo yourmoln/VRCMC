@@ -272,7 +272,7 @@ object LocaleStringsJa : LocaleStrings {
     override val systemDefaultMicrophone = "システムの既定のマイク"
     override val enableVoiceInput = "音声入力を有効にする"
     override val voiceInputHint = "クラウドまたはローカルモデルで録音を文字に変換します"
-    override val qwenVoiceInputHint = "Qwen3-ASR で録音をチャットのテキストに変換します"
+    override val qwenVoiceInputHint = "Fun-ASR で録音をチャットのテキストに変換します"
     override val voiceInputProvider = "音声認識サービス"
     override val localWhisper = "ローカル Whisper"
     override val localModelHint = "選択した多言語モデルを手動でダウンロードすると、API キーなしで文ごとにオフライン認識できます。ページやサービスの切り替え、音声入力の無効化ではダウンロードは中断されません。「ダウンロードをキャンセル」で停止できます。翻訳には設定済みのサービスを使用します。認識言語の指定で遅延を抑えられます。"
@@ -287,7 +287,7 @@ object LocaleStringsJa : LocaleStrings {
     override val localModelUnsupported = "Windows x64 と AVX2 対応プロセッサーが必要です"
     override val localModelNotReady = "API → 音声入力サービスでローカル Whisper を選び、「モデルをダウンロード」を押してください。完了後に音声入力を有効にしてください。"
     override val localRecognitionFailed = "ローカル音声認識に失敗しました"
-    override val qwenApiKey = "Qwen API Key"
+    override val qwenApiKey = "DashScope API Key"
     override val qwenRegion = "リージョン"
     override val qwenLanguage = "認識言語"
     override val qwenModel = "モデル"
@@ -333,7 +333,7 @@ object LocaleStringsJa : LocaleStrings {
             VoiceTranscriptionFailureReason.LOCAL_RECOGNITION_FAILED ->
                 localRecognitionFailed + failure.message.takeIf(String::isNotBlank)?.let { ": $it" }.orEmpty()
             VoiceTranscriptionFailureReason.NO_AUDIO -> "認識可能な音声が録音されませんでした"
-            VoiceTranscriptionFailureReason.API_KEY_REQUIRED -> "Qwen API Key を入力してください"
+            VoiceTranscriptionFailureReason.API_KEY_REQUIRED -> "DashScope API Key を入力してください"
             VoiceTranscriptionFailureReason.BASE_URL_REQUIRED -> "Base URL を入力してください"
             VoiceTranscriptionFailureReason.MODEL_REQUIRED -> "モデル ID を入力してください"
             VoiceTranscriptionFailureReason.INVALID_BASE_URL ->

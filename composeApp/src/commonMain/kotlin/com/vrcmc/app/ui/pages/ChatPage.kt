@@ -250,7 +250,9 @@ fun ChatPage(
                 onAutoStop = { if (!continuous) audioRecorder.stop() },
                 stopOnSilence = stopOnSilence,
                 continuous = continuous,
-                emitPartials = !continuous && config.provider != VoiceInputProvider.LOCAL_WHISPER,
+                // Fun-ASR is an asynchronous file-transcription model; it has no partial
+                // response API, so submit one request only after the utterance is complete.
+                emitPartials = false,
                 onChunk = if (continuous) {
                     { chunk -> managedVoiceChunks.trySend(ManagedVoiceChunk(generation, config, chunk)) }
                 } else null,
