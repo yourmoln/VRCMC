@@ -216,6 +216,9 @@ object LocaleStringsEn : LocaleStrings {
     override val alwaysInterpretationDelay = "Automatic send delay"
     override val alwaysInterpretationDelayHint =
         "Send after this much time without another input event"
+    override val alwaysInterpretationMergeMessages = "Merge quickly sent messages"
+    override val alwaysInterpretationMergeMessagesHint =
+        "In always interpret mode, merge a new message with the previous one when they are less than 2 seconds apart, then translate again"
     override val keepScreenOn = "Keep screen on"
     override val keepScreenOnHint = "Keep the screen awake while interpretation is running"
 

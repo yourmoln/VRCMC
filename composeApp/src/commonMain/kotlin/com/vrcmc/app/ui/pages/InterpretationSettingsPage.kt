@@ -305,6 +305,26 @@ internal fun SimultaneousInterpretationPage(state: AppState, strings: LocaleStri
                             )
                         },
                     )
+                    HorizontalDivider()
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Column(Modifier.weight(1f)) {
+                            Text(
+                                strings.alwaysInterpretationMergeMessages,
+                                style = MaterialTheme.typography.labelLarge,
+                            )
+                            Spacer(Modifier.height(4.dp))
+                            Text(
+                                strings.alwaysInterpretationMergeMessagesHint,
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            )
+                        }
+                        Spacer(Modifier.width(12.dp))
+                        Switch(
+                            checked = state.alwaysInterpretationMergeMessages,
+                            onCheckedChange = state::updateAlwaysInterpretationMergeMessages,
+                        )
+                    }
                 }
             }
         }

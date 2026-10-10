@@ -248,6 +248,9 @@ object LocaleStringsJa : LocaleStrings {
     override val stopAlwaysInterpretation = "常時通訳を停止"
     override val alwaysInterpretationDelay = "自動送信までの時間"
     override val alwaysInterpretationDelayHint = "最後の入力から自動送信までの待ち時間"
+    override val alwaysInterpretationMergeMessages = "短時間に送信したメッセージを結合"
+    override val alwaysInterpretationMergeMessagesHint =
+        "常時通訳中に 2 秒未満の間隔で新しいメッセージを送信した場合、前のメッセージと結合して再翻訳します"
 
     override fun seconds(value: String) = "$value 秒"
 

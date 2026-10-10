@@ -263,6 +263,8 @@ interface LocaleStrings {
     val stopAlwaysInterpretation: String
     val alwaysInterpretationDelay: String
     val alwaysInterpretationDelayHint: String
+    val alwaysInterpretationMergeMessages: String
+    val alwaysInterpretationMergeMessagesHint: String
 
     val keepScreenOn: String get() = "防止熄屏"
     val keepScreenOnHint: String get() = "传译运行期间保持屏幕常亮"

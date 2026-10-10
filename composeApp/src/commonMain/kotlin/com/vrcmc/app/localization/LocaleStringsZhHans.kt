@@ -317,6 +317,8 @@ object LocaleStringsZhHans : LocaleStrings {
     override val stopAlwaysInterpretation = "停止始终传译"
     override val alwaysInterpretationDelay = "自动发送等待时间"
     override val alwaysInterpretationDelayHint = "最后一次输入事件后等待多久自动发送"
+    override val alwaysInterpretationMergeMessages = "合并快速发送的消息"
+    override val alwaysInterpretationMergeMessagesHint = "始终传译时，若新消息与上一条消息间隔小于 2 秒，则合并后重新翻译"
 
     override fun seconds(value: String) = "$value 秒"
 

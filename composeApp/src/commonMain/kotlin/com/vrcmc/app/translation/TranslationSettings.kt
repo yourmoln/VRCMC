@@ -22,6 +22,7 @@ data class StoredTranslationSettings(
     val showTypingStatus: Boolean = true,
     val liveInputPreview: Boolean = false,
     val liveInputPreviewDelaySeconds: Int = 8,
+    val alwaysInterpretationMergeMessages: Boolean = true,
 )
 
 data class VoiceInputConfig(
@@ -115,6 +116,7 @@ fun StoredTranslationSettings.toJson(): String =
             put("showTypingStatus", showTypingStatus)
             put("liveInputPreview", liveInputPreview)
             put("liveInputPreviewDelaySeconds", liveInputPreviewDelaySeconds)
+            put("alwaysInterpretationMergeMessages", alwaysInterpretationMergeMessages)
         }
         .toString()
 
@@ -286,6 +288,9 @@ fun storedTranslationSettingsFromJson(value: String): StoredTranslationSettings 
                 liveInputPreviewDelaySeconds =
                     (root["liveInputPreviewDelaySeconds"]?.jsonPrimitive?.intOrNull ?: 8)
                         .coerceIn(0, 30),
+                alwaysInterpretationMergeMessages =
+                    root["alwaysInterpretationMergeMessages"]?.jsonPrimitive?.booleanOrNull
+                        ?: true,
             )
         }
         .getOrDefault(StoredTranslationSettings())

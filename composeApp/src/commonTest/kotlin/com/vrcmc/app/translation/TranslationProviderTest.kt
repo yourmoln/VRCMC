@@ -195,6 +195,16 @@ class TranslationProviderTest {
     }
 
     @Test
+    fun alwaysInterpretationMessageMergingDefaultsOnAndRoundTrips() {
+        assertTrue(storedTranslationSettingsFromJson("{}").alwaysInterpretationMergeMessages)
+
+        val configured = StoredTranslationSettings(alwaysInterpretationMergeMessages = false)
+        assertFalse(
+            storedTranslationSettingsFromJson(configured.toJson()).alwaysInterpretationMergeMessages
+        )
+    }
+
+    @Test
     fun liveInputPreviewDelayIsClampedWhenLoaded() {
         assertEquals(
             30,

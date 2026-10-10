@@ -244,6 +244,9 @@ object LocaleStringsZhHant : LocaleStrings {
     override val stopAlwaysInterpretation = "停止持續口譯"
     override val alwaysInterpretationDelay = "自動傳送延遲"
     override val alwaysInterpretationDelayHint = "最後一次輸入後等待多久再傳送"
+    override val alwaysInterpretationMergeMessages = "合併快速傳送的訊息"
+    override val alwaysInterpretationMergeMessagesHint =
+        "持續口譯時，若新訊息與上一則訊息間隔少於 2 秒，會合併後重新翻譯"
 
     override fun seconds(value: String) = "$value 秒"
 

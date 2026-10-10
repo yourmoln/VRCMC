@@ -83,6 +83,9 @@ class AppState {
             loadStoredAlwaysInterpretationDelayMillis().takeIf { it in 500..10_000 } ?: 2_000
         )
         private set
+    var alwaysInterpretationMergeMessages by
+        mutableStateOf(storedTranslation.alwaysInterpretationMergeMessages)
+        private set
     var interpretationKeepScreenOn by mutableStateOf(loadStoredInterpretationKeepScreenOn())
         private set
 
@@ -298,6 +301,7 @@ class AppState {
                     showTypingStatus = showTypingStatus,
                     liveInputPreview = liveInputPreview,
                     liveInputPreviewDelaySeconds = liveInputPreviewDelaySeconds,
+                    alwaysInterpretationMergeMessages = alwaysInterpretationMergeMessages,
                 )
                 .toJson()
         )
@@ -355,6 +359,11 @@ class AppState {
     fun updateAlwaysInterpretationDelayMillis(value: Int) {
         alwaysInterpretationDelayMillis = value.coerceIn(500, 10_000)
         saveStoredAlwaysInterpretationDelayMillis(alwaysInterpretationDelayMillis)
+    }
+
+    fun updateAlwaysInterpretationMergeMessages(enabled: Boolean) {
+        alwaysInterpretationMergeMessages = enabled
+        persistTranslation()
     }
 
     fun handleVrchatMuteSelf(muted: Boolean) {

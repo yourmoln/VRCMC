@@ -32,6 +32,17 @@ private data class LiveOscBarrier(val completed: CompletableDeferred<Unit>) : Li
 
 private data class TypingOscUpdate(val device: Device, val typing: Boolean)
 
+private const val alwaysInterpretationMergeWindowMillis = 2_000L
+
+private data class AlwaysInterpretationBatch(
+    val userMessage: ChatMessage,
+    val sentAtMillis: Long,
+    val deviceAddress: String,
+)
+
+private fun mergeAlwaysInterpretationMessages(previous: String, next: String): String =
+    listOf(previous.trim(), next.trim()).filter(String::isNotBlank).joinToString(" ")
+
 private data class ManagedVoiceChunk(
     val generation: Int,
     val config: VoiceInputConfig,
@@ -66,6 +77,9 @@ fun ChatPage(
     var pendingSimultaneousVoiceSend by remember { mutableStateOf(false) }
     var pendingManagedSendText by remember { mutableStateOf<String?>(null) }
     var managedVoiceRestartToken by remember { mutableIntStateOf(0) }
+    var lastAlwaysInterpretationBatch by remember {
+        mutableStateOf<AlwaysInterpretationBatch?>(null)
+    }
     val streamingMerger = remember { StreamingTextMerger() }
     val audioRecorder = remember { createAudioRecorder() }
     val localSpeechStatusFlow = remember(state.voiceInputConfig.localWhisperModel) {
@@ -355,6 +369,10 @@ fun ChatPage(
         }
     }
 
+    LaunchedEffect(state.isAlwaysInterpretationActive) {
+        if (!state.isAlwaysInterpretationActive) lastAlwaysInterpretationBatch = null
+    }
+
     fun removeLoadingMessages(messages: List<ChatMessage>) {
         messages.forEach { message ->
             val index = state.messages.indexOfFirst { it === message }
@@ -386,9 +404,13 @@ fun ChatPage(
         return result == ChatboxSendResult.SENT || result == ChatboxSendResult.SENT_OVER_LIMIT
     }
 
-    fun sendMessage(rawText: String, clearDraft: Boolean): Job? {
-        val original = state.hotwordDictionary.process(rawText)
-        if (original == null) {
+    fun sendMessage(
+        rawText: String,
+        clearDraft: Boolean,
+        automaticAlwaysInterpretation: Boolean = false,
+    ): Job? {
+        val incomingOriginal = state.hotwordDictionary.process(rawText)
+        if (incomingOriginal == null) {
             if (clearDraft) state.chatDraft = ""
             error = null
             if (blockedNotificationJob?.isActive != true) {
@@ -398,15 +420,50 @@ fun ChatPage(
         }
         val target = state.activeDevice() ?: return null
         cancelActiveTranslation()
-        if (original.isBlank()) {
+        if (incomingOriginal.isBlank()) {
             if (clearDraft) state.chatDraft = ""
             error = null
             return null
         }
+        if (!automaticAlwaysInterpretation) lastAlwaysInterpretationBatch = null
+        val sendTimestamp = currentTimeMillis()
+        val previousBatch = lastAlwaysInterpretationBatch
+        val previousIndex =
+            previousBatch?.let { batch ->
+                state.messages.indexOfFirst { it === batch.userMessage }
+            } ?: -1
+        val mergePrevious =
+            automaticAlwaysInterpretation &&
+                state.isAlwaysInterpretationActive &&
+                state.alwaysInterpretationMergeMessages &&
+                previousBatch != null &&
+                previousBatch.deviceAddress == target.address &&
+                sendTimestamp - previousBatch.sentAtMillis in 0 until alwaysInterpretationMergeWindowMillis &&
+                previousIndex >= 0
+        val original =
+            if (mergePrevious) {
+                mergeAlwaysInterpretationMessages(previousBatch!!.userMessage.text, incomingOriginal)
+            } else incomingOriginal
         val shouldTranslate = state.translate && !shouldSkipTranslation(original)
         if (shouldTranslate && !state.isTranslationApiConfigured) {
             error = strings.apiNotConfiguredTranslation
             return null
+        }
+        val userMessage = ChatMessage(original, MessageRole.USER, timestamp = sendTimestamp)
+        if (mergePrevious) {
+            while (
+                previousIndex + 1 < state.messages.size &&
+                    state.messages[previousIndex + 1].role == MessageRole.ASSISTANT
+            ) {
+                state.removeMessageAt(previousIndex + 1)
+            }
+            state.replaceMessage(previousIndex, userMessage)
+        } else {
+            state.addMessage(userMessage)
+        }
+        if (automaticAlwaysInterpretation && state.isAlwaysInterpretationActive) {
+            lastAlwaysInterpretationBatch =
+                AlwaysInterpretationBatch(userMessage, sendTimestamp, target.address)
         }
         val targetLanguages = state.languages.toList()
         val outputOrder = state.outputOrder.toList()
@@ -421,7 +478,6 @@ fun ChatPage(
         retryLimit = state.providerConfig.totalRetryCount(state.provider)
         error = null
         if (clearDraft) state.chatDraft = ""
-        state.addMessage(ChatMessage(original, MessageRole.USER))
         val loadingMessages =
             if (shouldTranslate) {
                 displayLanguages
@@ -530,7 +586,7 @@ fun ChatPage(
                     }
                 }
             }
-        if (shouldTranslate) activeTranslationJob = job
+        activeTranslationJob = job
         job.start()
         return job
     }
@@ -572,7 +628,11 @@ fun ChatPage(
                         managedVoiceCapture &&
                         state.isAlwaysInterpretationActive
                 ) {
-                    sendMessage(text, clearDraft = true)?.join()
+                    sendMessage(
+                        text,
+                        clearDraft = true,
+                        automaticAlwaysInterpretation = true,
+                    )?.join()
                 }
             }
             if (managedChunk.generation == voiceGeneration) voiceTranscribing = false
@@ -581,7 +641,13 @@ fun ChatPage(
 
     LaunchedEffect(pendingManagedSendText) {
         val text = pendingManagedSendText ?: return@LaunchedEffect
-        if (text.isNotBlank()) sendMessage(text, clearDraft = true)
+        if (text.isNotBlank()) {
+            sendMessage(
+                text,
+                clearDraft = true,
+                automaticAlwaysInterpretation = true,
+            )
+        }
         if (state.isAlwaysInterpretationActive && managedVoiceCapture) {
             while (voiceRecording || voiceTranscribing) delay(50)
             delay(120)
@@ -727,7 +793,11 @@ fun ChatPage(
                     !managedVoiceCapture &&
                     state.chatDraft == pendingText
             ) {
-                sendMessage(pendingText, clearDraft = true)
+                sendMessage(
+                    pendingText,
+                    clearDraft = true,
+                    automaticAlwaysInterpretation = true,
+                )
             }
         }
     }
