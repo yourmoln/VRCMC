@@ -18,6 +18,7 @@ import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.input.key.onPreviewKeyEvent
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.text.input.TextFieldValue
 import androidx.compose.ui.unit.dp
 import kotlinx.coroutines.launch
@@ -42,6 +43,7 @@ internal fun ChatComposer(
     onToggleAlwaysInterpretation: () -> Unit,
     onToggleVoiceInput: () -> Unit,
     animationTimeNanos: State<Long>? = null,
+    errorMessage: String? = null,
 ) {
     val focusRequester = remember { FocusRequester() }
     val scope = rememberCoroutineScope()
@@ -62,13 +64,25 @@ internal fun ChatComposer(
     Column(
         modifier = Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 10.dp),
     ) {
-        if (voiceTranscribing) {
-            Text(
-                strings.recognizing,
-                style = MaterialTheme.typography.labelSmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = .72f),
-                modifier = Modifier.align(Alignment.End).padding(end = 18.dp, bottom = 2.dp),
-            )
+                Box(Modifier.fillMaxWidth().height(20.dp)) {
+                    errorMessage?.let { message ->
+                        Text(
+                            message,
+                            style = MaterialTheme.typography.labelSmall,
+                            color = MaterialTheme.colorScheme.error,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis,
+                            modifier = Modifier.align(Alignment.CenterStart).padding(start = 6.dp),
+                        )
+                    }
+                    if (voiceTranscribing) {
+                        Text(
+                            strings.recognizing,
+                            style = MaterialTheme.typography.labelSmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = .72f),
+                            modifier = Modifier.align(Alignment.CenterEnd).padding(end = 18.dp),
+                        )
+                    }
         }
         Surface(
             modifier = Modifier.fillMaxWidth(),

@@ -921,14 +921,6 @@ fun ChatPage(
         }
 
         SnackbarHost(blockedSnackbar)
-        error?.let { message ->
-            Text(
-                message,
-                color = MaterialTheme.colorScheme.error,
-                style = MaterialTheme.typography.bodySmall,
-                modifier = Modifier.padding(horizontal = 18.dp, vertical = 4.dp),
-            )
-        }
         ChatComposer(
             input = state.chatDraft,
             sending = sending,
@@ -991,6 +983,7 @@ fun ChatPage(
             },
             onToggleVoiceInput = ::toggleVoiceInput,
             animationTimeNanos = animationTimeNanos,
+            errorMessage = error,
         )
     }
 }
