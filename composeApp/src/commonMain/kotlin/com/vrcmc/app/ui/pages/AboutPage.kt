@@ -29,6 +29,7 @@ fun AboutPage(
     val uriHandler = LocalUriHandler.current
     val scope = rememberCoroutineScope()
     var isCheckingForUpdates by remember { mutableStateOf(false) }
+    var isLatestVersion by remember { mutableStateOf(false) }
     var updateStatus by remember { mutableStateOf<String?>(null) }
 
     Box(Modifier.fillMaxSize().padding(24.dp), contentAlignment = Alignment.Center) {
@@ -64,13 +65,14 @@ fun AboutPage(
                     scope.launch {
                         if (isCheckingForUpdates) return@launch
                         isCheckingForUpdates = true
+                        isLatestVersion = false
                         updateStatus = null
                         checkForAppUpdate()
                             .onSuccess { result ->
                                 if (result.updateAvailable) {
                                     onUpdateAvailable(result.release)
                                 } else {
-                                    updateStatus = strings.alreadyLatestVersion
+                                    isLatestVersion = true
                                 }
                             }
                             .onFailure {
@@ -91,8 +93,11 @@ fun AboutPage(
                 }
                 Spacer(Modifier.width(10.dp))
                 Text(
-                    if (isCheckingForUpdates) strings.checkingForUpdates
-                    else strings.checkForUpdates
+                    when {
+                        isCheckingForUpdates -> strings.checkingForUpdates
+                        isLatestVersion -> strings.alreadyLatestVersion
+                        else -> strings.checkForUpdates
+                    }
                 )
             }
             updateStatus?.let {
