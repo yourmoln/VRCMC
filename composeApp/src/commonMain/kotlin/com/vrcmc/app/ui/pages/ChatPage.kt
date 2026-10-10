@@ -80,6 +80,7 @@ fun ChatPage(
     var lastAlwaysInterpretationBatch by remember {
         mutableStateOf<AlwaysInterpretationBatch?>(null)
     }
+    var lastVoiceTypingStatus by remember { mutableStateOf<Pair<String, Boolean>?>(null) }
     val streamingMerger = remember { StreamingTextMerger() }
     val audioRecorder = remember { createAudioRecorder() }
     val localSpeechStatusFlow = remember(state.voiceInputConfig.localWhisperModel) {
@@ -371,6 +372,16 @@ fun ChatPage(
 
     LaunchedEffect(state.isAlwaysInterpretationActive) {
         if (!state.isAlwaysInterpretationActive) lastAlwaysInterpretationBatch = null
+    }
+
+    LaunchedEffect(state.showTypingStatus, voiceRecording, voiceSpeaking, active) {
+        val target = active ?: return@LaunchedEffect
+        val typing = state.showTypingStatus && voiceRecording && voiceSpeaking
+        val status = target.address to typing
+        if (lastVoiceTypingStatus == status) return@LaunchedEffect
+        val hadPreviousStatus = lastVoiceTypingStatus != null
+        lastVoiceTypingStatus = status
+        if (hadPreviousStatus) typingUpdates.trySend(TypingOscUpdate(target, typing))
     }
 
     fun removeLoadingMessages(messages: List<ChatMessage>) {
