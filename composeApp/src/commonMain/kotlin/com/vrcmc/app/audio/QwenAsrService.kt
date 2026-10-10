@@ -8,17 +8,17 @@ import io.ktor.client.request.header
 import io.ktor.client.request.parameter
 import io.ktor.client.request.post
 import io.ktor.client.request.setBody
-import io.ktor.client.request.forms.MultiPartFormDataContent
 import io.ktor.http.ContentType
-import io.ktor.http.Headers
 import io.ktor.http.HttpHeaders
-import io.ktor.http.content.PartData
+import io.ktor.http.content.OutgoingContent
 import io.ktor.http.contentType
 import io.ktor.http.isSuccess
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.withTimeoutOrNull
 import kotlinx.io.Buffer
+import kotlinx.io.readByteArray
+import kotlinx.io.writeString
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.JsonPrimitive
 import kotlinx.serialization.json.buildJsonArray
@@ -184,49 +184,38 @@ private fun buildOssMultipartContent(
     policy: JsonObject,
     objectKey: String,
     wav: ByteArray,
-): MultiPartFormDataContent {
-    val parts = buildList {
-        addOssTextPart("OSSAccessKeyId", policy["oss_access_key_id"]?.jsonPrimitive?.contentOrNull.orEmpty())
-        addOssTextPart("Signature", policy["signature"]?.jsonPrimitive?.contentOrNull.orEmpty())
-        addOssTextPart("policy", policy["policy"]?.jsonPrimitive?.contentOrNull.orEmpty())
-        addOssTextPart("key", objectKey)
-        addOssTextPart("x-oss-object-acl", policy["x_oss_object_acl"]?.jsonPrimitive?.contentOrNull.orEmpty())
-        addOssTextPart("x-oss-forbid-overwrite", policy["x_oss_forbid_overwrite"]?.jsonPrimitive?.contentOrNull.orEmpty())
-        addOssTextPart("success_action_status", "200")
-        addOssTextPart("x-oss-content-type", "audio/wav")
-        add(
-            PartData.BinaryItem(
-                provider = { Buffer().apply { write(wav) } },
-                dispose = {},
-                partHeaders = Headers.build {
-                    append(HttpHeaders.ContentType, "audio/wav")
-                    append(HttpHeaders.ContentDisposition, "form-data; name=\"file\"; filename=\"audio.wav\"")
-                    append(HttpHeaders.ContentLength, wav.size.toString())
-                },
-            ),
-        )
-    }
+): OutgoingContent.ByteArrayContent {
     val boundary = "vrcmc-${kotlin.random.Random.nextLong().toString(16)}"
-    return MultiPartFormDataContent(
-        parts = parts,
-        boundary = boundary,
-        contentType = ContentType.parse("multipart/form-data; boundary=$boundary"),
+    val fields = listOf(
+        "OSSAccessKeyId" to policy["oss_access_key_id"]?.jsonPrimitive?.contentOrNull.orEmpty(),
+        "Signature" to policy["signature"]?.jsonPrimitive?.contentOrNull.orEmpty(),
+        "policy" to policy["policy"]?.jsonPrimitive?.contentOrNull.orEmpty(),
+        "key" to objectKey,
+        "x-oss-object-acl" to policy["x_oss_object_acl"]?.jsonPrimitive?.contentOrNull.orEmpty(),
+        "x-oss-forbid-overwrite" to policy["x_oss_forbid_overwrite"]?.jsonPrimitive?.contentOrNull.orEmpty(),
+        "success_action_status" to "200",
+        "x-oss-content-type" to "audio/wav",
     )
-}
-
-private fun MutableList<PartData>.addOssTextPart(
-    name: String,
-    value: String,
-) {
-    add(
-        PartData.FormItem(
-            value = value,
-            dispose = {},
-            partHeaders = Headers.build {
-                append(HttpHeaders.ContentDisposition, "form-data; name=\"$name\"")
-            },
-        ),
-    )
+    // Match browser/Python requests multipart encoding. Ktor's form encoder adds
+    // per-part Content-Length headers, which the OSS PostObject parser rejects.
+    val body = Buffer().apply {
+        for ((name, value) in fields) {
+            writeString("--$boundary\r\n")
+            writeString("Content-Disposition: form-data; name=\"$name\"\r\n\r\n")
+            writeString(value)
+            writeString("\r\n")
+        }
+        writeString("--$boundary\r\n")
+        writeString("Content-Disposition: form-data; name=\"file\"; filename=\"audio.wav\"\r\n")
+        writeString("Content-Type: audio/wav\r\n\r\n")
+        write(wav)
+        writeString("\r\n--$boundary--\r\n")
+    }.readByteArray()
+    return object : OutgoingContent.ByteArrayContent() {
+        override val contentType = ContentType.MultiPart.FormData.withParameter("boundary", boundary)
+        override val contentLength = body.size.toLong()
+        override fun bytes(): ByteArray = body
+    }
 }
 
 internal fun parseUploadPolicy(raw: String): JsonObject? = runCatching {
@@ -273,6 +262,7 @@ private suspend fun submitFunAsrTask(
         contentType(ContentType.Application.Json)
         bearerAuth(apiKey)
         header("X-DashScope-Async", "enable")
+        header("X-DashScope-OssResourceResolve", "enable")
         setBody(body)
     }
     val raw = response.body<String>()
