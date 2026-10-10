@@ -78,6 +78,14 @@ internal fun ChatComposer(
                 if (sending && !alwaysInterpretationActive) {
                     ChatLinearProgressIndicator(animationTime, Modifier.fillMaxWidth())
                 }
+                if (voiceTranscribing) {
+                    Text(
+                        strings.recognizing,
+                        style = MaterialTheme.typography.labelSmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = .72f),
+                        modifier = Modifier.align(Alignment.End).padding(top = 6.dp, end = 18.dp),
+                    )
+                }
                 Row(
                     modifier =
                         Modifier.fillMaxWidth()

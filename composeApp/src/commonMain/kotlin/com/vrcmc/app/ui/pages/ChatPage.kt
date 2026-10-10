@@ -73,7 +73,6 @@ fun ChatPage(
     var voiceRecording by remember { mutableStateOf(false) }
     var voiceSpeaking by remember { mutableStateOf(false) }
     var voiceTranscribing by remember { mutableStateOf(false) }
-    var voiceRecognitionLoadingMessage by remember { mutableStateOf<ChatMessage?>(null) }
     var voiceGeneration by remember { mutableIntStateOf(0) }
     var voiceBaseDraft by remember { mutableStateOf("") }
     var voiceRequestConfig by remember { mutableStateOf<VoiceInputConfig?>(null) }
@@ -131,28 +130,6 @@ fun ChatPage(
         }
     }
 
-    fun removeVoiceRecognitionLoading() {
-        val loading = voiceRecognitionLoadingMessage ?: return
-        val index = state.messages.indexOfFirst { it === loading }
-        if (index >= 0) state.removeMessageAt(index)
-        voiceRecognitionLoadingMessage = null
-    }
-
-    fun ensureVoiceRecognitionLoading(): ChatMessage {
-        val current = voiceRecognitionLoadingMessage
-        if (current != null && state.messages.any { it === current }) return current
-        removeVoiceRecognitionLoading()
-        return ChatMessage(
-            text = "",
-            role = MessageRole.USER,
-            isLoading = true,
-            loadingText = strings.recognizing,
-        ).also {
-            voiceRecognitionLoadingMessage = it
-            state.addMessage(it)
-        }
-    }
-
     LaunchedEffect(state.voiceInputConfig.enabled, state.voiceInputConfig.provider) {
         if (!state.voiceInputConfig.enabled ||
             voiceRequestConfig?.let { it.provider != state.voiceInputConfig.provider } == true) {
@@ -163,7 +140,6 @@ fun ChatPage(
             voiceRecording = false
             voiceTranscribing = false
             voiceSpeaking = false
-            removeVoiceRecognitionLoading()
         }
     }
 
@@ -202,7 +178,6 @@ fun ChatPage(
         activeVoiceRequestJob?.cancel()
         pendingPartialAudio = null
         voiceTranscribing = true
-        val loadingMessage = ensureVoiceRecognitionLoading()
         activeVoiceRequestJob = scope.launch {
             try {
                 when (val result = transcribeVoiceAudio(config, wav, state::addErrorLog)) {
@@ -231,9 +206,6 @@ fun ChatPage(
                         }
                 }
             } finally {
-                if (voiceRecognitionLoadingMessage === loadingMessage) {
-                    removeVoiceRecognitionLoading()
-                }
                 if (generation == voiceGeneration) voiceTranscribing = false
                 activeVoiceRequestJob = null
             }
@@ -291,7 +263,6 @@ fun ChatPage(
                             voiceRecording = false
                             voiceSpeaking = false
                             voiceTranscribing = false
-                            removeVoiceRecognitionLoading()
                             if (
                                 managedVoiceCapture &&
                                     (state.isAlwaysInterpretationActive ||
@@ -337,7 +308,6 @@ fun ChatPage(
                     voiceRecording = false
                     voiceTranscribing = false
                     voiceSpeaking = false
-                    removeVoiceRecognitionLoading()
                     error = message
                     if (continuous && managedVoiceCapture) {
                         managedVoiceRestartToken++
@@ -367,7 +337,6 @@ fun ChatPage(
         voiceRecording = false
         voiceSpeaking = false
         voiceTranscribing = false
-        removeVoiceRecognitionLoading()
         managedVoiceCapture = false
     }
 
@@ -679,14 +648,11 @@ fun ChatPage(
             ) continue
 
             val chunk = managedChunk.chunk
-            val loadingMessage = chunk.wav?.let {
-                voiceTranscribing = true
-                ensureVoiceRecognitionLoading()
-            }
             try {
                 val completedTexts = mutableListOf<String>()
                 val wav = chunk.wav
                 if (wav != null) {
+                    voiceTranscribing = true
                     when (val result = transcribeVoiceAudio(managedChunk.config, wav, state::addErrorLog)) {
                         is VoiceTranscriptionResult.Success ->
                             completedTexts += assembler.append(result.text, chunk.overlapSamples > 0)
@@ -713,9 +679,6 @@ fun ChatPage(
                     }
                 }
             } finally {
-                if (loadingMessage != null && voiceRecognitionLoadingMessage === loadingMessage) {
-                    removeVoiceRecognitionLoading()
-                }
                 if (managedChunk.generation == voiceGeneration) voiceTranscribing = false
             }
         }
