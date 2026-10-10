@@ -18,8 +18,47 @@ internal fun ApiCredentialsSection(
     onUpdate: ((ProviderConfig) -> ProviderConfig) -> Unit,
 ) {
     var regionMenu by remember(provider.id) { mutableStateOf(false) }
+    var protocolMenu by remember(provider.id) { mutableStateOf(false) }
     var showKey by remember(provider.id) { mutableStateOf(false) }
     SettingsCard(strings.credentialsAndEndpoint, Icons.Default.Key) {
+        if (provider.id == customCompatibleProviderId) {
+            Box {
+                OutlinedButton(
+                    { protocolMenu = true },
+                    Modifier.fillMaxWidth(),
+                    shape = MaterialTheme.shapes.large,
+                ) {
+                    Icon(Icons.Default.SwapHoriz, null)
+                    Spacer(Modifier.width(8.dp))
+                    Text(
+                        when (config.protocol) {
+                            ProviderProtocol.ANTHROPIC -> strings.anthropicCompatible
+                            else -> strings.openAiCompatible
+                        },
+                        Modifier.weight(1f),
+                    )
+                    Icon(Icons.Default.ArrowDropDown, null)
+                }
+                DropdownMenu(protocolMenu, { protocolMenu = false }) {
+                    listOf(
+                        ProviderProtocol.OPENAI to strings.openAiCompatible,
+                        ProviderProtocol.ANTHROPIC to strings.anthropicCompatible,
+                    )
+                        .forEach { (protocol, label) ->
+                            DropdownMenuItem(
+                                { Text(label) },
+                                leadingIcon = {
+                                    if (config.protocol == protocol) Icon(Icons.Default.Check, null)
+                                },
+                                onClick = {
+                                    onUpdate { old -> old.copy(protocol = protocol) }
+                                    protocolMenu = false
+                                },
+                            )
+                        }
+                }
+            }
+        }
         if (provider.id !in setOf("google_web", "microsoft_edge_web", "mymemory")) {
             OutlinedTextField(
                 value = config.apiKey,

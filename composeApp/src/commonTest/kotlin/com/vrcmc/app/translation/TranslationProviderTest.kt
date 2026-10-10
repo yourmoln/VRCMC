@@ -257,7 +257,7 @@ class TranslationProviderTest {
                     mapOf(
                         "deepseek" to
                             ProviderConfig(
-                                model = "deepseek-v4-flash",
+                                model = "deepseek-flash",
                                 fallbackModel = "deepseek-v4-pro",
                                 fallbackRetryCount = 4,
                                 fallbackEnabled = true,

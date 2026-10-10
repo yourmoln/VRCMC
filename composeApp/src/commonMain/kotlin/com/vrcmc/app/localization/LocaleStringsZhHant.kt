@@ -165,6 +165,9 @@ object LocaleStringsZhHant : LocaleStrings {
     override val translationLlm = "翻譯與 LLM"
     override val provider = "服務供應商"
     override val customCompatible = "自訂相容服務"
+    override val compatibleProtocol = "相容協定"
+    override val openAiCompatible = "OpenAI 相容"
+    override val anthropicCompatible = "Anthropic 相容"
     override val apiKey = "API 金鑰（Ollama 可不填）"
     override val targetLanguage = "目標語言"
     override val translateBeforeSending = "啟用翻譯"
@@ -339,6 +342,7 @@ object LocaleStringsZhHant : LocaleStrings {
 
     override fun providerHint(provider: TranslationProvider): String =
         when (provider.id) {
+            "custom_compatible" -> "手動設定 OpenAI 相容或 Anthropic 相容服務。"
             "openai" -> "OpenAI 官方 API。Base URL 可修改，並可從預設項目選擇模型 ID。"
             "openai_compatible" -> "適用於 OpenAI 相容代理、轉送服務及自架 API。自訂模型 ID 會原樣保留。"
             "anthropic" -> "Anthropic 官方 Messages API。"

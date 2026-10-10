@@ -98,7 +98,7 @@ class AppState {
         )
     var providerId by
         mutableStateOf(
-            storedTranslation.providerId.takeIf { id -> translationProviders.any { it.id == id } }
+            storedTranslation.providerId.takeIf { id -> allTranslationProviders.any { it.id == id } }
                 ?: defaultTranslationProviderId
         )
     var translate by mutableStateOf(storedTranslation.translate)

@@ -72,7 +72,7 @@ suspend fun translateText(
         onRetry = onRetry,
     ) { requestProvider, requestConfig ->
         try {
-            when (requestProvider.protocol) {
+            when (requestProvider.effectiveProtocol(requestConfig)) {
                 ProviderProtocol.OPENAI -> {
                     requestOpenAi(
                             requestProvider,
@@ -115,7 +115,7 @@ internal fun ProviderConfig.totalRetryCount(provider: TranslationProvider): Int 
         fallbackEnabled && fallbackModel.isNotBlank() && fallbackModel.trim() != model.trim()
     val modelFallbackAttempts = if (hasFallback) fallbackRetryCount.coerceIn(0, 10) + 1 else 0
     val bingFallbackAttempts =
-        if (bingFallbackEnabled && provider.protocol != ProviderProtocol.MICROSOFT_EDGE_WEB) 1 else 0
+        if (bingFallbackEnabled && provider.effectiveProtocol(this) != ProviderProtocol.MICROSOFT_EDGE_WEB) 1 else 0
     return primaryRetries + modelFallbackAttempts + bingFallbackAttempts
 }
 
@@ -144,7 +144,7 @@ internal suspend fun translateWithBingFallback(
     if (
         result !is TranslationResult.Failure ||
             !config.bingFallbackEnabled ||
-            provider.protocol == ProviderProtocol.MICROSOFT_EDGE_WEB
+            provider.effectiveProtocol(config) == ProviderProtocol.MICROSOFT_EDGE_WEB
     )
         return result
 

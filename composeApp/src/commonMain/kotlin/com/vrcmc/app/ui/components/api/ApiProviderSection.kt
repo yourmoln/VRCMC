@@ -15,9 +15,13 @@ import androidx.compose.ui.unit.dp
 @Composable
 internal fun ApiProviderSection(
     provider: TranslationProvider,
+    config: ProviderConfig,
     strings: LocaleStrings,
     onClick: () -> Unit,
 ) {
+    val providerLabel =
+        if (provider.id == customCompatibleProviderId) strings.customCompatible
+        else provider.label
     SettingsCard(strings.translationService, Icons.Default.Hub) {
         Surface(
             modifier = Modifier.fillMaxWidth().clickable(onClick = onClick),
@@ -26,16 +30,16 @@ internal fun ApiProviderSection(
             border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant),
         ) {
             Row(Modifier.padding(14.dp), verticalAlignment = Alignment.CenterVertically) {
-                ProviderAvatar(provider.label)
+                ProviderAvatar(providerLabel)
                 Spacer(Modifier.width(12.dp))
                 Column(Modifier.weight(1f)) {
                     Text(
-                        provider.label,
+                        providerLabel,
                         style = MaterialTheme.typography.titleMedium,
                         fontWeight = FontWeight.SemiBold,
                     )
                     Text(
-                        provider.protocol.displayName(),
+                        provider.effectiveProtocol(config).displayName(),
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )

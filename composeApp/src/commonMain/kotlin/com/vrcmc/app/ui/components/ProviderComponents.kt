@@ -18,7 +18,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
 
-private val recommendedProviderIds = setOf("deepseek", "qianwen", "gemini", "openai", "local_ai")
+private val recommendedProviderIds = setOf("deepseek", "qianwen", "openai")
 private val qwenGoldLight = Color(0xFF9A7000)
 private val qwenGoldDark = Color(0xFFFFD760)
 
@@ -37,6 +37,10 @@ internal fun ProviderPickerDialog(
                 .filter {
                     query.isBlank() ||
                         it.label.contains(query, true) ||
+                        (it.id == customCompatibleProviderId &&
+                            (strings.customCompatible.contains(query, true) ||
+                                strings.openAiCompatible.contains(query, true) ||
+                                strings.anthropicCompatible.contains(query, true))) ||
                         it.id.contains(query, true) ||
                         it.protocol.displayName().contains(query, true)
                 }
@@ -90,6 +94,9 @@ internal fun ProviderPickerDialog(
                     items(filtered, key = { it.id }) { option ->
                         val isQwen = option.id == "qianwen"
                         val isBing = option.id == "microsoft_edge_web"
+                        val optionLabel =
+                            if (option.id == customCompatibleProviderId) strings.customCompatible
+                            else option.label
                         val qwenGold = if (darkTheme) qwenGoldDark else qwenGoldLight
                         Surface(
                             Modifier.fillMaxWidth().clickable { onSelect(option.id) },
@@ -103,12 +110,12 @@ internal fun ProviderPickerDialog(
                                 Modifier.padding(horizontal = 12.dp, vertical = 10.dp),
                                 verticalAlignment = Alignment.CenterVertically,
                             ) {
-                                ProviderAvatar(option.label)
+                                ProviderAvatar(optionLabel)
                                 Spacer(Modifier.width(12.dp))
                                 Column(Modifier.weight(1f)) {
                                     Row(verticalAlignment = Alignment.CenterVertically) {
                                         Text(
-                                            option.label,
+                                            optionLabel,
                                             Modifier.weight(1f, fill = false),
                                             fontWeight = FontWeight.Medium,
                                         )
@@ -145,7 +152,9 @@ internal fun ProviderPickerDialog(
                                         }
                                     }
                                     Text(
-                                        option.protocol.displayName(),
+                                        if (option.id == customCompatibleProviderId)
+                                            strings.compatibleProtocol
+                                        else option.protocol.displayName(),
                                         style = MaterialTheme.typography.bodySmall,
                                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                                     )

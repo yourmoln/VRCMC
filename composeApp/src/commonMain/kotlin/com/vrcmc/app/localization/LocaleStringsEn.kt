@@ -124,6 +124,9 @@ object LocaleStringsEn : LocaleStrings {
     override val translationLlm = "Translation & LLM"
     override val provider = "Provider"
     override val customCompatible = "Custom compatible"
+    override val compatibleProtocol = "Compatible protocol"
+    override val openAiCompatible = "OpenAI-compatible"
+    override val anthropicCompatible = "Anthropic-compatible"
     override val apiKey = "API Key (optional for Ollama)"
     override val targetLanguage = "Target language"
     override val translateBeforeSending = "Enable translation"
@@ -313,6 +316,8 @@ object LocaleStringsEn : LocaleStrings {
 
     override fun providerHint(provider: TranslationProvider): String =
         when (provider.id) {
+            "custom_compatible" ->
+                "Manually configured OpenAI-compatible or Anthropic-compatible service."
             "openai" ->
                 "Official OpenAI API. The Base URL can be changed; select a model ID from the presets."
             "openai_compatible" ->

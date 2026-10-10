@@ -168,6 +168,9 @@ object LocaleStringsJa : LocaleStrings {
     override val translationLlm = "翻訳と LLM"
     override val provider = "プロバイダー"
     override val customCompatible = "カスタム互換サービス"
+    override val compatibleProtocol = "互換プロトコル"
+    override val openAiCompatible = "OpenAI 互換"
+    override val anthropicCompatible = "Anthropic 互換"
     override val apiKey = "API キー（Ollama は省略可）"
     override val targetLanguage = "翻訳先言語"
     override val translateBeforeSending = "翻訳を有効化"
@@ -343,6 +346,7 @@ object LocaleStringsJa : LocaleStrings {
 
     override fun providerHint(provider: TranslationProvider): String =
         when (provider.id) {
+            "custom_compatible" -> "OpenAI 互換または Anthropic 互換サービスを手動で設定します。"
             "openai" -> "OpenAI 公式 API。Base URL は変更でき、モデル ID はプリセットから選択できます。"
             "openai_compatible" -> "OpenAI 互換プロキシ、中継サービス、セルフホスト API 向けです。カスタムモデル ID は入力どおりに保持されます。"
             "anthropic" -> "Anthropic 公式 Messages API。"

@@ -115,7 +115,7 @@ internal fun ApiFallbackModelSettings(
             )
         }
     }
-    if (provider.protocol != ProviderProtocol.MICROSOFT_EDGE_WEB) {
+    if (provider.effectiveProtocol(config) != ProviderProtocol.MICROSOFT_EDGE_WEB) {
         HorizontalDivider()
         Row(verticalAlignment = Alignment.CenterVertically) {
             Column(Modifier.weight(1f)) {

@@ -9,8 +9,9 @@ internal val additionalProviders =
             "DeepSeek",
             ProviderProtocol.OPENAI,
             "https://api.deepseek.com",
-            "deepseek-v4-flash",
-            listOf("deepseek-v4-flash", "deepseek-v4-pro"),
+            "deepseek-flash",
+            listOf("deepseek-flash", "deepseek-v4-pro"),
+            editableModel = true,
             hint = "DeepSeek 官方接口；使用中转 Key 时请填写对应 Base URL。",
         ),
         TranslationProvider(

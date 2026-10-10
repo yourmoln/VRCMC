@@ -123,7 +123,7 @@ class TranslationRetryTest {
             val result =
                 translateWithFallback(
                     sourceText = "Hello",
-                    primaryModel = "deepseek-v4-flash",
+                    primaryModel = "deepseek-flash",
                     retryCount = 2,
                     fallbackModel = "deepseek-v4-pro",
                     fallbackRetryCount = 3,
@@ -137,9 +137,9 @@ class TranslationRetryTest {
 
             assertEquals(
                 listOf(
-                    "deepseek-v4-flash",
-                    "deepseek-v4-flash",
-                    "deepseek-v4-flash",
+                    "deepseek-flash",
+                    "deepseek-flash",
+                    "deepseek-flash",
                     "deepseek-v4-pro",
                     "deepseek-v4-pro",
                 ),

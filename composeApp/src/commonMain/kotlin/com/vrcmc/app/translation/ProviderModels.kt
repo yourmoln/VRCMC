@@ -43,7 +43,15 @@ data class ProviderConfig(
     val fallbackRetryCount: Int = 3,
     val fallbackEnabled: Boolean = false,
     val bingFallbackEnabled: Boolean = false,
+    /** Protocol used by the user-defined compatible provider. */
+    val protocol: ProviderProtocol = ProviderProtocol.OPENAI,
 )
+
+internal fun TranslationProvider.effectiveProtocol(config: ProviderConfig): ProviderProtocol =
+    if (id == customCompatibleProviderId) {
+        if (config.protocol == ProviderProtocol.ANTHROPIC) ProviderProtocol.ANTHROPIC
+        else ProviderProtocol.OPENAI
+    } else protocol
 
 internal fun TranslationProvider.isConfigured(config: ProviderConfig): Boolean =
     config.baseUrl.isNotBlank() &&

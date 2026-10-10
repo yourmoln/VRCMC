@@ -72,6 +72,7 @@ fun StoredTranslationSettings.toJson(): String =
                         put("fallbackRetries", value.fallbackRetryCount)
                         put("fallbackEnabled", value.fallbackEnabled)
                         put("bingFallbackEnabled", value.bingFallbackEnabled)
+                        put("protocol", value.protocol.name)
                     }
                 }
             }
@@ -171,6 +172,10 @@ fun storedTranslationSettingsFromJson(value: String): StoredTranslationSettings 
                                     obj["fallbackEnabled"]?.jsonPrimitive?.booleanOrNull ?: false,
                                 bingFallbackEnabled =
                                     obj["bingFallbackEnabled"]?.jsonPrimitive?.booleanOrNull ?: false,
+                                protocol =
+                                    ProviderProtocol.entries.firstOrNull {
+                                        it.name == obj["protocol"]?.jsonPrimitive?.contentOrNull
+                                    } ?: ProviderProtocol.OPENAI,
                             )
                         }
                     }
@@ -291,7 +296,7 @@ fun initialProviderConfigs(
     secrets: Map<String, ProviderSecrets> = emptyMap(),
 ) =
     mutableStateMapOf<String, ProviderConfig>().apply {
-        translationProviders.forEach { provider ->
+        allTranslationProviders.forEach { provider ->
             val value = stored[provider.id] ?: defaultProviderConfig(provider)
             val protected = secrets[provider.id]
             put(

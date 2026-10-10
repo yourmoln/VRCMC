@@ -62,7 +62,7 @@ internal fun ApiRequestSettings(
             shape = MaterialTheme.shapes.large,
         )
     }
-    if (provider.supportsStreaming) {
+    if (provider.supportsStreaming && provider.effectiveProtocol(config) == ProviderProtocol.OPENAI) {
         Row(verticalAlignment = Alignment.CenterVertically) {
             Column(Modifier.weight(1f)) {
                 Text(strings.streamingResponse)

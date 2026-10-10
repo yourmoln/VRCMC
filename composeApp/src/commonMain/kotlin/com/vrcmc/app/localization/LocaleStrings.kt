@@ -183,6 +183,9 @@ interface LocaleStrings {
     val translationLlm: String
     val provider: String
     val customCompatible: String
+    val compatibleProtocol: String get() = "Compatible protocol"
+    val openAiCompatible: String get() = "OpenAI-compatible"
+    val anthropicCompatible: String get() = "Anthropic-compatible"
     val apiKey: String
     val targetLanguage: String
     val translateBeforeSending: String

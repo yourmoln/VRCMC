@@ -40,7 +40,7 @@ fun ApiPage(
         verticalArrangement = Arrangement.spacedBy(12.dp),
     ) {
         item { ApiTranslationToggleSection(state, strings) }
-        item { ApiProviderSection(provider, strings) { showProviderPicker = true } }
+        item { ApiProviderSection(provider, config, strings) { showProviderPicker = true } }
         item { ApiCredentialsSection(provider, config, strings, ::update) }
         item { ApiModelSection(provider, config, strings, ::update) }
         item {
