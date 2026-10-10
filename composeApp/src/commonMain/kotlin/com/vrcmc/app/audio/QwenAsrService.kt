@@ -208,8 +208,23 @@ private fun FormBuilder.appendPolicyField(
     append(field, policy[policyKey]?.jsonPrimitive?.contentOrNull.orEmpty())
 }
 
-private fun parseUploadPolicy(raw: String): JsonObject? = runCatching {
-    translationJson.parseToJsonElement(raw).jsonObject["output"]?.jsonObject
+internal fun parseUploadPolicy(raw: String): JsonObject? = runCatching {
+    val root = translationJson.parseToJsonElement(raw).jsonObject
+    // DashScope's SDK normalizes both response shapes: newer endpoints return the
+    // certificate in `output`, while the uploads endpoint can return the
+    // certificate directly at the root (with an optional `request_id`).
+    val candidates = listOfNotNull(
+        root["output"]?.jsonObject,
+        root["data"]?.jsonObject,
+        root,
+    )
+    candidates.firstOrNull { policy ->
+        policy["upload_host"]?.jsonPrimitive?.contentOrNull?.isNotBlank() == true &&
+            policy["upload_dir"]?.jsonPrimitive?.contentOrNull?.isNotBlank() == true &&
+            policy["oss_access_key_id"]?.jsonPrimitive?.contentOrNull?.isNotBlank() == true &&
+            policy["signature"]?.jsonPrimitive?.contentOrNull?.isNotBlank() == true &&
+            policy["policy"]?.jsonPrimitive?.contentOrNull?.isNotBlank() == true
+    }
 }.getOrNull()
 
 private fun policyMessage(raw: String): String = runCatching {

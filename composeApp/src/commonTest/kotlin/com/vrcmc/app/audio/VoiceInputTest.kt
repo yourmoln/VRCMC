@@ -98,6 +98,22 @@ class VoiceInputTest {
     }
 
     @Test
+    fun funAsrUploadPolicySupportsDashScopeRootResponse() {
+        val policy = """
+            {
+              "request_id": "request-1",
+              "upload_host": "https://oss.example.com",
+              "upload_dir": "uploads/session",
+              "oss_access_key_id": "access-key",
+              "signature": "signature",
+              "policy": "policy"
+            }
+        """.trimIndent()
+
+        assertTrue(parseUploadPolicy(policy) != null)
+    }
+
+    @Test
     fun oldQwenModelsMigrateToFunAsr() {
         assertEquals(
             "fun-asr",
