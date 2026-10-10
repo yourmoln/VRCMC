@@ -62,6 +62,7 @@ object LocaleStringsEn : LocaleStrings {
     override val cancel = "Cancel"
     override val translationAssistant = "Translation"
     override val translating = "Translating..."
+    override val recognizing = "Recognizing..."
 
     override fun translatingRetry(attempt: Int, limit: Int) = "Translating... Retry $attempt/$limit"
 

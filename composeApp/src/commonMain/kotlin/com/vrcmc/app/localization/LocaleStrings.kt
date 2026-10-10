@@ -127,6 +127,7 @@ interface LocaleStrings {
     val cancel: String
     val translationAssistant: String
     val translating: String
+    val recognizing: String get() = "识别中..."
 
     fun translatingRetry(attempt: Int, limit: Int): String
 

@@ -112,6 +112,7 @@ object LocaleStringsZhHant : LocaleStrings {
     override val cancel = "取消"
     override val translationAssistant = "翻譯"
     override val translating = "翻譯中..."
+    override val recognizing = "辨識中..."
 
     override fun translatingRetry(attempt: Int, limit: Int) = "翻譯中...（重試 $attempt/$limit）"
 

@@ -73,7 +73,8 @@ internal fun MessageBubble(
                                 )
                                 Spacer(Modifier.width(9.dp))
                                 Text(
-                                    if (retryAttempt > 0)
+                                    message.loadingText
+                                        ?: if (retryAttempt > 0)
                                         strings.translatingRetry(retryAttempt, retryLimit)
                                     else strings.translating,
                                     style = MaterialTheme.typography.bodyMedium,

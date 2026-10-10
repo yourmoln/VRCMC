@@ -87,7 +87,10 @@ internal fun ChatComposer(
                 ) {
                     if (voiceInputEnabled) {
                         FilledTonalIconButton(
-                            enabled = enabled && !sending && !voiceTranscribing,
+                            enabled =
+                                enabled &&
+                                    !sending &&
+                                    (!voiceTranscribing || (alwaysInterpretationActive && voiceRecording)),
                             onClick = onToggleVoiceInput,
                             modifier = Modifier.size(44.dp),
                             colors =
@@ -98,7 +101,9 @@ internal fun ChatComposer(
                                     )
                                 else IconButtonDefaults.filledTonalIconButtonColors(),
                         ) {
-                            if (voiceTranscribing) {
+                            if (voiceRecording) {
+                                Icon(Icons.Default.Stop, strings.stopVoiceInput)
+                            } else if (voiceTranscribing) {
                                 if (alwaysInterpretationActive) {
                                     Icon(Icons.Default.Mic, strings.startVoiceInput, tint = primary)
                                 } else {
@@ -110,8 +115,8 @@ internal fun ChatComposer(
                                 }
                             } else {
                                 Icon(
-                                    if (voiceRecording) Icons.Default.Stop else Icons.Default.Mic,
-                                    if (voiceRecording) strings.stopVoiceInput else strings.startVoiceInput,
+                                    Icons.Default.Mic,
+                                    strings.startVoiceInput,
                                 )
                             }
                         }

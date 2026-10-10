@@ -11,4 +11,5 @@ data class ChatMessage(
     val timestamp: Long = currentTimeMillis(),
     val isLoading: Boolean = false,
     val language: String? = null,
+    val loadingText: String? = null,
 )

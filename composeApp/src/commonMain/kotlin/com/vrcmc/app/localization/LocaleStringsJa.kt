@@ -112,6 +112,7 @@ object LocaleStringsJa : LocaleStrings {
     override val cancel = "キャンセル"
     override val translationAssistant = "翻訳"
     override val translating = "翻訳中..."
+    override val recognizing = "認識中..."
 
     override fun translatingRetry(attempt: Int, limit: Int) = "翻訳中...（再試行 $attempt/$limit）"
 

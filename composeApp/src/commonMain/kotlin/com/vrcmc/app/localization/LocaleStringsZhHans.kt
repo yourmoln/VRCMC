@@ -195,6 +195,7 @@ object LocaleStringsZhHans : LocaleStrings {
     override val cancel = "取消"
     override val translationAssistant = "翻译"
     override val translating = "翻译中..."
+    override val recognizing = "识别中..."
 
     override fun translatingRetry(attempt: Int, limit: Int) = "翻译中...（重试 $attempt/$limit）"
 
