@@ -8,18 +8,17 @@ import io.ktor.client.request.header
 import io.ktor.client.request.parameter
 import io.ktor.client.request.post
 import io.ktor.client.request.setBody
-import io.ktor.client.request.forms.FormBuilder
-import io.ktor.client.request.forms.append
-import io.ktor.client.request.forms.formData
-import io.ktor.client.request.forms.submitFormWithBinaryData
+import io.ktor.client.request.forms.MultiPartFormDataContent
 import io.ktor.http.ContentType
 import io.ktor.http.Headers
 import io.ktor.http.HttpHeaders
+import io.ktor.http.content.PartData
 import io.ktor.http.contentType
 import io.ktor.http.isSuccess
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.withTimeoutOrNull
+import kotlinx.io.Buffer
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.JsonPrimitive
 import kotlinx.serialization.json.buildJsonArray
@@ -164,33 +163,14 @@ private suspend fun uploadFunAsrAudio(
         ?.takeIf(String::isNotBlank)
         ?: error("DashScope upload policy did not contain upload_dir")
     val objectKey = "$uploadDir/vrcmc-${kotlin.random.Random.nextLong().toString(16)}.wav"
-    val uploadResponse = translationHttpClient.submitFormWithBinaryData(
-        url = uploadHost,
-        formData = formData {
-            appendPolicyField(policy, "OSSAccessKeyId", "oss_access_key_id")
-            appendPolicyField(policy, "Signature", "signature")
-            appendPolicyField(policy, "policy", "policy")
-            append("key", objectKey)
-            appendPolicyField(policy, "x-oss-object-acl", "x_oss_object_acl")
-            appendPolicyField(policy, "x-oss-forbid-overwrite", "x_oss_forbid_overwrite")
-            append("success_action_status", "200")
-            append("x-oss-content-type", "audio/wav")
-            append(
-                "file",
-                wav,
-                Headers.build {
-                    append(HttpHeaders.ContentType, ContentType.parse("audio/wav").toString())
-                    append(HttpHeaders.ContentDisposition, "filename=\"audio.wav\"")
-                },
-            )
-        },
-    ) {
+    val uploadResponse = translationHttpClient.post(uploadHost) {
         timeout {
             requestTimeoutMillis = timeoutMillis
             connectTimeoutMillis = minOf(10_000L, timeoutMillis)
             socketTimeoutMillis = timeoutMillis
         }
         header(HttpHeaders.Accept, ContentType.Application.Json.toString())
+        setBody(buildOssMultipartContent(policy, objectKey, wav))
     }
     val uploadRaw = uploadResponse.body<String>()
     if (!uploadResponse.status.isSuccess()) {
@@ -200,12 +180,53 @@ private suspend fun uploadFunAsrAudio(
     return "oss://$objectKey"
 }
 
-private fun FormBuilder.appendPolicyField(
+private fun buildOssMultipartContent(
     policy: JsonObject,
-    field: String,
-    policyKey: String,
+    objectKey: String,
+    wav: ByteArray,
+): MultiPartFormDataContent {
+    val parts = buildList {
+        addOssTextPart("OSSAccessKeyId", policy["oss_access_key_id"]?.jsonPrimitive?.contentOrNull.orEmpty())
+        addOssTextPart("Signature", policy["signature"]?.jsonPrimitive?.contentOrNull.orEmpty())
+        addOssTextPart("policy", policy["policy"]?.jsonPrimitive?.contentOrNull.orEmpty())
+        addOssTextPart("key", objectKey)
+        addOssTextPart("x-oss-object-acl", policy["x_oss_object_acl"]?.jsonPrimitive?.contentOrNull.orEmpty())
+        addOssTextPart("x-oss-forbid-overwrite", policy["x_oss_forbid_overwrite"]?.jsonPrimitive?.contentOrNull.orEmpty())
+        addOssTextPart("success_action_status", "200")
+        addOssTextPart("x-oss-content-type", "audio/wav")
+        add(
+            PartData.BinaryItem(
+                provider = { Buffer().apply { write(wav) } },
+                dispose = {},
+                partHeaders = Headers.build {
+                    append(HttpHeaders.ContentType, "audio/wav")
+                    append(HttpHeaders.ContentDisposition, "form-data; name=\"file\"; filename=\"audio.wav\"")
+                    append(HttpHeaders.ContentLength, wav.size.toString())
+                },
+            ),
+        )
+    }
+    val boundary = "vrcmc-${kotlin.random.Random.nextLong().toString(16)}"
+    return MultiPartFormDataContent(
+        parts = parts,
+        boundary = boundary,
+        contentType = ContentType.parse("multipart/form-data; boundary=$boundary"),
+    )
+}
+
+private fun MutableList<PartData>.addOssTextPart(
+    name: String,
+    value: String,
 ) {
-    append(field, policy[policyKey]?.jsonPrimitive?.contentOrNull.orEmpty())
+    add(
+        PartData.FormItem(
+            value = value,
+            dispose = {},
+            partHeaders = Headers.build {
+                append(HttpHeaders.ContentDisposition, "form-data; name=\"$name\"")
+            },
+        ),
+    )
 }
 
 internal fun parseUploadPolicy(raw: String): JsonObject? = runCatching {
