@@ -67,6 +67,7 @@ fun ChatPage(
     var voiceRecording by remember { mutableStateOf(false) }
     var voiceSpeaking by remember { mutableStateOf(false) }
     var voiceTranscribing by remember { mutableStateOf(false) }
+    var voiceTranscriptionLoadingMessage by remember { mutableStateOf<ChatMessage?>(null) }
     var voiceGeneration by remember { mutableIntStateOf(0) }
     var voiceBaseDraft by remember { mutableStateOf("") }
     var voiceRequestConfig by remember { mutableStateOf<VoiceInputConfig?>(null) }
@@ -121,6 +122,24 @@ fun ChatPage(
             audioRecorder.release()
         }
     }
+
+    fun removeVoiceTranscriptionLoading() {
+        val loading = voiceTranscriptionLoadingMessage ?: return
+        val index = state.messages.indexOfFirst { it === loading }
+        if (index >= 0) state.removeMessageAt(index)
+        voiceTranscriptionLoadingMessage = null
+    }
+
+    fun ensureVoiceTranscriptionLoading() {
+        val current = voiceTranscriptionLoadingMessage
+        if (current != null && state.messages.any { it === current }) return
+        removeVoiceTranscriptionLoading()
+        ChatMessage("", MessageRole.ASSISTANT, isLoading = true).also {
+            voiceTranscriptionLoadingMessage = it
+            state.addMessage(it)
+        }
+    }
+
     LaunchedEffect(state.voiceInputConfig.enabled, state.voiceInputConfig.provider) {
         if (!state.voiceInputConfig.enabled ||
             voiceRequestConfig?.let { it.provider != state.voiceInputConfig.provider } == true) {
@@ -131,6 +150,7 @@ fun ChatPage(
             voiceRecording = false
             voiceTranscribing = false
             voiceSpeaking = false
+            removeVoiceTranscriptionLoading()
         }
     }
 
@@ -169,34 +189,42 @@ fun ChatPage(
         activeVoiceRequestJob?.cancel()
         pendingPartialAudio = null
         voiceTranscribing = true
+        ensureVoiceTranscriptionLoading()
+        val loadingMessage = voiceTranscriptionLoadingMessage
         activeVoiceRequestJob = scope.launch {
-            when (val result = transcribeVoiceAudio(config, wav, state::addErrorLog)) {
-                is VoiceTranscriptionResult.Success ->
-                    if (generation == voiceGeneration) {
-                        val finalText = streamingMerger.ingestFinal(result.text)
-                        applyVoiceText(finalText)
-                        error = null
-                        if (pendingSimultaneousVoiceSend) {
-                            pendingSimultaneousVoiceSend = false
-                            pendingManagedSendText = finalText
-                        } else if (managedVoiceCapture && state.isAlwaysInterpretationActive) {
-                            pendingManagedSendText = finalText
+            try {
+                when (val result = transcribeVoiceAudio(config, wav, state::addErrorLog)) {
+                    is VoiceTranscriptionResult.Success ->
+                        if (generation == voiceGeneration) {
+                            val finalText = streamingMerger.ingestFinal(result.text)
+                            applyVoiceText(finalText)
+                            error = null
+                            if (pendingSimultaneousVoiceSend) {
+                                pendingSimultaneousVoiceSend = false
+                                pendingManagedSendText = finalText
+                            } else if (managedVoiceCapture && state.isAlwaysInterpretationActive) {
+                                pendingManagedSendText = finalText
+                            }
                         }
-                    }
-                is VoiceTranscriptionResult.Failure ->
-                    if (generation == voiceGeneration) {
-                        error = strings.voiceTranscriptionFailureMessage(result)
-                        if (
-                            managedVoiceCapture &&
-                                (state.isAlwaysInterpretationActive ||
-                                    state.isSimultaneousInterpretationActive)
-                        ) {
-                            managedVoiceRestartToken++
+                    is VoiceTranscriptionResult.Failure ->
+                        if (generation == voiceGeneration) {
+                            error = strings.voiceTranscriptionFailureMessage(result)
+                            if (
+                                managedVoiceCapture &&
+                                    (state.isAlwaysInterpretationActive ||
+                                        state.isSimultaneousInterpretationActive)
+                            ) {
+                                managedVoiceRestartToken++
+                            }
                         }
-                    }
+                }
+            } finally {
+                if (voiceTranscriptionLoadingMessage === loadingMessage) {
+                    removeVoiceTranscriptionLoading()
+                }
+                if (generation == voiceGeneration) voiceTranscribing = false
+                activeVoiceRequestJob = null
             }
-            if (generation == voiceGeneration) voiceTranscribing = false
-            activeVoiceRequestJob = null
         }
     }
 
@@ -219,13 +247,18 @@ fun ChatPage(
         voiceRecording = true
         voiceSpeaking = false
         voiceTranscribing = false
+        var latestSpeechEvent = 0
         lateinit var processor: VoiceCaptureProcessor
         processor =
             VoiceCaptureProcessor(
                 config = config,
                 onSpeechState = { speaking ->
+                    val speechEvent = ++latestSpeechEvent
                     scope.launch {
-                        if (generation == voiceGeneration) voiceSpeaking = speaking
+                        if (generation == voiceGeneration && speechEvent == latestSpeechEvent) {
+                            voiceSpeaking = speaking
+                            if (!speaking && voiceRecording) ensureVoiceTranscriptionLoading()
+                        }
                     }
                 },
                 onPartial = { wav ->
@@ -250,6 +283,7 @@ fun ChatPage(
                             voiceRecording = false
                             voiceSpeaking = false
                             voiceTranscribing = false
+                            removeVoiceTranscriptionLoading()
                             if (
                                 managedVoiceCapture &&
                                     (state.isAlwaysInterpretationActive ||
@@ -290,8 +324,11 @@ fun ChatPage(
             },
             onError = { message ->
                 scope.launch {
+                    if (generation != voiceGeneration) return@launch
                     voiceRecording = false
                     voiceTranscribing = false
+                    voiceSpeaking = false
+                    removeVoiceTranscriptionLoading()
                     error = message
                     if (generation == voiceGeneration && continuous && managedVoiceCapture) {
                         managedVoiceRestartToken++
@@ -321,6 +358,7 @@ fun ChatPage(
         voiceRecording = false
         voiceSpeaking = false
         voiceTranscribing = false
+        removeVoiceTranscriptionLoading()
         managedVoiceCapture = false
     }
 
@@ -617,6 +655,8 @@ fun ChatPage(
             ) continue
 
             val chunk = managedChunk.chunk
+            if (chunk.isFinal) ensureVoiceTranscriptionLoading()
+            val loadingMessage = if (chunk.isFinal) voiceTranscriptionLoadingMessage else null
             val completedTexts = mutableListOf<String>()
             val wav = chunk.wav
             if (wav != null) {
@@ -631,6 +671,10 @@ fun ChatPage(
                 }
             }
             if (chunk.isFinal) completedTexts += assembler.finish()
+
+            if (loadingMessage != null && voiceTranscriptionLoadingMessage === loadingMessage) {
+                removeVoiceTranscriptionLoading()
+            }
 
             for (text in completedTexts) {
                 if (
