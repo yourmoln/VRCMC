@@ -59,115 +59,118 @@ internal fun ChatComposer(
         }
     }
 
-    Surface(
-        modifier =
-            Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 10.dp),
-        shape = RoundedCornerShape(20.dp),
-        color =
-            if (interpreting)
-                MaterialTheme.colorScheme.primaryContainer.copy(alpha = .28f)
-            else MaterialTheme.colorScheme.surfaceVariant.copy(alpha = .45f),
-        border =
-            BorderStroke(
-                if (interpreting) 2.dp else 1.dp,
-                if (interpreting) primary.copy(alpha = .34f) else outline,
-            ),
+    Column(
+        modifier = Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 10.dp),
     ) {
-        Box {
-            Column {
-                if (sending && !alwaysInterpretationActive) {
-                    ChatLinearProgressIndicator(animationTime, Modifier.fillMaxWidth())
-                }
-                if (voiceTranscribing) {
-                    Text(
-                        strings.recognizing,
-                        style = MaterialTheme.typography.labelSmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = .72f),
-                        modifier = Modifier.align(Alignment.End).padding(top = 6.dp, end = 18.dp),
-                    )
-                }
-                Row(
-                    modifier =
-                        Modifier.fillMaxWidth()
-                            .heightIn(min = 56.dp)
-                            .padding(start = 6.dp, end = 6.dp),
-                    verticalAlignment = Alignment.CenterVertically,
-                ) {
-                    if (voiceInputEnabled) {
-                        FilledTonalIconButton(
-                            enabled =
-                                enabled &&
-                                    !sending &&
-                                    (!voiceTranscribing || (alwaysInterpretationActive && voiceRecording)),
-                            onClick = onToggleVoiceInput,
-                            modifier = Modifier.size(44.dp),
-                            colors =
-                                if (voiceSpeaking)
-                                    IconButtonDefaults.filledTonalIconButtonColors(
-                                        containerColor = MaterialTheme.colorScheme.errorContainer,
-                                        contentColor = MaterialTheme.colorScheme.onErrorContainer,
-                                    )
-                                else IconButtonDefaults.filledTonalIconButtonColors(),
-                        ) {
-                            if (voiceRecording) {
-                                Icon(Icons.Default.Stop, strings.stopVoiceInput)
-                            } else if (voiceTranscribing) {
-                                if (alwaysInterpretationActive) {
-                                    Icon(Icons.Default.Mic, strings.startVoiceInput, tint = primary)
+        if (voiceTranscribing) {
+            Text(
+                strings.recognizing,
+                style = MaterialTheme.typography.labelSmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = .72f),
+                modifier = Modifier.align(Alignment.End).padding(end = 18.dp, bottom = 2.dp),
+            )
+        }
+        Surface(
+            modifier = Modifier.fillMaxWidth(),
+            shape = RoundedCornerShape(20.dp),
+            color =
+                if (interpreting)
+                    MaterialTheme.colorScheme.primaryContainer.copy(alpha = .28f)
+                else MaterialTheme.colorScheme.surfaceVariant.copy(alpha = .45f),
+            border =
+                BorderStroke(
+                    if (interpreting) 2.dp else 1.dp,
+                    if (interpreting) primary.copy(alpha = .34f) else outline,
+                ),
+        ) {
+            Box {
+                Column {
+                    if (sending && !alwaysInterpretationActive) {
+                        ChatLinearProgressIndicator(animationTime, Modifier.fillMaxWidth())
+                    }
+                    Row(
+                        modifier =
+                            Modifier.fillMaxWidth()
+                                .heightIn(min = 56.dp)
+                                .padding(start = 6.dp, end = 6.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                    ) {
+                        if (voiceInputEnabled) {
+                            FilledTonalIconButton(
+                                enabled =
+                                    enabled &&
+                                        !sending &&
+                                        (!voiceTranscribing || (alwaysInterpretationActive && voiceRecording)),
+                                onClick = onToggleVoiceInput,
+                                modifier = Modifier.size(44.dp),
+                                colors =
+                                    if (voiceSpeaking)
+                                        IconButtonDefaults.filledTonalIconButtonColors(
+                                            containerColor = MaterialTheme.colorScheme.errorContainer,
+                                            contentColor = MaterialTheme.colorScheme.onErrorContainer,
+                                        )
+                                    else IconButtonDefaults.filledTonalIconButtonColors(),
+                            ) {
+                                if (voiceRecording) {
+                                    Icon(Icons.Default.Stop, strings.stopVoiceInput)
+                                } else if (voiceTranscribing) {
+                                    if (alwaysInterpretationActive) {
+                                        Icon(Icons.Default.Mic, strings.startVoiceInput, tint = primary)
+                                    } else {
+                                        ChatCircularProgressIndicator(
+                                            animationTime,
+                                            Modifier.size(20.dp),
+                                            strokeWidth = 2.dp,
+                                        )
+                                    }
                                 } else {
-                                    ChatCircularProgressIndicator(
-                                        animationTime,
-                                        Modifier.size(20.dp),
-                                        strokeWidth = 2.dp,
+                                    Icon(
+                                        Icons.Default.Mic,
+                                        strings.startVoiceInput,
                                     )
                                 }
-                            } else {
+                            }
+                            Spacer(Modifier.width(10.dp))
+                        }
+                        ChatComposerTextInput(
+                            input = input,
+                            onInputChange = { onInputChange(it.take(maxInputCharacters)) },
+                            enabled = enabled,
+                            strings = strings,
+                            onSend = ::sendAndKeepFocus,
+                            modifier =
+                                Modifier.weight(1f)
+                                    .focusRequester(focusRequester)
+                                    .padding(vertical = 14.dp),
+                        )
+                        Spacer(Modifier.width(10.dp))
+                        if (alwaysInterpretationEnabled) {
+                            FilledIconButton(
+                                enabled = enabled && (!sending || alwaysInterpretationActive),
+                                onClick = {
+                                    onToggleAlwaysInterpretation()
+                                    scope.launch {
+                                        yield()
+                                        focusRequester.requestFocus()
+                                    }
+                                },
+                                modifier = Modifier.size(44.dp),
+                            ) {
                                 Icon(
-                                    Icons.Default.Mic,
-                                    strings.startVoiceInput,
+                                    if (alwaysInterpretationActive) Icons.Default.Stop
+                                    else Icons.Default.PlayArrow,
+                                    if (alwaysInterpretationActive) strings.stopAlwaysInterpretation
+                                    else strings.startAlwaysInterpretation,
                                 )
                             }
-                        }
-                        Spacer(Modifier.width(10.dp))
-                    }
-                    ChatComposerTextInput(
-                        input = input,
-                        onInputChange = { onInputChange(it.take(maxInputCharacters)) },
-                        enabled = enabled,
-                        strings = strings,
-                        onSend = ::sendAndKeepFocus,
-                        modifier =
-                            Modifier.weight(1f)
-                                .focusRequester(focusRequester)
-                                .padding(vertical = 14.dp),
-                    )
-                    Spacer(Modifier.width(10.dp))
-                    if (alwaysInterpretationEnabled) {
-                        FilledIconButton(
-                            enabled = enabled && (!sending || alwaysInterpretationActive),
-                            onClick = {
-                                onToggleAlwaysInterpretation()
-                                scope.launch {
-                                    yield()
-                                    focusRequester.requestFocus()
-                                }
-                            },
-                            modifier = Modifier.size(44.dp),
-                        ) {
-                            Icon(
-                                if (alwaysInterpretationActive) Icons.Default.Stop
-                                else Icons.Default.PlayArrow,
-                                if (alwaysInterpretationActive) strings.stopAlwaysInterpretation
-                                else strings.startAlwaysInterpretation,
-                            )
-                        }
-                    } else {
-                        FilledIconButton(
-                            enabled = input.isNotBlank() && enabled,
-                            onClick = ::sendAndKeepFocus,
-                            modifier = Modifier.size(44.dp),
-                        ) {
-                            Icon(Icons.AutoMirrored.Filled.Send, strings.send)
+                        } else {
+                            FilledIconButton(
+                                enabled = input.isNotBlank() && enabled,
+                                onClick = ::sendAndKeepFocus,
+                                modifier = Modifier.size(44.dp),
+                            ) {
+                                Icon(Icons.AutoMirrored.Filled.Send, strings.send)
+                            }
                         }
                     }
                 }
