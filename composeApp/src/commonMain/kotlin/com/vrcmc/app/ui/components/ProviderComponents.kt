@@ -18,7 +18,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
 
-private val recommendedProviderIds = setOf("deepseek", "qianwen", "openai")
+private val recommendedProviderIds = setOf("qianwen")
 private val qwenGoldLight = Color(0xFF9A7000)
 private val qwenGoldDark = Color(0xFFFFD760)
 
@@ -126,7 +126,6 @@ internal fun ProviderPickerDialog(
                                                 {
                                                     Text(
                                                         if (isBing) strings.free
-                                                        else if (isQwen) strings.highlyRecommended
                                                         else strings.recommended,
                                                         style = MaterialTheme.typography.labelSmall,
                                                     )
