@@ -78,11 +78,26 @@ object LocaleStringsZhHant : LocaleStrings {
     override val showOriginalText = "顯示原文"
     override val showOriginalTextHint = "關閉後，譯文產生完成時隱藏原文。"
     override val skipQwenConfiguration = "略過 Qwen 設定"
+    override val quickStart = "快速開始"
+    override val quickStartQwen = "設定 Qwen"
     override val quickStartTranslation = "設定翻譯"
     override val useFreeBingTranslation = "使用免費的 Bing 翻譯"
     override val quickStartBingHint = "不需 API Key 或儲值，即可免費翻譯聊天文字。"
     override val bingConfigureSuccess = "免費 Bing 翻譯已設定並開啟。"
+    override val quickStartVrc = "設定 VRC"
+    override val quickStartDevice = "新增電腦"
+    override val quickStartQwenIntro = "開啟千問平台，增值所需額度並建立 API Key。連線測試成功後，Key 先會儲存到本機。"
+    override val openQianwen = "開啟千問"
+    override val autoConfigure = "測試並自動設定"
+    override val autoConfiguring = "正在測試 qwen-mt-plus..."
+    override val autoConfigureSuccess = "Qwen 翻譯及語音輸入已準備就緒。"
     override val computerIpGuide = "在執行 VRChat 的電腦上，以滑鼠右鍵點擊右下角系統匣中的網路圖示，開啟「網路和 Internet」設定，點擊「內容」，找到 IPv4 位址，然後新增到下方。"
+    override val continueToVrc = "繼續設定 VRC"
+    override val vrcConfigured = "VRC 已設定，繼續"
+    override val computerIpPlaceholder = "例如：192.168.1.100"
+    override val addAndFinish = "新增裝置並完成"
+    override val quickStartComplete = "設定完成，而家可以使用 VRCMC。"
+    override val stepProgress = "第 %d 步，共 3 步"
     override val chat = "聊天"
     override val devices = "裝置"
     override val api = "API"
@@ -154,6 +169,10 @@ object LocaleStringsZhHant : LocaleStrings {
     override val currentLanIp = "此裝置的區域網路 IP：%s"
     override val lanIpUnavailable = "找不到可用的區域網路 IPv4 位址。請先將此裝置與執行 VRChat 的電腦連線至同一區域網路，然後重新整理。"
     override val localhostOscNote = "如果此應用程式與 VRChat 在同一台電腦上執行，可以使用 localhost 或 127.0.0.1 取代偵測到的位址。"
+    override val oscMenuNote = "請喺 VRChat 圓盤選單入面啟用 OSC 功能。"
+    override val apiNotConfiguredTranslation = "未設定翻譯 API，唔可以使用翻譯。"
+    override val apiNotConfiguredVoiceInput = "未設定語音輸入 API，唔可以使用語音輸入。"
+    override val voiceInputServiceRequired = "請先啟用語音輸入服務。"
     override val remoteOscNote =
         "若要讓 VRChat 將資料傳送至網路上的另一台裝置，中間的值必須是該裝置的 IP，例如：--osc=9000:192.168.1.42:9001"
     override val yesterday = "昨天"
@@ -229,6 +248,9 @@ object LocaleStringsZhHant : LocaleStrings {
     override val simultaneousInterpretation = "同步口譯"
     override val enableSimultaneousInterpretation = "啟用同步口譯"
     override val simultaneousInterpretationInputHint = "此功能必須配合鍵盤的語音輸入功能使用。"
+    override val interpretationVoiceInput = "同步啟用語音輸入"
+    override val interpretationVoiceInputHint =
+        "傳譯模式會自動使用應用程式內嘅語音辨識，唔會改變輸入法嘅語音輸入。"
     override val simultaneousInterpretationHint =
         "監聽目前裝置位址與傳送連接埠上的 VRChat MuteSelf。開啟麥克風時會即時傳送原文；靜音或按下傳送時則執行一般傳送流程。"
     override val simultaneousInterpretationSendDelay = "關閉麥克風後的傳送等待時間"
@@ -248,6 +270,9 @@ object LocaleStringsZhHant : LocaleStrings {
     override val alwaysInterpretationMergeMessages = "合併快速傳送的訊息"
     override val alwaysInterpretationMergeMessagesHint =
         "持續口譯時，若新訊息與上一則訊息間隔少於 2 秒，會合併後重新翻譯"
+
+    override val keepScreenOn = "防止熄屏"
+    override val keepScreenOnHint = "傳譯期間保持螢幕長開"
 
     override fun seconds(value: String) = "$value 秒"
 

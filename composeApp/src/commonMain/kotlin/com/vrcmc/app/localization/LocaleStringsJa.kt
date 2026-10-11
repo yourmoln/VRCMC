@@ -78,11 +78,26 @@ object LocaleStringsJa : LocaleStrings {
     override val showOriginalText = "原文を表示する"
     override val showOriginalTextHint = "オフにすると、翻訳の完了後に原文を非表示にします。"
     override val skipQwenConfiguration = "Qwen の設定をスキップ"
+    override val quickStart = "クイックスタート"
+    override val quickStartQwen = "Qwen を設定"
     override val quickStartTranslation = "翻訳を設定"
     override val useFreeBingTranslation = "無料の Bing 翻訳を使用"
     override val quickStartBingHint = "API Key やチャージ不要で、チャットのテキストを無料で翻訳できます。"
     override val bingConfigureSuccess = "無料の Bing 翻訳を設定し、有効にしました。"
+    override val quickStartVrc = "VRC を設定"
+    override val quickStartDevice = "パソコンを追加"
+    override val quickStartQwenIntro = "Qianwen を開き、必要な分をチャージして API Key を作成します。接続テストに成功した場合のみ Key が保存されます。"
+    override val openQianwen = "Qianwen を開く"
+    override val autoConfigure = "テストして自動設定"
+    override val autoConfiguring = "qwen-mt-plus をテスト中..."
+    override val autoConfigureSuccess = "Qwen の翻訳と音声入力を利用できます。"
     override val computerIpGuide = "VRChat を実行しているパソコンで、画面右下のシステムトレイにあるネットワークアイコンを右クリックし、「ネットワークとインターネットの設定」を開きます。「プロパティ」をクリックして IPv4 アドレスを確認し、下に追加してください。"
+    override val continueToVrc = "VRC の設定を続ける"
+    override val vrcConfigured = "VRC の設定が完了しました。続行"
+    override val computerIpPlaceholder = "例：192.168.1.100"
+    override val addAndFinish = "デバイスを追加して完了"
+    override val quickStartComplete = "設定が完了しました。VRCMC を使用できます。"
+    override val stepProgress = "全 3 ステップ中 %d"
     override val chat = "チャット"
     override val devices = "デバイス"
     override val api = "API"
@@ -157,6 +172,10 @@ object LocaleStringsJa : LocaleStrings {
         "使用可能な LAN IPv4 アドレスが見つかりません。このデバイスと VRChat を実行しているパソコンを同じローカルネットワークに接続してから更新してください。"
     override val localhostOscNote =
         "このアプリと VRChat を同じパソコンで実行する場合は、検出されたアドレスの代わりに localhost または 127.0.0.1 を使用できます。"
+    override val oscMenuNote = "VRChat の円形メニューで OSC を有効にしてください。"
+    override val apiNotConfiguredTranslation = "翻訳 API が設定されていないため、翻訳を使用できません。"
+    override val apiNotConfiguredVoiceInput = "音声入力 API が設定されていないため、音声入力を使用できません。"
+    override val voiceInputServiceRequired = "先に音声入力サービスを有効にしてください。"
     override val remoteOscNote =
         "ネットワーク上の別のデバイスへ VRChat からデータを送る場合、中央の値にはそのデバイスの IP を指定します。例：--osc=9000:192.168.1.42:9001"
     override val yesterday = "昨日"
@@ -233,6 +252,9 @@ object LocaleStringsJa : LocaleStrings {
     override val simultaneousInterpretation = "同時通訳"
     override val enableSimultaneousInterpretation = "同時通訳を有効化"
     override val simultaneousInterpretationInputHint = "この機能はキーボードの音声入力機能と併用してください。"
+    override val interpretationVoiceInput = "同時通訳で音声入力を有効化"
+    override val interpretationVoiceInputHint =
+        "通訳モードではアプリ内の音声認識を自動的に使用します。キーボードの音声入力には影響しません。"
     override val simultaneousInterpretationHint =
         "使用中デバイスのアドレスと送信ポートで VRChat の MuteSelf を監視します。マイクを開くと原文をリアルタイム送信し、ミュートまたは送信操作で通常の送信処理を行います。"
     override val simultaneousInterpretationSendDelay = "マイク停止後の送信待機時間"
@@ -252,6 +274,9 @@ object LocaleStringsJa : LocaleStrings {
     override val alwaysInterpretationMergeMessages = "短時間に送信したメッセージを結合"
     override val alwaysInterpretationMergeMessagesHint =
         "常時通訳中に 2 秒未満の間隔で新しいメッセージを送信した場合、前のメッセージと結合して再翻訳します"
+
+    override val keepScreenOn = "画面を常にオン"
+    override val keepScreenOnHint = "通訳の実行中は画面をスリープさせない"
 
     override fun seconds(value: String) = "$value 秒"
 
