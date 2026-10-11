@@ -24,30 +24,38 @@ VRCMC is a VRChat Chatbox companion built with Kotlin Multiplatform and Compose 
 
 ## Highlights
 
-- **OSC Chatbox**: Send text to VRChat while respecting the Chatbox limit of 144 characters and 9 lines.
-- **Multiple devices**: Save multiple IP and port configurations, and scan for devices on the same local network.
-- **Multiple translation services**: Supports OpenAI-compatible, Anthropic, DeepL, Google Web, Microsoft Edge Web, MyMemory, LibreTranslate, and other protocols and services.
-- **Bilingual output**: Select one or two target languages and customize the display order of the original text and translations.
-- **Resilient requests**: Configure timeouts, automatic retries, fallback models, custom headers, and streaming responses.
-- **Interpretation modes**: Use voice input from your system keyboard and send content based on the VRChat microphone state.
-- **Local speech recognition (Windows)**: Explicitly download and select Whisper Small Q5_1 (190 MB) or the more accurate, slower Medium Q5_0 (539 MB). Each model has an independent cache; inference runs locally on x64 AVX2 CPUs without an ASR API key.
-- **Local experience**: Chat history, device configurations, and error logs are stored locally, with light, dark, and multilingual UI support.
+- **VRChat Chatbox**: Send messages over OSC to VRChat on the same computer or local network. Save multiple devices and switch between them; desktop and Android builds can also scan the local network. An IP alone defaults to `9000:IP:9001`, or you can specify both ports. The input limit follows Chatbox's 144-character and 9-line limits and the number of output languages; disable dynamic character limiting in Preferences.
+- **Translation providers**: The API page exposes Qwen, Microsoft Edge Web (Bing), DeepSeek, OpenAI/GPT, and a custom compatible endpoint. Configure an API key, base URL, model, timeout, retries, fallback model, custom headers, and streaming where supported.
+- **Translation output**: Select up to two target languages, choose whether to show the original, configure line breaks and output order, and optionally send the original before the translation.
+- **Voice input**: Use Qwen Fun-ASR cloud recognition. On Windows x64 with AVX2, download Whisper Small or Medium for offline recognition. Desktop builds let you select a microphone; Android requires microphone permission.
+- **Interpretation**: Use system voice input or app recognition. Simultaneous interpretation follows the VRChat microphone state and sends after mute; Always interpretation sends after input pauses and can merge quick successive messages.
+- **Listen to others (Windows)**: Click the ear button on the Chat page to capture the Windows default playback device. Speech is detected locally and shown sentence by sentence with the original and one translation in an always-on-top subtitle window. Choose listening and target languages, resize or minimize the window, and adjust opacity.
+- **SteamVR overlay**: Enable it in subtitle settings and choose the left hand, right hand, or screen center. Hand overlays follow controllers and the center overlay follows the headset. Choose 50%–200% size; opacity is shared with desktop subtitles and ranges from 30%–100%. SteamVR and a connected headset are required.
+- **Text-to-speech**: Enable Edge TTS, choose original, translation, or outgoing text, preview voices, and select a desktop playback device. Text is sent to Microsoft for synthesis.
+- **Hotword dictionary**: Replace keywords or block complete messages before sending; import and export JSON.
+- **Local settings**: Use light, dark, or system themes; the UI supports Simplified Chinese, Traditional Chinese, English, and Japanese. Japanese romaji display, local chat history, and error logs are also available.
+- **In-app updates**: The app checks the latest GitHub release, and the check can be disabled in Preferences. Android and Windows can download and launch an installer; iOS opens the release page.
+
+## Quick Start
+
+1. Open **Quick Start**. Test a Qwen API key, or choose Edge Web for keyless public translation.
+2. Open **Configure VRChat**, copy the generated `--osc=9000:<VRCMC LAN IP>:9001` command into VRChat's Steam launch options, and restart VRChat. Use `127.0.0.1` when both apps run on the same computer.
+3. Open **Device Management** and add the IP address of the computer running VRChat. An IP alone uses the default 9000/9001 ports.
+4. Enable and configure translation, languages, voice input, and other options as needed.
 
 ## Translation Services
 
-VRCMC includes configurations for OpenAI, Anthropic / Claude, xAI / Grok, DeepSeek, Gemini, Qwen, GLM, Kimi, DeepL, Microsoft Edge Web, Ollama, LibreTranslate, and more. Custom OpenAI-compatible and Anthropic-compatible endpoints are also supported.
+The provider picker currently offers Qwen, Microsoft Edge Web (Bing), DeepSeek, OpenAI/GPT, and a custom compatible endpoint. The custom endpoint can use either the OpenAI-compatible or Anthropic-compatible protocol.
 
-Some public translation APIs do not require an API key. Their availability, rate limits, and privacy policies are controlled by the corresponding providers. When you use a third-party translation service, the text to be translated is sent to your selected provider. Review its terms as appropriate.
-
-Microsoft Edge Web uses an undocumented Edge browser endpoint, not the supported Azure AI Translator API. It may be rate-limited, changed, or discontinued without notice.
+Edge Web is a public web endpoint that does not require an API key. It is not the Azure AI Translator API and may be rate-limited, changed, or discontinued. Text sent to a third-party provider is handled according to that provider's terms and privacy policy.
 
 ## Data and Security
 
-- Device information, chat history, application settings, and error logs are stored locally by default.
-- API keys and custom authentication headers are stored separately from regular settings.
-- Sensitive configuration is protected with Android Keystore on Android, DPAPI on Windows, and Keychain on iOS.
-- The current macOS and Linux desktop versions do not persist sensitive data such as API keys.
-- Android application backup is disabled to reduce the risk of configuration data being exported through system backups.
+- Device information, chat history, application settings, the hotword dictionary, and error logs are stored locally by default.
+- API keys and custom authentication headers are stored separately from regular settings. Android uses Android Keystore, Windows uses DPAPI, and iOS uses Keychain; other desktop systems do not persist these sensitive values.
+- Cloud speech recognition sends recordings to the selected service. Local Whisper processes audio on the device and does not fall back to the cloud. Translation text is sent to the configured translation provider, and Edge TTS sends speech text to Microsoft.
+- **Listen to others** keeps recognized subtitles in its window only: it does not write them to chat history, send them to VRChat, or read them aloud. It captures the Windows default playback device selected when listening starts; restart listening after switching devices.
+- Android application data backup is disabled.
 
 ## Project Structure
 
