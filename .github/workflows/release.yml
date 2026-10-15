@@ -20,6 +20,10 @@ on:
         description: 'Model for the AI release-notes draft (defaults to repository variable RELEASE_NOTES_MODEL or deepseek-flash)'
         required: false
         type: string
+      effort:
+        description: 'Thinking effort for the AI draft: none/low/high/max (defaults to repository variable RELEASE_NOTES_EFFORT or high)'
+        required: false
+        type: string
 
 # 同一个版本不并发打包；失败后可以直接重跑整个工作流。
 concurrency:
@@ -38,6 +42,7 @@ jobs:
       RELEASE_TAG: ${{ inputs.tag || github.ref_name }}
       PRERELEASE: ${{ inputs.prerelease }}
       AI_MODEL: ${{ inputs.model || vars.RELEASE_NOTES_MODEL || 'deepseek-flash' }}
+      AI_EFFORT: ${{ inputs.effort || vars.RELEASE_NOTES_EFFORT || 'high' }}
       NOTES_OUTPUT: release-notes-body.md
     steps:
       - name: Checkout repository
@@ -230,11 +235,14 @@ jobs:
               'Write the bilingual release announcement now, following the format rules.'
             ) -join "`n"
 
-            # DeepSeek：默认关闭思考模式，公告草稿追求快速、稳定。
+            # DeepSeek：默认开启思考（high 档）提升公告质量；RELEASE_NOTES_EFFORT 可覆盖（none 关闭思考）。
+            $effort = $env:AI_EFFORT
+            if ([string]::IsNullOrWhiteSpace($effort)) { $effort = 'high' }
+            $thinkingType = if ($effort -eq 'none') { 'disabled' } else { 'enabled' }
             $payload = @{
               model = $env:AI_MODEL
-              thinking = @{ type = 'disabled' }
-              reasoning_effort = 'none'
+              thinking = @{ type = $thinkingType }
+              reasoning_effort = $effort
               messages = @(
                 @{ role = 'system'; content = $systemPrompt }
                 @{ role = 'user'; content = $userPrompt }
