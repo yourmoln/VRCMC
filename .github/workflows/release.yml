@@ -17,7 +17,7 @@ on:
         type: boolean
         default: false
       model:
-        description: 'Model for the AI release-notes draft (defaults to repository variable RELEASE_NOTES_MODEL or gpt-5.6-sol)'
+        description: 'Model for the AI release-notes draft (defaults to repository variable RELEASE_NOTES_MODEL or deepseek-flash)'
         required: false
         type: string
 
@@ -37,7 +37,7 @@ jobs:
     env:
       RELEASE_TAG: ${{ inputs.tag || github.ref_name }}
       PRERELEASE: ${{ inputs.prerelease }}
-      AI_MODEL: ${{ inputs.model || vars.RELEASE_NOTES_MODEL || 'gpt-5.6-sol' }}
+      AI_MODEL: ${{ inputs.model || vars.RELEASE_NOTES_MODEL || 'deepseek-flash' }}
       NOTES_OUTPUT: release-notes-body.md
     steps:
       - name: Checkout repository
@@ -170,8 +170,7 @@ jobs:
         shell: pwsh
         env:
           GH_TOKEN: ${{ github.token }}
-          OPENAI_API_BASE: ${{ secrets.OPENAI_API_BASE }}
-          OPENAI_KEY: ${{ secrets.OPENAI_KEY }}
+          DEEPSEEK_API_KEY: ${{ secrets.DEEPSEEK_API_KEY }}
         run: |
           $ErrorActionPreference = 'Stop'
           $tag = $env:RELEASE_TAG
@@ -192,7 +191,7 @@ jobs:
           }
 
           $draft = ''
-          if ($env:OPENAI_API_BASE -and $env:OPENAI_KEY) {
+          if ($env:DEEPSEEK_API_KEY) {
             if ($previousTag) {
               $range = "$previousTag..$tag"
               $commitLog = (git log --no-merges --pretty=format:'%h %s%n%b' $range) -join "`n"
@@ -231,17 +230,20 @@ jobs:
               'Write the bilingual release announcement now, following the format rules.'
             ) -join "`n"
 
+            # DeepSeek：默认关闭思考模式，公告草稿追求快速、稳定。
             $payload = @{
               model = $env:AI_MODEL
+              thinking = @{ type = 'disabled' }
+              reasoning_effort = 'none'
               messages = @(
                 @{ role = 'system'; content = $systemPrompt }
                 @{ role = 'user'; content = $userPrompt }
               )
             } | ConvertTo-Json -Depth 8 -Compress
             $payloadBytes = [Text.Encoding]::UTF8.GetBytes($payload)
-            $headers = @{ Authorization = "Bearer $($env:OPENAI_KEY)" }
+            $headers = @{ Authorization = "Bearer $($env:DEEPSEEK_API_KEY)" }
 
-            $base = $env:OPENAI_API_BASE.TrimEnd('/')
+            $base = if ($env:DEEPSEEK_API_BASE) { $env:DEEPSEEK_API_BASE.TrimEnd('/') } else { 'https://api.deepseek.com' }
             $endpoints = @("$base/chat/completions")
             if ($base -notmatch '/v1$') { $endpoints += "$base/v1/chat/completions" }
             foreach ($endpoint in $endpoints) {
@@ -258,7 +260,7 @@ jobs:
               }
             }
           } else {
-            Write-Host 'OPENAI_API_BASE / OPENAI_KEY are not configured; skipping the AI draft.'
+            Write-Host 'DEEPSEEK_API_KEY is not configured; skipping the AI draft.'
           }
 
           if ($draft) {
