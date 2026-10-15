@@ -1,0 +1,192 @@
+name: Release
+
+# 推送 vX.Y.Z tag 时自动打包并发布 GitHub Release。
+# 流程与 scripts/release.ps1 保持一致：单元测试 -> 签名 APK -> Compose 发布目录 -> Inno Setup 安装包。
+on:
+  push:
+    tags: ['v*']
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: 'Existing tag to package and publish, e.g. v2.1.1'
+        required: true
+        type: string
+      prerelease:
+        description: 'Mark the GitHub release as a pre-release'
+        required: false
+        type: boolean
+        default: false
+
+# 同一个版本不并发打包；失败后可以直接重跑整个工作流。
+concurrency:
+  group: release-${{ inputs.tag || github.ref_name }}
+  cancel-in-progress: false
+
+permissions:
+  contents: write
+
+jobs:
+  package:
+    name: Package and publish
+    runs-on: windows-latest
+    timeout-minutes: 120
+    env:
+      RELEASE_TAG: ${{ inputs.tag || github.ref_name }}
+      PRERELEASE: ${{ inputs.prerelease }}
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v7
+        with:
+          ref: ${{ inputs.tag || github.ref }}
+          fetch-depth: 0
+
+      - name: Set up Temurin JDK 21
+        uses: actions/setup-java@v6
+        with:
+          distribution: temurin
+          java-version: '21'
+
+      - name: Set up Gradle
+        uses: gradle/actions/setup-gradle@v6
+
+      # tag 必须是 vX.Y.Z，并且与 release.ps1 维护的三处版本声明完全一致。
+      - name: Verify version metadata
+        shell: pwsh
+        run: |
+          $tag = $env:RELEASE_TAG
+          if ($tag -notmatch '^v(?<version>\d+\.\d+\.\d+)$') {
+            throw "Release tag '$tag' must look like v<major>.<minor>.<patch>."
+          }
+          $version = $Matches.version
+          $targets = @(
+            @{ File = 'gradle/libs.versions.toml';                                           Pattern = '(?m)^app-version\s*=\s*"([^"]+)"\s*$' },
+            @{ File = 'installer/VRCMC.iss';                                                 Pattern = '(?m)^#define AppVersion\s+"([^"]+)"\s*$' },
+            @{ File = 'composeApp/src/commonMain/kotlin/com/vrcmc/app/update/AppUpdate.kt';  Pattern = '(?m)^\s*const val VERSION\s*=\s*"([^"]+)"\s*$' }
+          )
+          foreach ($target in $targets) {
+            $match = [regex]::Match((Get-Content -Raw -LiteralPath $target.File), $target.Pattern)
+            if (-not $match.Success) { throw "Version declaration not found in $($target.File)." }
+            if ($match.Groups[1].Value -ne $version) {
+              throw "$($target.File) declares $($match.Groups[1].Value), but the tag is $tag."
+            }
+          }
+          Add-Content -Path $env:GITHUB_ENV -Value "VERSION=$version"
+          Write-Host "Version metadata matches $tag."
+
+      # 签名材料从仓库 Secrets 注入，工作区内不留任何已提交的密钥。
+      - name: Prepare Android signing
+        shell: pwsh
+        env:
+          ANDROID_KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
+          ANDROID_STORE_PASSWORD: ${{ secrets.ANDROID_STORE_PASSWORD }}
+          ANDROID_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+          ANDROID_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
+        run: |
+          $missing = @('ANDROID_KEYSTORE_BASE64', 'ANDROID_STORE_PASSWORD', 'ANDROID_KEY_ALIAS', 'ANDROID_KEY_PASSWORD') |
+            Where-Object { [string]::IsNullOrWhiteSpace([Environment]::GetEnvironmentVariable($_)) }
+          if ($missing) {
+            throw "Missing repository secrets: $($missing -join ', '). Configure them under Settings -> Secrets and variables -> Actions."
+          }
+          [IO.File]::WriteAllBytes('vrcmc-release.jks', [Convert]::FromBase64String($env:ANDROID_KEYSTORE_BASE64))
+          [IO.File]::WriteAllLines('local.properties', @(
+              'store_file=vrcmc-release.jks'
+              "store_pass=$env:ANDROID_STORE_PASSWORD"
+              "key_alias=$env:ANDROID_KEY_ALIAS"
+              "key_pass=$env:ANDROID_KEY_PASSWORD"
+            ))
+          Write-Host 'Android signing configuration prepared.'
+
+      - name: Run unit tests
+        shell: pwsh
+        run: |
+          .\gradlew.bat --console=plain --stacktrace :composeApp:desktopTest :composeApp:testDebugUnitTest
+          exit $LASTEXITCODE
+
+      - name: Build signed release APK
+        shell: pwsh
+        run: |
+          .\gradlew.bat --console=plain --stacktrace :composeApp:assembleRelease
+          exit $LASTEXITCODE
+
+      - name: Build Windows application directory
+        shell: pwsh
+        run: |
+          .\gradlew.bat --console=plain --stacktrace :composeApp:createReleaseDistributable
+          exit $LASTEXITCODE
+
+      # windows-latest 镜像自带 Inno Setup 6；若将来镜像移除则回退到 Chocolatey 安装。
+      - name: Locate Inno Setup compiler
+        shell: pwsh
+        run: |
+          $candidates = @(
+            (Get-Command ISCC.exe -ErrorAction SilentlyContinue).Source
+            "$env:ProgramFiles\Inno Setup 6\ISCC.exe"
+            "${env:ProgramFiles(x86)}\Inno Setup 6\ISCC.exe"
+            "$env:LOCALAPPDATA\Programs\Inno Setup 6\ISCC.exe"
+          )
+          $iscc = $candidates | Where-Object { $_ -and (Test-Path -LiteralPath $_) } | Select-Object -First 1
+          if (-not $iscc) {
+            Write-Host 'ISCC.exe not found; installing Inno Setup with Chocolatey...'
+            choco install innosetup --yes --no-progress
+            $iscc = @(
+              "$env:ProgramFiles\Inno Setup 6\ISCC.exe"
+              "${env:ProgramFiles(x86)}\Inno Setup 6\ISCC.exe"
+            ) | Where-Object { Test-Path -LiteralPath $_ } | Select-Object -First 1
+          }
+          if (-not $iscc) { throw 'ISCC.exe could not be located.' }
+          Add-Content -Path $env:GITHUB_ENV -Value "ISCC=$iscc"
+          Write-Host "Using Inno Setup compiler: $iscc"
+
+      - name: Build Windows installer
+        shell: pwsh
+        run: |
+          & $env:ISCC 'installer\VRCMC.iss'
+          exit $LASTEXITCODE
+
+      - name: Verify artifacts
+        shell: pwsh
+        run: |
+          $version = $env:VERSION
+          $artifacts = @(
+            "composeApp/build/outputs/apk/release/VRCMC-v$version.apk"
+            "composeApp/build/installer/VRCMC-v$version-setup.exe"
+          )
+          foreach ($artifact in $artifacts) {
+            if (-not (Test-Path -LiteralPath $artifact)) { throw "Missing expected artifact: $artifact" }
+            $item = Get-Item -LiteralPath $artifact
+            $hash = (Get-FileHash -Algorithm SHA256 -LiteralPath $artifact).Hash
+            Write-Host ("{0}  {1:N1} MB  SHA256 {2}" -f $item.Name, ($item.Length / 1MB), $hash)
+            Add-Content -Path $env:GITHUB_STEP_SUMMARY -Value "- $($item.Name): $([math]::Round($item.Length / 1MB, 1)) MB, SHA256 $hash"
+          }
+
+      - name: Upload workflow artifacts
+        uses: actions/upload-artifact@v7
+        with:
+          name: release-artifacts
+          path: |
+            composeApp/build/outputs/apk/release/*.apk
+            composeApp/build/installer/VRCMC-v*-setup.exe
+          if-no-files-found: error
+
+      # 已存在同名 Release（例如本地 release.ps1 已发布）时只更新附件，否则新建。
+      - name: Publish GitHub release
+        shell: pwsh
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          $tag = $env:RELEASE_TAG
+          $assets = @(
+            "composeApp/build/outputs/apk/release/VRCMC-v$($env:VERSION).apk"
+            "composeApp/build/installer/VRCMC-v$($env:VERSION)-setup.exe"
+          )
+          gh release view $tag *> $null
+          if ($LASTEXITCODE -eq 0) {
+            Write-Host "Release $tag already exists; updating assets."
+            gh release upload $tag $assets --clobber
+            if ($LASTEXITCODE -ne 0) { throw 'gh release upload failed.' }
+          } else {
+            $arguments = @('release', 'create', $tag, $assets, '--title', $tag, '--generate-notes', '--verify-tag')
+            if ($env:PRERELEASE -eq 'true') { $arguments += '--prerelease' }
+            gh @arguments
+            if ($LASTEXITCODE -ne 0) { throw 'gh release create failed.' }
+          }
