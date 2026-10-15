@@ -55,6 +55,37 @@ private data class VoiceSpeechUpdate(
     val speaking: Boolean,
 )
 
+/**
+ * Tracks spoken segments whose message has not been dispatched yet. Recognition and
+ * translation run after the voice goes quiet, so the VRChat typing status must stay on
+ * until the message is actually sent instead of ending with the speech.
+ */
+internal class VoiceTypingHold {
+    private var pendingSegments by mutableIntStateOf(0)
+
+    val active: Boolean
+        get() = pendingSegments > 0
+
+    fun onSpeechEnded() {
+        pendingSegments++
+    }
+
+    /** Releases one segment once its message was dispatched or nothing could be sent. */
+    fun onDispatchFinished() {
+        pendingSegments = (pendingSegments - 1).coerceAtLeast(0)
+    }
+
+    fun reset() {
+        pendingSegments = 0
+    }
+
+    fun typingActive(
+        showTypingStatus: Boolean,
+        voiceRecording: Boolean,
+        voiceSpeaking: Boolean,
+    ): Boolean = showTypingStatus && voiceRecording && (voiceSpeaking || active)
+}
+
 @Composable
 fun ChatPage(
     state: AppState,
@@ -87,6 +118,7 @@ fun ChatPage(
         mutableStateOf<AlwaysInterpretationBatch?>(null)
     }
     var lastVoiceTypingStatus by remember { mutableStateOf<Pair<String, Boolean>?>(null) }
+    val voiceTypingHold = remember { VoiceTypingHold() }
     val streamingMerger = remember { StreamingTextMerger() }
     val audioRecorder = remember { createAudioRecorder() }
     val localSpeechStatusFlow = remember(state.voiceInputConfig.localWhisperModel) {
@@ -140,6 +172,7 @@ fun ChatPage(
             voiceRecording = false
             voiceTranscribing = false
             voiceSpeaking = false
+            voiceTypingHold.reset()
         }
     }
 
@@ -231,6 +264,7 @@ fun ChatPage(
         voiceRecording = true
         voiceSpeaking = false
         voiceTranscribing = false
+        voiceTypingHold.reset()
         var speechSequence = 0L
         lateinit var processor: VoiceCaptureProcessor
         processor =
@@ -258,7 +292,12 @@ fun ChatPage(
                     }
                 },
                 onNoSpeech = {
-                    if (!continuous) scope.launch {
+                    if (continuous) {
+                        // A segment below the speech threshold produces no message.
+                        scope.launch {
+                            if (generation == voiceGeneration) voiceTypingHold.onDispatchFinished()
+                        }
+                    } else scope.launch {
                         if (generation == voiceGeneration) {
                             voiceRecording = false
                             voiceSpeaking = false
@@ -308,6 +347,7 @@ fun ChatPage(
                     voiceRecording = false
                     voiceTranscribing = false
                     voiceSpeaking = false
+                    voiceTypingHold.reset()
                     error = message
                     if (continuous && managedVoiceCapture) {
                         managedVoiceRestartToken++
@@ -337,6 +377,7 @@ fun ChatPage(
         voiceRecording = false
         voiceSpeaking = false
         voiceTranscribing = false
+        voiceTypingHold.reset()
         managedVoiceCapture = false
     }
 
@@ -387,7 +428,10 @@ fun ChatPage(
     }
 
     LaunchedEffect(state.isAlwaysInterpretationActive) {
-        if (!state.isAlwaysInterpretationActive) lastAlwaysInterpretationBatch = null
+        if (!state.isAlwaysInterpretationActive) {
+            lastAlwaysInterpretationBatch = null
+            voiceTypingHold.reset()
+        }
     }
 
     LaunchedEffect(voiceSpeechUpdates) {
@@ -402,12 +446,26 @@ fun ChatPage(
             if (update.sequence <= latestSequence) continue
             latestSequence = update.sequence
             voiceSpeaking = update.speaking
+            if (
+                !update.speaking &&
+                    voiceRecording &&
+                    managedVoiceCapture &&
+                    state.isAlwaysInterpretationActive
+            ) {
+                // Keep the typing status on while recognition and sending run.
+                voiceTypingHold.onSpeechEnded()
+            }
         }
     }
 
-    LaunchedEffect(state.showTypingStatus, voiceRecording, voiceSpeaking, active) {
+    LaunchedEffect(state.showTypingStatus, voiceRecording, voiceSpeaking, voiceTypingHold.active, active) {
         val target = active ?: return@LaunchedEffect
-        val typing = state.showTypingStatus && voiceRecording && voiceSpeaking
+        val typing =
+            voiceTypingHold.typingActive(
+                showTypingStatus = state.showTypingStatus,
+                voiceRecording = voiceRecording,
+                voiceSpeaking = voiceSpeaking,
+            )
         val status = target.address to typing
         if (lastVoiceTypingStatus == status) return@LaunchedEffect
         val hadPreviousStatus = lastVoiceTypingStatus != null
@@ -541,7 +599,8 @@ fun ChatPage(
         val job =
             scope.launch(start = CoroutineStart.LAZY) {
                 try {
-                    if (showTypingStatus) {
+                    // Voice segments keep the typing status on until the send finishes.
+                    if (showTypingStatus && !voiceSpeaking && !voiceTypingHold.active) {
                         sendChatboxTypingOsc(target.address, false, target.receivePort)
                     }
                     if (shouldTranslate && sendOriginalBeforeTranslation) {
@@ -679,7 +738,10 @@ fun ChatPage(
                     }
                 }
             } finally {
-                if (managedChunk.generation == voiceGeneration) voiceTranscribing = false
+                if (managedChunk.generation == voiceGeneration) {
+                    voiceTranscribing = false
+                    if (chunk.isFinal) voiceTypingHold.onDispatchFinished()
+                }
             }
         }
     }
