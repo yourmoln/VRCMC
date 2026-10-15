@@ -16,6 +16,10 @@ on:
         required: false
         type: boolean
         default: false
+      model:
+        description: 'Model for the AI release-notes draft (defaults to repository variable RELEASE_NOTES_MODEL or gpt-5.6-sol)'
+        required: false
+        type: string
 
 # 同一个版本不并发打包；失败后可以直接重跑整个工作流。
 concurrency:
@@ -33,6 +37,8 @@ jobs:
     env:
       RELEASE_TAG: ${{ inputs.tag || github.ref_name }}
       PRERELEASE: ${{ inputs.prerelease }}
+      AI_MODEL: ${{ inputs.model || vars.RELEASE_NOTES_MODEL || 'gpt-5.6-sol' }}
+      NOTES_OUTPUT: release-notes-body.md
     steps:
       - name: Checkout repository
         uses: actions/checkout@v7
@@ -159,6 +165,127 @@ jobs:
             Add-Content -Path $env:GITHUB_STEP_SUMMARY -Value "- $($item.Name): $([math]::Round($item.Length / 1MB, 1)) MB, SHA256 $hash"
           }
 
+      # 公告优先级：release-notes/<tag>.md（完全手写）→ AI 双语草稿 → GitHub 自动汇总。
+      - name: Prepare release notes
+        shell: pwsh
+        env:
+          GH_TOKEN: ${{ github.token }}
+          OPENAI_API_BASE: ${{ secrets.OPENAI_API_BASE }}
+          OPENAI_KEY: ${{ secrets.OPENAI_KEY }}
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $tag = $env:RELEASE_TAG
+          $version = $env:VERSION
+          $output = $env:NOTES_OUTPUT
+
+          $describe = git describe --tags --abbrev=0 "$tag^" 2>$null
+          $previousTag = ''
+          if ($LASTEXITCODE -eq 0 -and $describe) { $previousTag = (($describe | Select-Object -First 1)).Trim() }
+
+          $manualFile = "release-notes/$tag.md"
+          if (Test-Path -LiteralPath $manualFile) {
+            Copy-Item -LiteralPath $manualFile -Destination $output -Force
+            Add-Content -Path $env:GITHUB_ENV -Value 'NOTES_MODE=manual'
+            Add-Content -Path $env:GITHUB_STEP_SUMMARY -Value "Release notes mode: **manual** (``$manualFile``)"
+            Write-Host "Using manual release notes from $manualFile."
+            exit 0
+          }
+
+          $draft = ''
+          if ($env:OPENAI_API_BASE -and $env:OPENAI_KEY) {
+            if ($previousTag) {
+              $range = "$previousTag..$tag"
+              $commitLog = (git log --no-merges --pretty=format:'%h %s%n%b' $range) -join "`n"
+              $diffStat = (git diff --stat $range) -join "`n"
+            } else {
+              $commitLog = (git log -n 100 --no-merges --pretty=format:'%h %s%n%b' $tag) -join "`n"
+              $diffStat = '(no previous release tag)'
+            }
+            if ($commitLog.Length -gt 24000) { $commitLog = $commitLog.Substring(0, 24000) + "`n...(truncated)" }
+            if ($diffStat.Length -gt 8000) { $diffStat = $diffStat.Substring(0, 8000) + "`n...(truncated)" }
+
+            $systemPrompt = @(
+              'You are the release-notes writer for VRCMC, an open-source VRChat chatbox assistant built with Kotlin Multiplatform and Compose for Windows, Android and iOS.'
+              'You write the update announcement that users see in the in-app update dialog and on the GitHub release page.'
+              'Format rules:'
+              '- Write bilingually: Simplified Chinese first, then English.'
+              '- Use Markdown headings. Only if there are breaking changes, removed features or important user actions, open with "## 重要更新" followed by "## Important Update" (both kept short).'
+              '- Then write "## 更新内容" (Chinese) and "## What''s Changed" (English).'
+              '- Present user-visible changes, most important first: breaking changes, new features, behavior changes, notable fixes and performance improvements.'
+              '- Do not invent information. Do not mention internal refactors, CI, tests or dependency updates unless they have user-visible impact.'
+              '- Do not add download links, changelog links or a Downloads section; they are appended automatically.'
+              '- Keep each language under roughly 350 words unless the changes clearly need more.'
+              '- Tone: clear, calm product announcement.'
+            ) -join "`n"
+
+            $previousLabel = if ($previousTag) { $previousTag } else { 'none' }
+            $userPrompt = @(
+              "Project: VRCMC. Release tag: $tag. Previous release tag: $previousLabel."
+              ''
+              'Commit log since the previous release:'
+              $commitLog
+              ''
+              'Diff stat:'
+              $diffStat
+              ''
+              'Write the bilingual release announcement now, following the format rules.'
+            ) -join "`n"
+
+            $payload = @{
+              model = $env:AI_MODEL
+              messages = @(
+                @{ role = 'system'; content = $systemPrompt }
+                @{ role = 'user'; content = $userPrompt }
+              )
+            } | ConvertTo-Json -Depth 8 -Compress
+            $payloadBytes = [Text.Encoding]::UTF8.GetBytes($payload)
+            $headers = @{ Authorization = "Bearer $($env:OPENAI_KEY)" }
+
+            $base = $env:OPENAI_API_BASE.TrimEnd('/')
+            $endpoints = @("$base/chat/completions")
+            if ($base -notmatch '/v1$') { $endpoints += "$base/v1/chat/completions" }
+            foreach ($endpoint in $endpoints) {
+              try {
+                $response = Invoke-RestMethod -Method Post -Uri $endpoint -Headers $headers -ContentType 'application/json' -Body $payloadBytes -TimeoutSec 300
+                $draft = [string]$response.choices[0].message.content
+                if ($draft) {
+                  Write-Host "AI release notes draft received from $endpoint."
+                  break
+                }
+                Write-Warning "AI endpoint $endpoint returned an empty draft."
+              } catch {
+                Write-Warning "AI request to $endpoint failed: $($_.Exception.Message)"
+              }
+            }
+          } else {
+            Write-Host 'OPENAI_API_BASE / OPENAI_KEY are not configured; skipping the AI draft.'
+          }
+
+          if ($draft) {
+            $footer = @(
+              '## 下载 / Downloads'
+              "- Windows: ``VRCMC-v$version-setup.exe``"
+              "- Android: ``VRCMC-v$version.apk``"
+            )
+            if ($previousTag) {
+              $footer += "[查看完整变更 / Full Changelog](https://github.com/$($env:GITHUB_REPOSITORY)/compare/$previousTag...$tag)"
+            }
+            $body = $draft.Trim() + "`n`n" + ($footer -join "`n") + "`n"
+            $mode = 'ai'
+          } else {
+            Write-Warning 'AI draft unavailable; falling back to GitHub generated notes.'
+            $arguments = @('api', "repos/$($env:GITHUB_REPOSITORY)/releases/generate-notes", '-f', "tag_name=$tag")
+            if ($previousTag) { $arguments += @('-f', "previous_tag_name=$previousTag") }
+            $body = (gh @arguments --jq .body) -join "`n"
+            if ($LASTEXITCODE -ne 0 -or [string]::IsNullOrWhiteSpace($body)) { throw 'Failed to generate release notes.' }
+            $mode = 'generated'
+          }
+
+          [IO.File]::WriteAllText($output, $body, (New-Object Text.UTF8Encoding($false)))
+          Add-Content -Path $env:GITHUB_ENV -Value "NOTES_MODE=$mode"
+          Add-Content -Path $env:GITHUB_STEP_SUMMARY -Value "Release notes mode: **$mode**"
+          Write-Host "Release notes prepared with mode '$mode' ($($body.Length) chars)."
+
       - name: Upload workflow artifacts
         uses: actions/upload-artifact@v7
         with:
@@ -166,6 +293,7 @@ jobs:
           path: |
             composeApp/build/outputs/apk/release/*.apk
             composeApp/build/installer/VRCMC-v*-setup.exe
+            release-notes-body.md
           if-no-files-found: error
 
       # 已存在同名 Release（例如本地 release.ps1 已发布）时只更新附件，否则新建。
@@ -185,7 +313,7 @@ jobs:
             gh release upload $tag $assets --clobber
             if ($LASTEXITCODE -ne 0) { throw 'gh release upload failed.' }
           } else {
-            $arguments = @('release', 'create', $tag, $assets, '--title', $tag, '--generate-notes', '--verify-tag')
+            $arguments = @('release', 'create', $tag, $assets, '--title', $tag, '--notes-file', $env:NOTES_OUTPUT, '--verify-tag')
             if ($env:PRERELEASE -eq 'true') { $arguments += '--prerelease' }
             gh @arguments
             if ($LASTEXITCODE -ne 0) { throw 'gh release create failed.' }
