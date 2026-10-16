@@ -93,6 +93,8 @@ fun ChatPage(
     onReadAloud: (String, ReadAloudConfig) -> Unit = { _, _ -> },
     visible: Boolean = true,
     animationsEnabled: Boolean = true,
+    // Overridable so tests never open a real audio device.
+    audioRecorderFactory: () -> AudioRecorder = ::createAudioRecorder,
 ) {
     var error by remember { mutableStateOf<String?>(null) }
     var sending by remember { mutableStateOf(false) }
@@ -120,7 +122,7 @@ fun ChatPage(
     var lastVoiceTypingStatus by remember { mutableStateOf<Pair<String, Boolean>?>(null) }
     val voiceTypingHold = remember { VoiceTypingHold() }
     val streamingMerger = remember { StreamingTextMerger() }
-    val audioRecorder = remember { createAudioRecorder() }
+    val audioRecorder = remember { audioRecorderFactory() }
     val localSpeechStatusFlow = remember(state.voiceInputConfig.localWhisperModel) {
         localSpeechRecognizer.status(state.voiceInputConfig.localWhisperModel)
     }
@@ -217,7 +219,13 @@ fun ChatPage(
                     is VoiceTranscriptionResult.Success ->
                         if (generation == voiceGeneration) {
                             val finalText = streamingMerger.ingestFinal(result.text)
-                            applyVoiceText(finalText)
+                            val dispatchedByManagedVoice =
+                                pendingSimultaneousVoiceSend ||
+                                    (managedVoiceCapture && state.isAlwaysInterpretationActive)
+                            // Managed voice results are dispatched directly and must not
+                            // overwrite the composer draft, which is reserved for text
+                            // the user typed.
+                            if (!dispatchedByManagedVoice) applyVoiceText(finalText)
                             error = null
                             if (pendingSimultaneousVoiceSend) {
                                 pendingSimultaneousVoiceSend = false
@@ -732,7 +740,8 @@ fun ChatPage(
                     ) {
                         sendMessage(
                             text,
-                            clearDraft = true,
+                            // Keep whatever the user typed in the composer untouched.
+                            clearDraft = false,
                             automaticAlwaysInterpretation = true,
                         )?.join()
                     }
@@ -751,7 +760,8 @@ fun ChatPage(
         if (text.isNotBlank()) {
             sendMessage(
                 text,
-                clearDraft = true,
+                // Keep whatever the user typed in the composer untouched.
+                clearDraft = false,
                 automaticAlwaysInterpretation = true,
             )
         }
@@ -888,18 +898,13 @@ fun ChatPage(
         state.chatDraft,
         state.alwaysInterpretationDelayMillis,
     ) {
+        // The draft holds text typed by the user and must keep auto-sending even while a
+        // synced voice input owns the voice pipeline: recognized speech is dispatched
+        // through its own channel and never occupies the draft.
         val pendingText = state.chatDraft
-        if (
-            state.isAlwaysInterpretationActive &&
-                !managedVoiceCapture &&
-                pendingText.isNotBlank()
-        ) {
+        if (state.isAlwaysInterpretationActive && pendingText.isNotBlank()) {
             delay(state.alwaysInterpretationDelayMillis.toLong())
-            if (
-                state.isAlwaysInterpretationActive &&
-                    !managedVoiceCapture &&
-                    state.chatDraft == pendingText
-            ) {
+            if (state.isAlwaysInterpretationActive && state.chatDraft == pendingText) {
                 sendMessage(
                     pendingText,
                     clearDraft = true,
