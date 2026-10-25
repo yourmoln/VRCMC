@@ -1,27 +1,45 @@
 package com.vrcmc.app
 
 import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.border
+import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.background
+import androidx.compose.foundation.selection.selectable
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.compositeOver
+import androidx.compose.ui.graphics.luminance
+import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import kotlin.math.roundToInt
+
+private val preferenceLanguages =
+    listOf(AppLanguage.EN, AppLanguage.JA, AppLanguage.ZH_HANS, AppLanguage.ZH_HANT)
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 internal fun PreferencesPage(
     theme: ThemeMode,
+    themeColor: ThemeColor,
     language: AppLanguage,
     strings: LocaleStrings,
     setTheme: (ThemeMode) -> Unit,
+    setThemeColor: (ThemeColor) -> Unit,
     setLanguage: (AppLanguage) -> Unit,
     showJapaneseRomaji: Boolean,
     setShowJapaneseRomaji: (Boolean) -> Unit,
@@ -41,8 +59,6 @@ internal fun PreferencesPage(
     setReadAloudConfig: (ReadAloudConfig) -> Unit,
     readAloudController: ReadAloudController,
 ) {
-    var expanded by remember { mutableStateOf(false) }
-    val modes = ThemeMode.values()
     LazyColumn(
         modifier = Modifier.fillMaxSize(),
         contentPadding = PaddingValues(16.dp),
@@ -58,68 +74,20 @@ internal fun PreferencesPage(
         item {
             Surface(
                 modifier = Modifier.fillMaxWidth(),
-                shape = RoundedCornerShape(8.dp),
+                shape = RoundedCornerShape(20.dp),
                 color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = .45f),
                 border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant),
             ) {
-                Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(14.dp)) {
-                    Text(strings.appearance, style = MaterialTheme.typography.titleMedium)
-                    Text(
-                        strings.theme,
-                        style = MaterialTheme.typography.labelLarge,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                Column(Modifier.padding(18.dp), verticalArrangement = Arrangement.spacedBy(14.dp)) {
+                    AppearancePreferences(
+                        theme = theme,
+                        themeColor = themeColor,
+                        language = language,
+                        strings = strings,
+                        setTheme = setTheme,
+                        setThemeColor = setThemeColor,
+                        setLanguage = setLanguage,
                     )
-                    SingleChoiceSegmentedButtonRow(Modifier.fillMaxWidth()) {
-                        modes.forEachIndexed { index, mode ->
-                            SegmentedButton(
-                                selected = mode == theme,
-                                onClick = { setTheme(mode) },
-                                shape = SegmentedButtonDefaults.itemShape(index, modes.size),
-                                label = {
-                                    Text(
-                                        when (mode) {
-                                            ThemeMode.SYSTEM -> strings.systemTheme
-                                            ThemeMode.LIGHT -> strings.lightTheme
-                                            ThemeMode.DARK -> strings.darkTheme
-                                        },
-                                        maxLines = 1,
-                                    )
-                                },
-                            )
-                        }
-                    }
-                    HorizontalDivider()
-                    Text(
-                        strings.language,
-                        style = MaterialTheme.typography.labelLarge,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    )
-                    Box {
-                        OutlinedButton(
-                            onClick = { expanded = true },
-                            modifier = Modifier.fillMaxWidth(),
-                            shape = RoundedCornerShape(8.dp),
-                        ) {
-                            Icon(Icons.Default.Language, null)
-                            Spacer(Modifier.width(8.dp))
-                            Text(language.label, Modifier.weight(1f))
-                            Icon(Icons.Default.ArrowDropDown, null)
-                        }
-                        DropdownMenu(expanded, { expanded = false }) {
-                            AppLanguage.values().forEach { item ->
-                                DropdownMenuItem(
-                                    text = { Text(item.label) },
-                                    leadingIcon = {
-                                        if (item == language) Icon(Icons.Default.Check, null)
-                                    },
-                                    onClick = {
-                                        setLanguage(item)
-                                        expanded = false
-                                    },
-                                )
-                            }
-                        }
-                    }
                     HorizontalDivider()
                     Column(Modifier.fillMaxWidth()) {
                         Row(
@@ -265,3 +233,190 @@ internal fun PreferencesPage(
         }
     }
 }
+
+@Composable
+internal fun AppearancePreferences(
+    theme: ThemeMode,
+    themeColor: ThemeColor,
+    language: AppLanguage,
+    strings: LocaleStrings,
+    setTheme: (ThemeMode) -> Unit,
+    setThemeColor: (ThemeColor) -> Unit,
+    setLanguage: (AppLanguage) -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    Column(modifier.fillMaxWidth()) {
+        PreferenceGroupLabel(strings.language)
+        Spacer(Modifier.height(10.dp))
+        PreferenceSegmentGroup(
+            options = preferenceLanguages,
+            selected = language,
+            label = AppLanguage::label,
+            onSelect = setLanguage,
+            testTag = "appearance-language-group",
+        )
+        Spacer(Modifier.height(22.dp))
+        PreferenceGroupLabel(strings.themeMode)
+        Spacer(Modifier.height(10.dp))
+        PreferenceSegmentGroup(
+            options = ThemeMode.entries,
+            selected = theme,
+            label = {
+                when (it) {
+                    ThemeMode.SYSTEM -> strings.systemTheme
+                    ThemeMode.DARK -> strings.darkTheme
+                    ThemeMode.LIGHT -> strings.lightTheme
+                }
+            },
+            onSelect = setTheme,
+            testTag = "appearance-theme-mode-group",
+        )
+        Spacer(Modifier.height(22.dp))
+        PreferenceGroupLabel(strings.themeColor)
+        Spacer(Modifier.height(10.dp))
+        ThemeColorSelector(
+            selected = themeColor,
+            strings = strings,
+            onSelect = setThemeColor,
+        )
+    }
+}
+
+@Composable
+private fun PreferenceGroupLabel(text: String) {
+    Text(
+        text,
+        style = MaterialTheme.typography.bodyMedium,
+        color = MaterialTheme.colorScheme.onSurfaceVariant,
+    )
+}
+
+@Composable
+private fun <T> PreferenceSegmentGroup(
+    options: List<T>,
+    selected: T,
+    label: (T) -> String,
+    onSelect: (T) -> Unit,
+    testTag: String,
+) {
+    val selectedBackground =
+        MaterialTheme.colorScheme.onSurface.copy(alpha = .18f)
+            .compositeOver(MaterialTheme.colorScheme.surfaceContainerHigh)
+    Surface(
+        modifier = Modifier.fillMaxWidth().testTag(testTag),
+        shape = RoundedCornerShape(50),
+        color = MaterialTheme.colorScheme.surfaceContainerHigh,
+    ) {
+        Row(
+            modifier = Modifier.fillMaxWidth().padding(4.dp),
+            horizontalArrangement = Arrangement.spacedBy(2.dp),
+        ) {
+            options.forEach { option ->
+                val isSelected = option == selected
+                Box(
+                    modifier =
+                        Modifier.weight(1f)
+                            .heightIn(min = 42.dp)
+                            .clip(RoundedCornerShape(50))
+                            .background(if (isSelected) selectedBackground else Color.Transparent)
+                            .selectable(
+                                selected = isSelected,
+                                onClick = { onSelect(option) },
+                                role = Role.RadioButton,
+                            )
+                            .padding(horizontal = 4.dp),
+                    contentAlignment = Alignment.Center,
+                ) {
+                    Text(
+                        label(option),
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                        style = MaterialTheme.typography.labelLarge,
+                        fontWeight = if (isSelected) FontWeight.SemiBold else FontWeight.Normal,
+                    )
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun ThemeColorSelector(
+    selected: ThemeColor,
+    strings: LocaleStrings,
+    onSelect: (ThemeColor) -> Unit,
+) {
+    Surface(
+        modifier = Modifier.fillMaxWidth().testTag("appearance-theme-color-group"),
+        shape = RoundedCornerShape(24.dp),
+        color = MaterialTheme.colorScheme.surfaceContainerHigh,
+    ) {
+        Row(
+            modifier = Modifier.fillMaxWidth().padding(horizontal = 8.dp, vertical = 8.dp),
+        ) {
+            ThemeColor.entries.forEach { color ->
+                val isSelected = color == selected
+                val colorLabel = color.localizedName(strings)
+                val interactionSource = remember(color) { MutableInteractionSource() }
+                Box(
+                    modifier =
+                        Modifier.weight(1f)
+                            .height(52.dp)
+                            .testTag("theme-color-${color.storageKey}")
+                            .semantics { contentDescription = colorLabel }
+                            .selectable(
+                                selected = isSelected,
+                                interactionSource = interactionSource,
+                                indication = null,
+                                onClick = { onSelect(color) },
+                                role = Role.RadioButton,
+                            ),
+                    contentAlignment = Alignment.Center,
+                ) {
+                    Box(
+                        modifier =
+                            Modifier.size(42.dp)
+                                .border(
+                                    width = 2.dp,
+                                    color =
+                                        if (isSelected) color.swatch
+                                        else Color.Transparent,
+                                    shape = CircleShape,
+                                )
+                                .padding(4.dp),
+                    ) {
+                        Box(
+                            Modifier.fillMaxSize()
+                                .background(color.swatch, CircleShape),
+                            contentAlignment = Alignment.Center,
+                        ) {
+                            if (isSelected) {
+                                Icon(
+                                    Icons.Default.Check,
+                                    contentDescription = null,
+                                    modifier = Modifier.size(20.dp),
+                                    tint =
+                                        if (color.swatch.luminance() > .35f) {
+                                            Color(0xFF111111)
+                                        } else {
+                                            Color.White
+                                        },
+                                )
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
+
+private fun ThemeColor.localizedName(strings: LocaleStrings): String =
+    when (this) {
+        ThemeColor.BLUE -> strings.colorBlue
+        ThemeColor.PURPLE -> strings.colorPurple
+        ThemeColor.PINK -> strings.colorPink
+        ThemeColor.ORANGE -> strings.colorOrange
+        ThemeColor.GREEN -> strings.colorGreen
+        ThemeColor.CYAN -> strings.colorCyan
+    }
