@@ -27,7 +27,6 @@ import androidx.compose.ui.semantics.stateDescription
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Window
-import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.WindowPosition
 import androidx.compose.ui.window.rememberWindowState
 import com.sun.jna.Platform
@@ -248,110 +247,191 @@ internal fun SystemAudioSubtitleWindow(
                     }
                 }
             }
-            if (showSettings) {
-                SystemAudioLanguageSettingsDialog(
-                    config = config,
-                    strings = strings,
-                    onSave = { onLanguageConfigChange(it); showSettings = false },
-                    onDismiss = { showSettings = false },
-                )
-            }
         }
+    }
+    if (showSettings) {
+        SystemAudioLanguageSettingsWindow(
+            config = config,
+            strings = strings,
+            dark = dark,
+            position = windowState.position,
+            onConfigChange = onLanguageConfigChange,
+            onClose = { showSettings = false },
+        )
     }
 }
 
 @Composable
-internal fun SystemAudioLanguageSettingsDialog(
+internal fun SystemAudioLanguageSettingsWindow(
     config: SystemAudioLanguageConfig,
     strings: LocaleStrings,
-    onSave: (SystemAudioLanguageConfig) -> Unit,
-    onDismiss: () -> Unit,
+    dark: Boolean,
+    position: WindowPosition = WindowPosition(24.dp, 24.dp),
+    onConfigChange: (SystemAudioLanguageConfig) -> Unit,
+    onClose: () -> Unit,
 ) {
-    var source by remember { mutableStateOf(config.sourceLanguage) }
-    var target by remember { mutableStateOf(config.targetLanguage) }
-    var opacity by remember { mutableIntStateOf(config.normalized().opacityPercent) }
-    var overlayEnabled by remember { mutableStateOf(config.steamVrOverlayEnabled) }
-    var overlayPosition by remember { mutableStateOf(config.steamVrOverlayPosition) }
-    var overlayScale by remember { mutableIntStateOf(config.normalized().steamVrOverlayScalePercent) }
-    Dialog(onDismissRequest = onDismiss) {
-        Surface(
-            modifier = Modifier.fillMaxWidth().testTag("systemAudioLanguageSettings"),
-            shape = MaterialTheme.shapes.extraLarge,
-            tonalElevation = 6.dp,
-        ) {
-            Column(
-                Modifier.testTag("systemAudioSettingsScroll").verticalScroll(rememberScrollState()).padding(16.dp),
-                verticalArrangement = Arrangement.spacedBy(8.dp),
+    var current by remember { mutableStateOf(config.normalized()) }
+    LaunchedEffect(config) { current = config.normalized() }
+    fun apply(updated: SystemAudioLanguageConfig) {
+        val normalized = updated.normalized()
+        current = normalized
+        onConfigChange(normalized)
+    }
+    val windowState = rememberWindowState(width = 360.dp, height = 480.dp, position = position)
+    Window(
+        onCloseRequest = onClose,
+        title = "VRCMC · ${strings.settings}",
+        icon = painterResource(Res.drawable.logo),
+        state = windowState,
+        undecorated = true,
+        transparent = true,
+        alwaysOnTop = true,
+    ) {
+        SideEffect {
+            // Keep the rounded corners transparent while the settings content stays fully opaque.
+            window.background = java.awt.Color(0, 0, 0, 0)
+            window.opacity = 1f
+            window.isResizable = false
+        }
+        LaunchedEffect(window) {
+            if (!setWindowsRoundedCorners(window)) {
+                window.shape = RoundRectangle2D.Double(
+                    0.0,
+                    0.0,
+                    window.width.toDouble(),
+                    window.height.toDouble(),
+                    16.0,
+                    16.0,
+                )
+            }
+        }
+        MaterialTheme(if (dark) darkColorScheme() else lightColorScheme()) {
+            Surface(
+                modifier = Modifier.fillMaxSize().testTag("systemAudioLanguageSettings"),
+                shape = RoundedCornerShape(16.dp),
+                color = MaterialTheme.colorScheme.surface,
             ) {
-                Text(strings.settings, style = MaterialTheme.typography.titleLarge)
-                Column {
-                    SystemAudioLanguagePicker(
-                        label = strings.systemAudioSourceLanguage,
-                        selected = source,
-                        options = listOf("auto" to strings.systemAudioAutomaticLanguage) + systemAudioSourceLanguages.toList(),
-                        onSelect = { source = it },
-                    )
-                    SystemAudioLanguagePicker(
-                        label = strings.targetLanguage,
-                        selected = target,
-                        options = availableTargetLanguages.map { it to it },
-                        onSelect = { target = it },
-                    )
-                    Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-                        Text(strings.steamVrOverlay, Modifier.weight(1f), style = MaterialTheme.typography.labelLarge)
-                        Switch(
-                            checked = overlayEnabled,
-                            onCheckedChange = { overlayEnabled = it },
-                            modifier = Modifier.semantics { contentDescription = strings.steamVrOverlay },
-                        )
+                Column(Modifier.fillMaxSize()) {
+                    Column(
+                        Modifier.weight(1f).fillMaxWidth().testTag("systemAudioSettingsScroll")
+                            .verticalScroll(rememberScrollState()).padding(16.dp),
+                        verticalArrangement = Arrangement.spacedBy(8.dp),
+                    ) {
+                        Text(strings.settings, style = MaterialTheme.typography.titleLarge)
+                        Column {
+                            SystemAudioLanguagePicker(
+                                label = strings.systemAudioSourceLanguage,
+                                selected = current.sourceLanguage,
+                                options = listOf("auto" to strings.systemAudioAutomaticLanguage) +
+                                    systemAudioSourceLanguages.toList(),
+                                optionTestTag = "systemAudioSourceLanguage",
+                                onSelect = { apply(current.copy(sourceLanguage = it)) },
+                            )
+                            SystemAudioLanguagePicker(
+                                label = strings.targetLanguage,
+                                selected = current.targetLanguage,
+                                options = availableTargetLanguages.map { it to it },
+                                optionTestTag = "systemAudioTargetLanguage",
+                                onSelect = { apply(current.copy(targetLanguage = it)) },
+                            )
+                            Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+                                Text(
+                                    strings.steamVrOverlay,
+                                    Modifier.weight(1f),
+                                    style = MaterialTheme.typography.labelLarge,
+                                )
+                                Switch(
+                                    checked = current.steamVrOverlayEnabled,
+                                    onCheckedChange = {
+                                        apply(current.copy(steamVrOverlayEnabled = it))
+                                    },
+                                    modifier = Modifier.semantics { contentDescription = strings.steamVrOverlay },
+                                )
+                            }
+                            if (current.steamVrOverlayEnabled) {
+                                SystemAudioLanguagePicker(
+                                    label = strings.steamVrOverlayPosition,
+                                    selected = current.steamVrOverlayPosition.name,
+                                    options = listOf(
+                                        SteamVrOverlayPosition.LEFT_HAND.name to strings.steamVrOverlayLeftHand,
+                                        SteamVrOverlayPosition.RIGHT_HAND.name to strings.steamVrOverlayRightHand,
+                                        SteamVrOverlayPosition.SCREEN_CENTER.name to strings.steamVrOverlayScreenCenter,
+                                    ),
+                                    optionTestTag = "steamVrOverlayPosition",
+                                    onSelect = {
+                                        apply(
+                                            current.copy(
+                                                steamVrOverlayPosition = SteamVrOverlayPosition.valueOf(it),
+                                            ),
+                                        )
+                                    },
+                                )
+                                SystemAudioLanguagePicker(
+                                    label = strings.steamVrOverlaySize,
+                                    selected = current.steamVrOverlayScalePercent.toString(),
+                                    options = steamVrOverlayScalePercents.map {
+                                        it.toString() to if (it == 100) strings.steamVrOverlayDefaultSize else "$it%"
+                                    },
+                                    optionTestTag = "steamVrOverlaySize",
+                                    onSelect = {
+                                        apply(current.copy(steamVrOverlayScalePercent = it.toInt()))
+                                    },
+                                )
+                                Text(
+                                    strings.steamVrOverlaySizeHint,
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                )
+                                SystemAudioLanguagePicker(
+                                    label = strings.steamVrOverlayFontSize,
+                                    selected = current.steamVrOverlayFontSizePercent.toString(),
+                                    options = steamVrOverlayFontSizePercents.map {
+                                        it.toString() to
+                                            if (it == 100) strings.steamVrOverlayDefaultFontSize else "$it%"
+                                    },
+                                    optionTestTag = "steamVrOverlayFontSize",
+                                    onSelect = {
+                                        apply(current.copy(steamVrOverlayFontSizePercent = it.toInt()))
+                                    },
+                                )
+                                Text(
+                                    strings.steamVrOverlayFontSizeHint,
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                )
+                                Text(
+                                    strings.steamVrOverlayHint,
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                )
+                            }
+                            Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+                                Text(
+                                    strings.systemAudioWindowOpacity,
+                                    Modifier.weight(1f),
+                                    style = MaterialTheme.typography.labelLarge,
+                                )
+                                Text("${current.opacityPercent}%", style = MaterialTheme.typography.labelLarge)
+                            }
+                            Slider(
+                                value = current.opacityPercent.toFloat(),
+                                onValueChange = {
+                                    apply(current.copy(opacityPercent = it.roundToInt()))
+                                },
+                                valueRange = 30f..100f,
+                                modifier = Modifier.fillMaxWidth().semantics {
+                                    contentDescription = strings.systemAudioWindowOpacity
+                                    stateDescription = "${current.opacityPercent}%"
+                                },
+                            )
+                        }
                     }
-                    if (overlayEnabled) {
-                        SystemAudioLanguagePicker(
-                            label = strings.steamVrOverlayPosition,
-                            selected = overlayPosition.name,
-                            options = listOf(
-                                SteamVrOverlayPosition.LEFT_HAND.name to strings.steamVrOverlayLeftHand,
-                                SteamVrOverlayPosition.RIGHT_HAND.name to strings.steamVrOverlayRightHand,
-                                SteamVrOverlayPosition.SCREEN_CENTER.name to strings.steamVrOverlayScreenCenter,
-                            ),
-                            onSelect = { overlayPosition = SteamVrOverlayPosition.valueOf(it) },
-                        )
-                        SystemAudioLanguagePicker(
-                            label = strings.steamVrOverlaySize,
-                            selected = overlayScale.toString(),
-                            options = steamVrOverlayScalePercents.map {
-                                it.toString() to if (it == 100) strings.steamVrOverlayDefaultSize else "$it%"
-                            },
-                            onSelect = { overlayScale = it.toInt() },
-                        )
-                        Text(strings.steamVrOverlaySizeHint, style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant)
-                        Text(strings.steamVrOverlayHint, style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    Row(
+                        Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp),
+                        horizontalArrangement = Arrangement.End,
+                    ) {
+                        TextButton(onClick = onClose) { Text(strings.done) }
                     }
-                    Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-                        Text(strings.systemAudioWindowOpacity, Modifier.weight(1f), style = MaterialTheme.typography.labelLarge)
-                        Text("$opacity%", style = MaterialTheme.typography.labelLarge)
-                    }
-                    Slider(
-                        value = opacity.toFloat(),
-                        onValueChange = { opacity = it.roundToInt() },
-                        valueRange = 30f..100f,
-                        modifier = Modifier.fillMaxWidth().semantics {
-                            contentDescription = strings.systemAudioWindowOpacity
-                            stateDescription = "$opacity%"
-                        },
-                    )
-                }
-                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End) {
-                    TextButton(onClick = onDismiss) { Text(strings.cancel) }
-                    TextButton(onClick = {
-                        onSave(config.copy(
-                            sourceLanguage = source, targetLanguage = target, opacityPercent = opacity,
-                            steamVrOverlayEnabled = overlayEnabled, steamVrOverlayPosition = overlayPosition,
-                            steamVrOverlayScalePercent = overlayScale,
-                        ).normalized())
-                    }) { Text(strings.save) }
                 }
             }
         }
@@ -363,6 +443,7 @@ private fun SystemAudioLanguagePicker(
     label: String,
     selected: String,
     options: List<Pair<String, String>>,
+    optionTestTag: String,
     onSelect: (String) -> Unit,
 ) {
     var expanded by remember { mutableStateOf(false) }
@@ -370,10 +451,13 @@ private fun SystemAudioLanguagePicker(
     Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
         Text(label, Modifier.weight(1f), style = MaterialTheme.typography.labelLarge)
         Box(Modifier.weight(1.6f)) {
-            OutlinedButton(onClick = { expanded = true }, modifier = Modifier.fillMaxWidth().semantics {
-                contentDescription = label
-                stateDescription = selectedLabel
-            }) {
+            OutlinedButton(
+                onClick = { expanded = true },
+                modifier = Modifier.fillMaxWidth().testTag("$optionTestTag-picker").semantics {
+                    contentDescription = label
+                    stateDescription = selectedLabel
+                },
+            ) {
                 Text(selectedLabel, Modifier.weight(1f))
                 Icon(Icons.Default.ArrowDropDown, contentDescription = null)
             }
@@ -382,6 +466,7 @@ private fun SystemAudioLanguagePicker(
                     DropdownMenuItem(
                         text = { Text(text) },
                         leadingIcon = { if (value == selected) Icon(Icons.Default.Check, contentDescription = null) },
+                        modifier = Modifier.testTag("$optionTestTag-option-$value"),
                         onClick = { onSelect(value); expanded = false },
                     )
                 }

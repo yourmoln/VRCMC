@@ -1,7 +1,6 @@
 package com.vrcmc.app
 
 import androidx.compose.runtime.*
-import androidx.compose.material3.MaterialTheme
 import androidx.compose.ui.graphics.toAwtImage
 import androidx.compose.ui.semantics.SemanticsProperties
 import androidx.compose.ui.semantics.SemanticsActions
@@ -37,6 +36,9 @@ class SystemAudioSubtitleWindowTest {
             }
         }
     }
+
+    private fun SemanticsNodeInteraction.performClickOnUiThread() =
+        performSemanticsAction(SemanticsActions.OnClick) { it() }
 
     private fun assertRoundedWindow(window: Window) {
         val dwm = Native.load("dwmapi", SubtitleDwmTestApi::class.java)
@@ -86,14 +88,33 @@ class SystemAudioSubtitleWindowTest {
             .performSemanticsAction(SemanticsActions.OnClick) { it() }
         waitForSelection(LocaleStringsZhHans.systemAudioSourceLanguage, "自动")
         compose.onNodeWithContentDescription(LocaleStringsZhHans.targetLanguage).assertIsDisplayed()
-        compose.onNodeWithText(LocaleStringsZhHans.cancel)
-            .performSemanticsAction(SemanticsActions.OnClick) { it() }
-        compose.waitUntil(5_000) { compose.onAllNodesWithTag("systemAudioLanguageSettings").fetchSemanticsNodes().isEmpty() }
+        compose.onNodeWithText(LocaleStringsZhHans.cancel).assertDoesNotExist()
+        compose.onNodeWithText(LocaleStringsZhHans.save).assertDoesNotExist()
         lateinit var subtitleWindow: Window
+        lateinit var settingsWindow: Window
         compose.runOnIdle {
             subtitleWindow = Window.getWindows().single {
                 it.isShowing && (it as? Frame)?.title == "VRCMC · 听别人说话"
             }
+            settingsWindow = Window.getWindows().single {
+                it.isShowing && (it as? Frame)?.title == "VRCMC · 设置"
+            }
+            assertTrue(settingsWindow is Frame)
+            assertFalse(settingsWindow is java.awt.Dialog)
+            val settingsFrame = settingsWindow as Frame
+            assertTrue(settingsFrame.isUndecorated)
+            assertFalse(settingsFrame.isResizable)
+            assertTrue(settingsWindow.isAlwaysOnTop)
+            assertEquals(1f, settingsWindow.opacity)
+            assertEquals(subtitleWindow.width, settingsWindow.width)
+            assertEquals(subtitleWindow.height, settingsWindow.height)
+            assertEquals(subtitleWindow.location, settingsWindow.location)
+            assertRoundedWindow(settingsWindow)
+        }
+        compose.onNodeWithText(LocaleStringsZhHans.done)
+            .performSemanticsAction(SemanticsActions.OnClick) { it() }
+        compose.waitUntil(5_000) { compose.onAllNodesWithTag("systemAudioLanguageSettings").fetchSemanticsNodes().isEmpty() }
+        compose.runOnIdle {
             assertTrue(subtitleWindow.isAlwaysOnTop)
             assertTrue((subtitleWindow as Frame).isUndecorated)
             assertTrue((subtitleWindow as Frame).isResizable)
@@ -113,6 +134,12 @@ class SystemAudioSubtitleWindowTest {
         compose.onNodeWithContentDescription(LocaleStringsZhHans.settings)
             .performSemanticsAction(SemanticsActions.OnClick) { it() }
         waitForSelection(LocaleStringsZhHans.systemAudioWindowOpacity, "80%")
+        compose.runOnIdle {
+            settingsWindow = Window.getWindows().single {
+                it.isShowing && (it as? Frame)?.title == "VRCMC · 设置"
+            }
+            assertEquals(1f, settingsWindow.opacity)
+        }
         compose.onNodeWithTag("systemAudioSettingsScroll")
             .performSemanticsAction(SemanticsActions.ScrollBy) { it(0f, 500f) }
         compose.waitUntil(5_000) {
@@ -123,17 +150,15 @@ class SystemAudioSubtitleWindowTest {
             .assertIsDisplayed()
             .performSemanticsAction(SemanticsActions.SetProgress) { it(65f) }
         waitForSelection(LocaleStringsZhHans.systemAudioWindowOpacity, "65%")
-        compose.runOnIdle {
-            assertEquals(.8f, subtitleWindow.opacity)
-            assertEquals(80, config.opacityPercent)
-        }
-        compose.onNodeWithText(LocaleStringsZhHans.save).assertIsDisplayed()
-            .performSemanticsAction(SemanticsActions.OnClick) { it() }
-        compose.waitUntil(5_000) { subtitleWindow.opacity == .65f }
+        compose.waitUntil(5_000) { subtitleWindow.opacity == .65f && config.opacityPercent == 65 }
         compose.runOnIdle {
             assertEquals(65, config.opacityPercent)
             assertRoundedWindow(subtitleWindow)
+            assertEquals(subtitleWindow.location, settingsWindow.location)
         }
+        compose.onNodeWithText(LocaleStringsZhHans.done)
+            .performSemanticsAction(SemanticsActions.OnClick) { it() }
+        compose.waitUntil(5_000) { compose.onAllNodesWithTag("systemAudioLanguageSettings").fetchSemanticsNodes().isEmpty() }
         compose.onNodeWithContentDescription(LocaleStringsZhHans.minimizeWindow)
             .performSemanticsAction(SemanticsActions.OnClick) { it() }
         compose.waitUntil(5_000) { (subtitleWindow as Frame).extendedState and Frame.ICONIFIED != 0 }
@@ -167,77 +192,120 @@ class SystemAudioSubtitleWindowTest {
     }
 
     @Test
-    fun steamVrSettingsSaveAllPresetsShareOpacityAndCancelWithoutApplying() {
+    fun steamVrSettingsApplyImmediatelyInAnIndependentOpaqueWindow() {
         assumeTrue(Platform.isWindows())
         var config by mutableStateOf(SystemAudioLanguageConfig())
         var visible by mutableStateOf(true)
-        var saves = 0
+        var changes = 0
         compose.setContent {
-            MaterialTheme {
-                if (visible) SystemAudioLanguageSettingsDialog(
-                    config = config, strings = LocaleStringsZhHans,
-                    onSave = { config = it; saves++; visible = false },
-                    onDismiss = { visible = false },
-                )
-            }
+            if (visible) SystemAudioLanguageSettingsWindow(
+                config = config,
+                strings = LocaleStringsZhHans,
+                dark = true,
+                onConfigChange = { config = it; changes++ },
+                onClose = { visible = false },
+            )
         }
-        compose.onNodeWithContentDescription(LocaleStringsZhHans.steamVrOverlay).assertIsOff().performClick()
+        compose.waitUntil(5_000) {
+            compose.onAllNodesWithContentDescription(LocaleStringsZhHans.systemAudioSourceLanguage)
+                .fetchSemanticsNodes().isNotEmpty()
+        }
+        compose.onNodeWithText(LocaleStringsZhHans.cancel).assertDoesNotExist()
+        compose.onNodeWithText(LocaleStringsZhHans.save).assertDoesNotExist()
+        lateinit var settingsWindow: Window
+        compose.runOnIdle {
+            settingsWindow = Window.getWindows().single {
+                it.isShowing && (it as? Frame)?.title == "VRCMC · 设置"
+            }
+            assertTrue(settingsWindow is Frame)
+            assertFalse(settingsWindow is java.awt.Dialog)
+            val settingsFrame = settingsWindow as Frame
+            assertTrue(settingsFrame.isUndecorated)
+            assertFalse(settingsFrame.isResizable)
+            assertTrue(settingsWindow.isAlwaysOnTop)
+            assertEquals(1f, settingsWindow.opacity)
+            assertEquals(0, settingsWindow.background.alpha)
+            assertEquals(360, settingsWindow.width)
+            assertEquals(480, settingsWindow.height)
+            assertRoundedWindow(settingsWindow)
+        }
+        compose.onNodeWithContentDescription(LocaleStringsZhHans.steamVrOverlay).assertIsOff().performClickOnUiThread()
+        compose.waitUntil(5_000) { config.steamVrOverlayEnabled }
         waitForSelection(LocaleStringsZhHans.steamVrOverlayPosition, "左手")
         waitForSelection(LocaleStringsZhHans.steamVrOverlaySize, LocaleStringsZhHans.steamVrOverlayDefaultSize)
-        for (scale in steamVrOverlayScalePercents + 150) {
-            compose.onNodeWithContentDescription(LocaleStringsZhHans.steamVrOverlaySize).performScrollTo().performClick()
-            val label = if (scale == 100) LocaleStringsZhHans.steamVrOverlayDefaultSize else "$scale%"
-            compose.onNodeWithText(label).performScrollTo().performClick()
-            waitForSelection(LocaleStringsZhHans.steamVrOverlaySize, label)
+        waitForSelection(LocaleStringsZhHans.steamVrOverlayFontSize, LocaleStringsZhHans.steamVrOverlayDefaultFontSize)
+        compose.onNodeWithContentDescription(LocaleStringsZhHans.steamVrOverlaySize)
+            .performClickOnUiThread()
+        compose.waitUntil(5_000) {
+            compose.onAllNodesWithTag("steamVrOverlaySize-option-150").fetchSemanticsNodes().isNotEmpty()
         }
-        for (label in listOf("右手", "屏幕中间", "左手", "屏幕中间")) {
-            compose.onNodeWithContentDescription(LocaleStringsZhHans.steamVrOverlayPosition).performScrollTo().performClick()
-            compose.onNodeWithText(label).performClick()
-            waitForSelection(LocaleStringsZhHans.steamVrOverlayPosition, label)
+        val sizeTag = "steamVrOverlaySize-option-150"
+        compose.onNodeWithTag(sizeTag).performClickOnUiThread()
+        compose.waitUntil(5_000) { config.steamVrOverlayScalePercent == 150 }
+        compose.waitUntil(5_000) { compose.onAllNodesWithTag(sizeTag).fetchSemanticsNodes().isEmpty() }
+        waitForSelection(LocaleStringsZhHans.steamVrOverlaySize, "150%")
+
+        compose.onNodeWithContentDescription(LocaleStringsZhHans.steamVrOverlayFontSize)
+            .performClickOnUiThread()
+        compose.waitUntil(5_000) {
+            compose.onAllNodesWithTag("steamVrOverlayFontSize-option-175").fetchSemanticsNodes().isNotEmpty()
         }
-        compose.onNodeWithContentDescription(LocaleStringsZhHans.systemAudioWindowOpacity).performScrollTo()
+        val fontSizeTag = "steamVrOverlayFontSize-option-175"
+        compose.onNodeWithTag(fontSizeTag).performClickOnUiThread()
+        compose.waitUntil(5_000) { config.steamVrOverlayFontSizePercent == 175 }
+        compose.waitUntil(5_000) { compose.onAllNodesWithTag(fontSizeTag).fetchSemanticsNodes().isEmpty() }
+        waitForSelection(LocaleStringsZhHans.steamVrOverlayFontSize, "175%")
+
+        compose.onNodeWithContentDescription(LocaleStringsZhHans.steamVrOverlayPosition)
+            .performClickOnUiThread()
+        val positionTag = "steamVrOverlayPosition-option-${SteamVrOverlayPosition.SCREEN_CENTER.name}"
+        compose.waitUntil(5_000) { compose.onAllNodesWithTag(positionTag).fetchSemanticsNodes().isNotEmpty() }
+        compose.onNodeWithTag(positionTag).performClickOnUiThread()
+        compose.waitUntil(5_000) { config.steamVrOverlayPosition == SteamVrOverlayPosition.SCREEN_CENTER }
+        compose.waitUntil(5_000) {
+            compose.onAllNodesWithTag(positionTag).fetchSemanticsNodes().isEmpty()
+        }
+        waitForSelection(LocaleStringsZhHans.steamVrOverlayPosition, "屏幕中间")
+        compose.onNodeWithContentDescription(LocaleStringsZhHans.systemAudioWindowOpacity)
             .performSemanticsAction(SemanticsActions.SetProgress) { it(55f) }
         waitForSelection(LocaleStringsZhHans.systemAudioWindowOpacity, "55%")
-        compose.runOnIdle { assertEquals(SystemAudioLanguageConfig(), config) }
-        val image = compose.onNodeWithTag("systemAudioLanguageSettings").captureToImage()
-        val output = File("build/test-screenshots/system-audio-steamvr-settings.png")
-        output.parentFile.mkdirs()
-        ImageIO.write(image.toAwtImage(), "png", output)
-        compose.onNodeWithText(LocaleStringsZhHans.save).performScrollTo().performClick()
-        compose.waitUntil(5_000) { saves == 1 }
         val expected = SystemAudioLanguageConfig(
-            opacityPercent = 55, steamVrOverlayEnabled = true, steamVrOverlayPosition = SteamVrOverlayPosition.SCREEN_CENTER,
+            opacityPercent = 55,
+            steamVrOverlayEnabled = true,
+            steamVrOverlayPosition = SteamVrOverlayPosition.SCREEN_CENTER,
             steamVrOverlayScalePercent = 150,
+            steamVrOverlayFontSizePercent = 175,
         )
         compose.runOnIdle {
             assertEquals(expected, config)
-            val provider = providerById("microsoft_edge_web")
-            val services = SystemAudioListeningSettings(VoiceInputConfig(), provider, defaultProviderConfig(provider), listOf("English"))
-            assertEquals(services.withLanguages(SystemAudioLanguageConfig()), services.withLanguages(config))
-            visible = true
+            assertTrue(changes >= 5)
         }
-        waitForSelection(LocaleStringsZhHans.steamVrOverlayPosition, "屏幕中间")
-        waitForSelection(LocaleStringsZhHans.steamVrOverlaySize, "150%")
-        compose.onNodeWithContentDescription(LocaleStringsZhHans.steamVrOverlaySize).performScrollTo().performClick()
-        compose.onNodeWithText("75%").performScrollTo().performClick()
-        waitForSelection(LocaleStringsZhHans.steamVrOverlaySize, "75%")
-        compose.onNodeWithContentDescription(LocaleStringsZhHans.steamVrOverlay).assertIsOn().performScrollTo().performClick()
-        compose.onNodeWithContentDescription(LocaleStringsZhHans.steamVrOverlayPosition).assertDoesNotExist()
+        val image = compose.onNodeWithTag("systemAudioLanguageSettings").captureToImage()
+        val imageAwt = image.toAwtImage()
+        assertEquals(0, imageAwt.getRGB(0, 0) ushr 24)
+        assertEquals(0, imageAwt.getRGB(imageAwt.width - 1, 0) ushr 24)
+        val output = File("build/test-screenshots/system-audio-steamvr-settings.png")
+        output.parentFile.mkdirs()
+        ImageIO.write(imageAwt, "png", output)
+        val windowScreenshot = Robot().createScreenCapture(
+            Rectangle(settingsWindow.locationOnScreen, settingsWindow.size),
+        )
+        ImageIO.write(windowScreenshot, "png", File("build/test-screenshots/system-audio-settings-window.png"))
+        compose.onNodeWithContentDescription(LocaleStringsZhHans.steamVrOverlay)
+            .assertIsOn().performClickOnUiThread()
+        compose.waitUntil(5_000) { !config.steamVrOverlayEnabled }
+        compose.waitUntil(5_000) {
+            compose.onAllNodesWithContentDescription(LocaleStringsZhHans.steamVrOverlayPosition)
+                .fetchSemanticsNodes().isEmpty()
+        }
         compose.onNodeWithContentDescription(LocaleStringsZhHans.steamVrOverlaySize).assertDoesNotExist()
-        compose.onNodeWithText(LocaleStringsZhHans.cancel).performScrollTo().performClick()
-        compose.runOnIdle {
-            assertEquals(expected, config)
-            assertEquals(1, saves)
-            visible = true
-        }
-        compose.onNodeWithContentDescription(LocaleStringsZhHans.steamVrOverlay).performScrollTo().performClick()
-        compose.onNodeWithText(LocaleStringsZhHans.save).performScrollTo().performClick()
-        compose.waitUntil(5_000) { saves == 2 }
         compose.runOnIdle { assertEquals(expected.copy(steamVrOverlayEnabled = false), config) }
+        compose.onNodeWithText(LocaleStringsZhHans.done).performClickOnUiThread()
+        compose.waitUntil(5_000) { !visible }
     }
 
     @Test
-    fun settingsApplyLanguagesAndOpacityOnlyWhenSaved() {
+    fun settingsApplyLanguagesAndOpacityImmediatelyWithoutSaveOrCancel() {
         assumeTrue(Platform.isWindows())
         val provider = providerById("microsoft_edge_web")
         val services = SystemAudioListeningSettings(
@@ -245,15 +313,15 @@ class SystemAudioSubtitleWindowTest {
         )
         var config by mutableStateOf(SystemAudioLanguageConfig())
         var visible by mutableStateOf(true)
-        var saves = 0
+        var changes = 0
         compose.setContent {
-            MaterialTheme {
-                if (visible) SystemAudioLanguageSettingsDialog(
-                    config = config, strings = LocaleStringsZhHans,
-                    onSave = { config = it; saves++; visible = false },
-                    onDismiss = { visible = false },
-                )
-            }
+            if (visible) SystemAudioLanguageSettingsWindow(
+                config = config,
+                strings = LocaleStringsZhHans,
+                dark = false,
+                onConfigChange = { config = it; changes++ },
+                onClose = { visible = false },
+            )
         }
         compose.waitUntil(5_000) {
             compose.onAllNodesWithContentDescription(LocaleStringsZhHans.systemAudioSourceLanguage).fetchSemanticsNodes().isNotEmpty()
@@ -264,30 +332,39 @@ class SystemAudioSubtitleWindowTest {
             .assertIsDisplayed().assert(SemanticsMatcher.expectValue(SemanticsProperties.StateDescription, "简体中文"))
         compose.onNodeWithContentDescription(LocaleStringsZhHans.systemAudioWindowOpacity)
             .assertIsDisplayed().assert(SemanticsMatcher.expectValue(SemanticsProperties.StateDescription, "80%"))
+        compose.onNodeWithText(LocaleStringsZhHans.cancel).assertDoesNotExist()
+        compose.onNodeWithText(LocaleStringsZhHans.save).assertDoesNotExist()
         val screenshot = compose.onNodeWithTag("systemAudioLanguageSettings").captureToImage()
         val output = File("build/test-screenshots/system-audio-languages.png")
         output.parentFile.mkdirs()
         ImageIO.write(screenshot.toAwtImage(), "png", output)
-        compose.onNodeWithContentDescription(LocaleStringsZhHans.systemAudioSourceLanguage).performClick()
-        compose.waitUntil(5_000) { compose.onAllNodesWithText("English").fetchSemanticsNodes().isNotEmpty() }
-        compose.onNodeWithText("English").performScrollTo().performClick()
+        compose.onNodeWithContentDescription(LocaleStringsZhHans.systemAudioSourceLanguage).performClickOnUiThread()
+        compose.waitUntil(5_000) {
+            compose.onAllNodesWithTag("systemAudioSourceLanguage-option-en").fetchSemanticsNodes().isNotEmpty()
+        }
+        compose.onNodeWithTag("systemAudioSourceLanguage-option-en").performClickOnUiThread()
+        compose.waitUntil(5_000) {
+            compose.onAllNodesWithTag("systemAudioSourceLanguage-option-en").fetchSemanticsNodes().isEmpty()
+        }
         waitForSelection(LocaleStringsZhHans.systemAudioSourceLanguage, "English")
-        compose.onNodeWithContentDescription(LocaleStringsZhHans.targetLanguage).performClick()
-        compose.waitUntil(5_000) { compose.onAllNodesWithText("日本語").fetchSemanticsNodes().isNotEmpty() }
-        compose.onNodeWithText("日本語").performScrollTo().performClick()
+        compose.runOnIdle { assertEquals("en", config.sourceLanguage) }
+        compose.onNodeWithContentDescription(LocaleStringsZhHans.targetLanguage).performClickOnUiThread()
+        compose.waitUntil(5_000) {
+            compose.onAllNodesWithTag("systemAudioTargetLanguage-option-日本語").fetchSemanticsNodes().isNotEmpty()
+        }
+        compose.onNodeWithTag("systemAudioTargetLanguage-option-日本語")
+            .performClickOnUiThread()
+        compose.waitUntil(5_000) {
+            compose.onAllNodesWithTag("systemAudioTargetLanguage-option-日本語").fetchSemanticsNodes().isEmpty()
+        }
         waitForSelection(LocaleStringsZhHans.targetLanguage, "日本語")
+        compose.runOnIdle { assertEquals("日本語", config.targetLanguage) }
         compose.onNodeWithContentDescription(LocaleStringsZhHans.systemAudioWindowOpacity)
             .performSemanticsAction(SemanticsActions.SetProgress) { it(70f) }
         waitForSelection(LocaleStringsZhHans.systemAudioWindowOpacity, "70%")
         compose.runOnIdle {
-            assertEquals(SystemAudioLanguageConfig(), config)
-            assertEquals(0, saves)
-        }
-        compose.onNodeWithText(LocaleStringsZhHans.save).performClick()
-        compose.waitUntil(5_000) { saves == 1 }
-        compose.runOnIdle {
             assertEquals(SystemAudioLanguageConfig("en", "日本語", 70), config)
-            assertEquals(1, saves)
+            assertTrue(changes >= 3)
             val effective = services.withLanguages(config)
             assertEquals("en", effective.voice.language)
             assertEquals(listOf("日本語"), effective.languages)
@@ -295,28 +372,8 @@ class SystemAudioSubtitleWindowTest {
             assertEquals(listOf("English"), services.languages)
             assertEquals(effective, services.withLanguages(config.copy(opacityPercent = 30)))
         }
-        compose.runOnIdle { visible = true }
-        compose.waitUntil(5_000) {
-            compose.onAllNodesWithContentDescription(LocaleStringsZhHans.systemAudioSourceLanguage).fetchSemanticsNodes().isNotEmpty()
-        }
-        compose.onNodeWithContentDescription(LocaleStringsZhHans.systemAudioSourceLanguage)
-            .assert(SemanticsMatcher.expectValue(SemanticsProperties.StateDescription, "English"))
-        compose.onNodeWithContentDescription(LocaleStringsZhHans.targetLanguage)
-            .assert(SemanticsMatcher.expectValue(SemanticsProperties.StateDescription, "日本語"))
-        compose.onNodeWithContentDescription(LocaleStringsZhHans.systemAudioWindowOpacity)
-            .assert(SemanticsMatcher.expectValue(SemanticsProperties.StateDescription, "70%"))
-            .performSemanticsAction(SemanticsActions.SetProgress) { it(30f) }
-        waitForSelection(LocaleStringsZhHans.systemAudioWindowOpacity, "30%")
-        compose.onNodeWithContentDescription(LocaleStringsZhHans.systemAudioSourceLanguage).performClick()
-        compose.waitUntil(5_000) { compose.onAllNodesWithText("自动").fetchSemanticsNodes().isNotEmpty() }
-        compose.onNodeWithText("自动").performScrollTo().performClick()
-        waitForSelection(LocaleStringsZhHans.systemAudioSourceLanguage, "自动")
-        compose.onNodeWithText(LocaleStringsZhHans.cancel).performClick()
-        compose.waitUntil(5_000) { compose.onAllNodesWithTag("systemAudioLanguageSettings").fetchSemanticsNodes().isEmpty() }
-        compose.runOnIdle {
-            assertEquals(SystemAudioLanguageConfig("en", "日本語", 70), config)
-            assertEquals(1, saves)
-        }
+        compose.onNodeWithText(LocaleStringsZhHans.done).performClickOnUiThread()
+        compose.waitUntil(5_000) { !visible }
     }
 }
 

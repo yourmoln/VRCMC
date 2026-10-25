@@ -24,6 +24,7 @@ internal class OpenVrSubtitleOverlay : SteamVrOverlayBackend {
     private var lastContent: SteamVrOverlayContent? = null
     private var lastPosition: SteamVrOverlayPosition? = null
     private var lastScalePercent = -1
+    private var lastFontSizePercent = -1
     private var lastDevice = k_unTrackedDeviceIndexInvalid
     private var lastOpacity = -1
     private var visible = false
@@ -79,6 +80,7 @@ internal class OpenVrSubtitleOverlay : SteamVrOverlayBackend {
                 return SteamVrOverlayStatus.WAITING_FOR_CONTROLLER
             }
             val sizeChanged = frame.scalePercent != lastScalePercent
+            val fontSizeChanged = frame.fontSizePercent != lastFontSizePercent
             if (frame.position != lastPosition || device != lastDevice || sizeChanged) {
                 val preset = steamVrOverlayPlacement(frame.position, frame.scalePercent)
                 val transform = HmdMatrix34.calloc(stack)
@@ -93,9 +95,14 @@ internal class OpenVrSubtitleOverlay : SteamVrOverlayBackend {
                 checkOverlay(VROverlay_SetOverlayAlpha(handle, frame.opacityPercent.coerceIn(30, 100) / 100f))
                 lastOpacity = frame.opacityPercent
             }
-            if (frame.content != lastContent || sizeChanged) {
+            if (frame.content != lastContent || sizeChanged || fontSizeChanged) {
                 val buffer = checkNotNull(pixels)
-                SteamVrSubtitleRenderer.renderRgba(frame.content, buffer, frame.scalePercent)
+                SteamVrSubtitleRenderer.renderRgba(
+                    frame.content,
+                    buffer,
+                    frame.scalePercent,
+                    frame.fontSizePercent,
+                )
                 // SetOverlayRaw replaces SteamVR's image on every subtitle/status change.
                 // Keep a single GPU texture alive, finish its upload, then submit it again.
                 val textureId = checkNotNull(texture).upload(buffer)
@@ -105,6 +112,7 @@ internal class OpenVrSubtitleOverlay : SteamVrOverlayBackend {
                     .eColorSpace(EColorSpace_ColorSpace_Gamma)
                 checkOverlay(VROverlay_SetOverlayTexture(handle, submission))
                 lastContent = frame.content
+                lastFontSizePercent = frame.fontSizePercent
             }
             if (!visible) {
                 checkOverlay(VROverlay_ShowOverlay(handle))

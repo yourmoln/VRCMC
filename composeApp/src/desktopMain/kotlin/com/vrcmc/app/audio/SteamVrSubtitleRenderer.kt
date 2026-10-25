@@ -9,6 +9,7 @@ import java.awt.font.TextLayout
 import java.awt.image.BufferedImage
 import java.nio.ByteBuffer
 import java.text.AttributedString
+import kotlin.math.roundToInt
 
 /** Renders caption data directly, so minimization and desktop occlusion do not affect VR. */
 internal object SteamVrSubtitleRenderer {
@@ -16,17 +17,23 @@ internal object SteamVrSubtitleRenderer {
     const val HEIGHT = 960
     private const val PADDING = 28
 
-    private data class Line(val layout: TextLayout?, val color: Color) {
-        val height: Float get() = layout?.let { it.ascent + it.descent + it.leading + 8f } ?: 18f
+    private data class Line(val layout: TextLayout?, val color: Color, val blankHeight: Float = 18f) {
+        val height: Float get() = layout?.let { it.ascent + it.descent + it.leading + 8f } ?: blankHeight
     }
 
-    fun render(content: SteamVrOverlayContent, scalePercent: Int = 100): BufferedImage {
+    fun render(
+        content: SteamVrOverlayContent,
+        scalePercent: Int = 100,
+        fontSizePercent: Int = 100,
+    ): BufferedImage {
         // Keep the same GPU allocation at every size. Change the amount of content
         // laid out, compensating pixel density so the physical text size stays fixed.
         val scale = normalizedSteamVrOverlayScalePercent(scalePercent)
+        val fontScale = normalizedSteamVrOverlayFontSizePercent(fontSizePercent) / 100f
         val layoutWidth = WIDTH / 2 * scale / 100
         val layoutHeight = HEIGHT / 2 * scale / 100
         val contentScale = WIDTH.toDouble() / layoutWidth
+        fun fontSize(size: Int): Int = (size * fontScale).roundToInt().coerceAtLeast(1)
         val image = BufferedImage(WIDTH, HEIGHT, BufferedImage.TYPE_INT_ARGB)
         val graphics = image.createGraphics()
         try {
@@ -42,7 +49,7 @@ internal object SteamVrSubtitleRenderer {
             fun lines(text: String, size: Int, color: Color, bold: Boolean = false): List<Line> = buildList {
                 for (paragraph in text.lineSequence()) {
                     if (paragraph.isBlank()) {
-                        add(Line(null, color))
+                        add(Line(null, color, 18f * fontScale))
                         continue
                     }
                     val attributed = AttributedString(paragraph).apply {
@@ -55,7 +62,7 @@ internal object SteamVrSubtitleRenderer {
                 }
             }
             var headerY = PADDING.toFloat()
-            for (line in lines("VRCMC · ${content.status}", 24, primary).take(3)) {
+            for (line in lines("VRCMC · ${content.status}", fontSize(24), primary).take(3)) {
                 line.layout?.draw(graphics.apply { this.color = line.color }, PADDING.toFloat(), headerY + line.layout.ascent)
                 headerY += line.height
             }
@@ -66,10 +73,12 @@ internal object SteamVrSubtitleRenderer {
                 // Only recent captions can fit on the panel. Keeping their tail matches
                 // the desktop window's automatic scroll to the most recent subtitle.
                 for (caption in content.captions.takeLast(5)) {
-                    if (caption.original.isNotBlank()) addAll(lines(caption.original, 28, foreground))
-                    for ((_, translation) in caption.translations) addAll(lines(translation, 30, primary, bold = true))
-                    caption.error?.let { addAll(lines(it, 26, error)) }
-                    add(Line(null, foreground))
+                    if (caption.original.isNotBlank()) addAll(lines(caption.original, fontSize(28), foreground))
+                    for ((_, translation) in caption.translations) {
+                        addAll(lines(translation, fontSize(30), primary, bold = true))
+                    }
+                    caption.error?.let { addAll(lines(it, fontSize(26), error)) }
+                    add(Line(null, foreground, 18f * fontScale))
                 }
             }
             val availableHeight = layoutHeight - PADDING - headerY - 20f
@@ -89,8 +98,13 @@ internal object SteamVrSubtitleRenderer {
         return image
     }
 
-    fun renderRgba(content: SteamVrOverlayContent, target: ByteBuffer, scalePercent: Int = 100) {
-        val image = render(content, scalePercent)
+    fun renderRgba(
+        content: SteamVrOverlayContent,
+        target: ByteBuffer,
+        scalePercent: Int = 100,
+        fontSizePercent: Int = 100,
+    ) {
+        val image = render(content, scalePercent, fontSizePercent)
         val pixels = image.getRGB(0, 0, WIDTH, HEIGHT, null, 0, WIDTH)
         target.clear()
         for (argb in pixels) {
