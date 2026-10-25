@@ -6,13 +6,17 @@ import kotlin.test.assertEquals
 class SystemAudioLanguageConfigTest {
     @Test
     fun steamVrSettingsRoundTripWithSharedOpacityAndSafeDefaults() {
-        for (position in SteamVrOverlayPosition.entries) for (scale in steamVrOverlayScalePercents) {
-            val config = SystemAudioLanguageConfig(
-                "en", "日本語", 65, steamVrOverlayEnabled = true, steamVrOverlayPosition = position,
-                steamVrOverlayScalePercent = scale,
-            )
-            val restored = storedTranslationSettingsFromJson(StoredTranslationSettings(systemAudioLanguages = config).toJson())
-            assertEquals(config, restored.systemAudioLanguages)
+        for (position in SteamVrOverlayPosition.entries) {
+            for (scale in steamVrOverlayScalePercents) for (fontSize in steamVrOverlayFontSizePercents) {
+                val config = SystemAudioLanguageConfig(
+                    "en", "日本語", 65, steamVrOverlayEnabled = true, steamVrOverlayPosition = position,
+                    steamVrOverlayScalePercent = scale, steamVrOverlayFontSizePercent = fontSize,
+                )
+                val restored = storedTranslationSettingsFromJson(
+                    StoredTranslationSettings(systemAudioLanguages = config).toJson(),
+                )
+                assertEquals(config, restored.systemAudioLanguages)
+            }
         }
         val old = storedTranslationSettingsFromJson("""{"systemAudioLanguages":{"opacityPercent":45}}""")
         assertEquals(SystemAudioLanguageConfig(opacityPercent = 45), old.systemAudioLanguages)
@@ -30,6 +34,20 @@ class SystemAudioLanguageConfigTest {
         }
         val old = storedTranslationSettingsFromJson("""{"systemAudioLanguages":{"steamVrOverlayEnabled":true}}""")
         assertEquals(100, old.systemAudioLanguages.steamVrOverlayScalePercent)
+        assertEquals(100, old.systemAudioLanguages.steamVrOverlayFontSizePercent)
+    }
+
+    @Test
+    fun missingOrInvalidOverlayFontSizesKeepTheCurrentDefaultAndOtherSettings() {
+        for (value in listOf("null", "{}", "\"bad\"", "0", "65", "201", "-2147483648")) {
+            val restored = storedTranslationSettingsFromJson(
+                """{"systemAudioLanguages":{"sourceLanguage":"en","steamVrOverlayEnabled":true,"steamVrOverlayFontSizePercent":$value}}""",
+            )
+            assertEquals(
+                SystemAudioLanguageConfig(sourceLanguage = "en", steamVrOverlayEnabled = true),
+                restored.systemAudioLanguages,
+            )
+        }
     }
 
     @Test

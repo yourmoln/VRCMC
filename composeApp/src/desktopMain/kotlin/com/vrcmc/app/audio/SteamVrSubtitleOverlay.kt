@@ -27,6 +27,7 @@ internal data class SteamVrOverlayFrame(
     val opacityPercent: Int,
     val content: SteamVrOverlayContent,
     val scalePercent: Int = 100,
+    val fontSizePercent: Int = 100,
 )
 
 internal interface SteamVrOverlayBackend : AutoCloseable {
@@ -43,7 +44,13 @@ internal fun rememberSteamVrSubtitleOverlay(
     content: SteamVrOverlayContent,
     onError: (String) -> Unit,
 ): SteamVrOverlayStatus? {
-    val frame = SteamVrOverlayFrame(config.steamVrOverlayPosition, config.opacityPercent, content, config.steamVrOverlayScalePercent)
+    val frame = SteamVrOverlayFrame(
+        config.steamVrOverlayPosition,
+        config.opacityPercent,
+        content,
+        config.steamVrOverlayScalePercent,
+        config.steamVrOverlayFontSizePercent,
+    )
     val frames = remember { MutableStateFlow(frame) }
     val currentOnError by rememberUpdatedState(onError)
     var status by remember { mutableStateOf<SteamVrOverlayStatus?>(null) }

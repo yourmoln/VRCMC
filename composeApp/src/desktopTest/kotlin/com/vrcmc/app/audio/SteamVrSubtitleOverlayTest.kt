@@ -199,6 +199,32 @@ class SteamVrSubtitleOverlayTest {
     }
 
     @Test
+    fun independentFontSizePresetsScaleRenderedTextSize() {
+        val sample = content.copy(captions = listOf(SystemAudioCaption(1, "Font size")))
+        val default = SteamVrSubtitleRenderer.render(sample)
+        val foreground = Color(0xEEEAF4).rgb
+        fun glyphHeight(image: BufferedImage): Int {
+            val rows = (0 until image.height).filter { y ->
+                (0 until image.width).any { x -> image.getRGB(x, y) == foreground }
+            }
+            assertTrue(rows.isNotEmpty())
+            return rows.last() - rows.first() + 1
+        }
+        val defaultHeight = glyphHeight(default)
+        for (fontSize in steamVrOverlayFontSizePercents) {
+            val rendered = SteamVrSubtitleRenderer.render(sample, fontSizePercent = fontSize)
+            assertEquals(
+                SteamVrSubtitleRenderer.WIDTH to SteamVrSubtitleRenderer.HEIGHT,
+                rendered.width to rendered.height,
+            )
+            val height = glyphHeight(rendered)
+            if (fontSize < 100) assertTrue(height < defaultHeight)
+            if (fontSize == 100) assertEquals(defaultHeight, height)
+            if (fontSize > 100) assertTrue(height > defaultHeight)
+        }
+    }
+
+    @Test
     fun rendererWrapsMultilingualCaptionsAndUploadsStraightRgbaWithTransparentCorners() {
         for (dark in listOf(true, false)) {
             val sample = content.copy(dark = dark, captions = content.captions + listOf(

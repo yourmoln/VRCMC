@@ -104,6 +104,7 @@ fun StoredTranslationSettings.toJson(): String =
                 put("steamVrOverlayEnabled", systemAudioLanguages.steamVrOverlayEnabled)
                 put("steamVrOverlayPosition", systemAudioLanguages.steamVrOverlayPosition.name)
                 put("steamVrOverlayScalePercent", systemAudioLanguages.normalized().steamVrOverlayScalePercent)
+                put("steamVrOverlayFontSizePercent", systemAudioLanguages.normalized().steamVrOverlayFontSizePercent)
             }
             putJsonObject("readAloud") {
                 put("enabled", readAloud.enabled)
@@ -220,6 +221,8 @@ fun storedTranslationSettingsFromJson(value: String): StoredTranslationSettings 
                             it.name == (obj["steamVrOverlayPosition"] as? JsonPrimitive)?.contentOrNull
                         } ?: SteamVrOverlayPosition.LEFT_HAND,
                         steamVrOverlayScalePercent = (obj["steamVrOverlayScalePercent"] as? JsonPrimitive)?.intOrNull ?: 100,
+                        steamVrOverlayFontSizePercent =
+                            (obj["steamVrOverlayFontSizePercent"] as? JsonPrimitive)?.intOrNull ?: 100,
                     ).normalized()
                 } ?: SystemAudioLanguageConfig(),
                 readAloud = (root["readAloud"] as? JsonObject)?.let { obj ->
