@@ -22,23 +22,25 @@ private val asrRegions = listOf(
     AsrRegion("custom", "自定义", ""),
 )
 
+private val localSpeechLanguages = listOf("auto", "zh", "yue", "ja", "en", "ko")
+
 @Composable
 internal fun VoiceInputServiceSection(
     config: VoiceInputConfig,
     strings: LocaleStrings,
     onUpdate: ((VoiceInputConfig) -> VoiceInputConfig) -> Unit,
-    onDownloadLocalModel: (LocalWhisperModel) -> Unit = {},
-    onCancelLocalModel: (LocalWhisperModel) -> Unit = {},
+    onDownloadLocalModel: (LocalSpeechModel) -> Unit = {},
+    onCancelLocalModel: (LocalSpeechModel) -> Unit = {},
     localRecognizer: LocalSpeechRecognizer = localSpeechRecognizer,
 ) {
     var providerMenu by remember { mutableStateOf(false) }
-    val localModelStatusFlow = remember(localRecognizer, config.localWhisperModel) {
-        localRecognizer.status(config.localWhisperModel)
+    val localModelStatusFlow = remember(localRecognizer, config.localSpeechModel) {
+        localRecognizer.status(config.localSpeechModel)
     }
     val localModelStatus by localModelStatusFlow.collectAsState()
     val availableProviders = if (localRecognizer.supported) VoiceInputProvider.entries else listOf(VoiceInputProvider.QWEN)
     val showLocalModel = localRecognizer.supported && (
-        config.provider == VoiceInputProvider.LOCAL_WHISPER ||
+        config.provider == VoiceInputProvider.LOCAL_MODEL ||
             localModelStatus is LocalSpeechModelStatus.Downloading || localModelStatus is LocalSpeechModelStatus.Failed
         )
     var showKey by remember { mutableStateOf(false) }
@@ -68,13 +70,13 @@ internal fun VoiceInputServiceSection(
             if (showLocalModel) {
                 HorizontalDivider()
                 LocalSpeechModelSettings(
-                    model = config.localWhisperModel,
+                    model = config.localSpeechModel,
                     status = localModelStatus,
                     supported = localRecognizer.supported,
                     strings = strings,
-                    onModelChange = { model -> onUpdate { it.copy(localWhisperModel = model) } },
-                    onDownload = { onDownloadLocalModel(config.localWhisperModel) },
-                    onCancel = { onCancelLocalModel(config.localWhisperModel) },
+                    onModelChange = { model -> onUpdate { it.copy(localSpeechModel = model) } },
+                    onDownload = { onDownloadLocalModel(config.localSpeechModel) },
+                    onCancel = { onCancelLocalModel(config.localSpeechModel) },
                 )
             }
             return@SettingsCard
@@ -91,17 +93,25 @@ internal fun VoiceInputServiceSection(
                 ) {
                     Text(strings.voiceInputProvider, Modifier.weight(1f))
                     if (config.provider in availableProviders) {
-                        Text(if (config.provider == VoiceInputProvider.QWEN) "Fun-ASR" else strings.localWhisper)
+                        Text(if (config.provider == VoiceInputProvider.QWEN) "Fun-ASR" else strings.localModel)
                     }
                     Icon(Icons.Default.ArrowDropDown, null)
                 }
                 DropdownMenu(providerMenu, { providerMenu = false }) {
                     availableProviders.forEach { provider ->
                         DropdownMenuItem(
-                            text = { Text(if (provider == VoiceInputProvider.QWEN) "Fun-ASR" else strings.localWhisper) },
+                            text = { Text(if (provider == VoiceInputProvider.QWEN) "Fun-ASR" else strings.localModel) },
                             leadingIcon = { if (provider == config.provider) Icon(Icons.Default.Check, null) },
                             onClick = {
-                                onUpdate { it.copy(provider = provider) }
+                                onUpdate {
+                                    it.copy(
+                                        provider = provider,
+                                        language = if (
+                                            provider == VoiceInputProvider.LOCAL_MODEL &&
+                                            it.language !in localSpeechLanguages
+                                        ) "auto" else it.language,
+                                    )
+                                }
                                 providerMenu = false
                             },
                         )
@@ -111,13 +121,13 @@ internal fun VoiceInputServiceSection(
         }
         if (showLocalModel) {
             LocalSpeechModelSettings(
-                model = config.localWhisperModel,
+                model = config.localSpeechModel,
                 status = localModelStatus,
                 supported = localRecognizer.supported,
                 strings = strings,
-                onModelChange = { model -> onUpdate { it.copy(localWhisperModel = model) } },
-                onDownload = { onDownloadLocalModel(config.localWhisperModel) },
-                onCancel = { onCancelLocalModel(config.localWhisperModel) },
+                onModelChange = { model -> onUpdate { it.copy(localSpeechModel = model) } },
+                onDownload = { onDownloadLocalModel(config.localSpeechModel) },
+                onCancel = { onCancelLocalModel(config.localSpeechModel) },
             )
         }
         if (config.provider == VoiceInputProvider.QWEN) {
@@ -223,7 +233,10 @@ internal fun VoiceInputServiceSection(
                 Icon(Icons.Default.ArrowDropDown, null)
             }
             DropdownMenu(languageMenu, { languageMenu = false }) {
-                listOf("auto", "zh", "ja", "en", "ko", "de", "fr", "ru").forEach { language ->
+                val languages =
+                    if (config.provider == VoiceInputProvider.LOCAL_MODEL) localSpeechLanguages
+                    else listOf("auto", "zh", "ja", "en", "ko", "de", "fr", "ru")
+                languages.forEach { language ->
                     DropdownMenuItem(
                         text = { Text(language) },
                         leadingIcon = { if (language == config.language) Icon(Icons.Default.Check, null) },
@@ -335,11 +348,11 @@ internal fun VoiceInputServiceSection(
 
 @Composable
 internal fun LocalSpeechModelSettings(
-    model: LocalWhisperModel,
+    model: LocalSpeechModel,
     status: LocalSpeechModelStatus,
     supported: Boolean,
     strings: LocaleStrings,
-    onModelChange: (LocalWhisperModel) -> Unit,
+    onModelChange: (LocalSpeechModel) -> Unit,
     onDownload: () -> Unit,
     onCancel: () -> Unit,
 ) {
@@ -356,7 +369,7 @@ internal fun LocalSpeechModelSettings(
                 Icon(Icons.Default.ArrowDropDown, null)
             }
             DropdownMenu(modelMenu, { modelMenu = false }) {
-                LocalWhisperModel.entries.forEach { option ->
+                LocalSpeechModel.entries.forEach { option ->
                     DropdownMenuItem(
                         text = { Text(option.displayLabel) },
                         leadingIcon = { if (option == model) Icon(Icons.Default.Check, null) },
@@ -369,6 +382,13 @@ internal fun LocalSpeechModelSettings(
             }
         }
         Text(strings.localModelHint, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+        if (model == LocalSpeechModel.FUN_ASR_NANO_2512_INT8) {
+            Text(
+                strings.funAsrNanoHint,
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.tertiary,
+            )
+        }
         if (!supported) {
             Text(strings.localModelUnsupported, color = MaterialTheme.colorScheme.error)
             return@Column

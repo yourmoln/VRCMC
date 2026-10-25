@@ -3,7 +3,6 @@ package com.vrcmc.app
 import io.ktor.utils.io.ByteChannel
 import io.ktor.utils.io.ByteReadChannel
 import java.nio.file.Files
-import java.nio.file.Path
 import java.security.MessageDigest
 import java.util.concurrent.CountDownLatch
 import java.util.concurrent.TimeUnit
@@ -28,302 +27,248 @@ import org.junit.rules.TemporaryFolder
 
 class LocalSpeechRecognitionTest {
     @get:Rule val directory = TemporaryFolder()
-    private val small = LocalWhisperModel.SMALL_Q5_1
-    private val medium = LocalWhisperModel.MEDIUM_Q5_0
-    private val model = ByteArray(2048) { it.toByte() }
+    private val model = LocalSpeechModel.SENSE_VOICE_SMALL_INT8
+    private val modelBytes = ByteArray(2048) { it.toByte() }
+    private val tokens = ByteArray(256) { (it * 3).toByte() }
     private val wav = pcm16ToWav(ByteArray(32_000) { if (it % 2 == 0) 0 else 16 }, 16_000)
 
-    private fun store(fileName: String = "ggml-small-q5_1.bin"): LocalWhisperModelStore = LocalWhisperModelStore(
-        directory.root.toPath().resolve(fileName), model.size.toLong(),
-        MessageDigest.getInstance("SHA-256").digest(model).toHexString(),
+    private fun store(): LocalSpeechModelStore = LocalSpeechModelStore(
+        path = directory.root.toPath().resolve("model.int8.onnx"),
+        expectedSize = modelBytes.size.toLong(),
+        expectedHash = sha256(modelBytes),
+        auxiliaryPath = directory.root.toPath().resolve("tokens.txt"),
+        expectedAuxiliarySize = tokens.size.toLong(),
+        expectedAuxiliaryHash = sha256(tokens),
     )
 
     @Test
-    fun modelArtifactsMatchPinnedWhisperCppFiles() {
-        assertEquals("ggml-small-q5_1.bin", small.modelFileName())
-        assertEquals(190_085_487L, small.modelSize())
+    fun modelArtifactMatchesPinnedSenseVoiceFile() {
+        assertEquals("model.int8.onnx", model.modelFileName())
+        assertEquals(239_233_841L, model.modelSize())
         assertEquals(
-            "ae85e4a935d7a567bd102fe55afc16bb595bdb618e11b2fc7591bc08120411bb",
-            small.modelSha256(),
+            "c71f0ce00bec95b07744e116345e33d8cbbe08cef896382cf907bf4b51a2cd51",
+            model.modelSha256(),
         )
-        assertEquals("ggml-medium-q5_0.bin", medium.modelFileName())
-        assertEquals(539_212_467L, medium.modelSize())
+        val funAsr = LocalSpeechModel.FUN_ASR_NANO_2512_INT8
+        assertEquals("model.int8.onnx", funAsr.modelFileName())
+        assertEquals(263_531_902L, funAsr.modelSize())
         assertEquals(
-            "19fea4b380c3a618ec4723c3eef2eb785ffba0d0538cf43f8f235e7b3b34220f",
-            medium.modelSha256(),
+            "9dc6e72aa8bc6f5966cf2857a0ce3a425b1d72e91500e147d66329f407c017a1",
+            funAsr.modelSha256(),
         )
     }
 
     @Test
-    fun verifiesCacheAndPreservesItAfterTruncatedOrCorruptDownloads() = runBlocking {
-        val store = store()
-        assertFalse(store.isValid())
-        store.install(ByteReadChannel(model)) { _, _ -> }
-        assertTrue(store.isValid())
-        for (bad in listOf(model.copyOf(20), ByteArray(model.size), model + byteArrayOf(0))) {
-            assertTrue(runCatching { store.install(ByteReadChannel(bad)) { _, _ -> } }.isFailure)
-            assertTrue(store.isValid())
+    fun verifiesModelAndAuxiliaryCacheAndPreservesValidFiles() = runBlocking {
+        val cache = store()
+        assertFalse(cache.isComplete())
+        cache.install(ByteReadChannel(modelBytes)) { _, _ -> }
+        assertFalse(cache.isComplete())
+        cache.installAuxiliary(ByteReadChannel(tokens)) { _, _ -> }
+        assertTrue(cache.isComplete())
+
+        for (bad in listOf(modelBytes.copyOf(20), ByteArray(modelBytes.size), modelBytes + byteArrayOf(0))) {
+            assertTrue(runCatching { cache.install(ByteReadChannel(bad)) { _, _ -> } }.isFailure)
+            assertTrue(cache.isComplete())
         }
-        Files.list(directory.root.toPath()).use { assertEquals(1, it.count()) }
-        Files.write(store.path, ByteArray(model.size))
-        assertFalse(store.isValid())
+        Files.delete(cache.auxiliaryPath)
+        assertFalse(cache.isComplete())
     }
 
     @Test
     fun cancelledDownloadRemovesTemporaryFileAndCanRetry() = runBlocking {
-        val store = store()
+        val cache = store()
         val opened = CompletableDeferred<Unit>()
         val channel = ByteChannel()
-        val job = launch { store.install(channel) { _, _ -> opened.complete(Unit) } }
+        val job = launch { cache.install(channel) { _, _ -> opened.complete(Unit) } }
         withTimeout(5_000) { opened.await() }
         job.cancelAndJoin()
         channel.cancel(null)
-        assertFalse(Files.exists(store.path))
-        Files.list(directory.root.toPath()).use { assertEquals(0, it.count()) }
-        store.install(ByteReadChannel(model)) { _, _ -> }
-        assertTrue(store.isValid())
+        assertFalse(Files.exists(cache.path))
+        cache.install(ByteReadChannel(modelBytes)) { _, _ -> }
+        assertTrue(cache.isValid())
     }
 
     @Test
-    fun downloadsOnlyRequestedModelAndTracksStatusesIndependently() = runBlocking {
-        val smallStore = store()
-        val mediumStore = store("ggml-medium-q5_0.bin")
-        val downloads = mutableListOf<LocalWhisperModel>()
-        val recognizer = DesktopLocalSpeechRecognizer(
-            stores = mapOf(small to smallStore, medium to mediumStore),
-            supported = true,
-            download = { selected, cache, progress ->
-                downloads += selected
-                cache.install(ByteReadChannel(model), progress)
-            },
-            createEngine = { fakeEngine() },
-        )
-
-        assertTrue(recognizer.downloadModel(medium))
-
-        assertEquals(listOf(medium), downloads)
-        assertEquals(LocalSpeechModelStatus.Missing, recognizer.status(small).value)
-        assertEquals(LocalSpeechModelStatus.Downloaded, recognizer.status(medium).value)
-        assertFalse(Files.exists(smallStore.path))
-        assertTrue(mediumStore.isValid())
-    }
-
-    @Test
-    fun switchingModelsClosesOldEngineAndUsesSelectedCache() = runBlocking {
-        val smallStore = store()
-        val mediumStore = store("ggml-medium-q5_0.bin")
-        smallStore.install(ByteReadChannel(model)) { _, _ -> }
-        mediumStore.install(ByteReadChannel(model)) { _, _ -> }
-        val loaded = mutableListOf<String>()
-        val closed = mutableListOf<String>()
-        val recognizer = DesktopLocalSpeechRecognizer(
-            stores = mapOf(small to smallStore, medium to mediumStore),
-            supported = true,
-            createEngine = { path ->
-                val name = path.fileName.toString()
-                loaded += name
-                object : LocalWhisperEngine {
-                    override fun transcribe(samples: FloatArray, language: String) = name
-                    override fun close() { closed += name }
-                }
-            },
-        )
-
-        assertTrue(recognizer.prepare(small))
-        assertEquals(
-            VoiceTranscriptionResult.Success("ggml-small-q5_1.bin"),
-            recognizer.transcribe(small, wav, "en"),
-        )
-        assertEquals(
-            VoiceTranscriptionFailureReason.LOCAL_MODEL_NOT_READY,
-            assertIs<VoiceTranscriptionResult.Failure>(recognizer.transcribe(medium, wav, "en")).reason,
-        )
-
-        assertTrue(recognizer.prepare(medium))
-
-        assertEquals(listOf("ggml-small-q5_1.bin", "ggml-medium-q5_0.bin"), loaded)
-        assertEquals(listOf("ggml-small-q5_1.bin"), closed)
-        assertEquals(LocalSpeechModelStatus.Downloaded, recognizer.status(small).value)
-        assertEquals(LocalSpeechModelStatus.Ready, recognizer.status(medium).value)
-        assertEquals(
-            VoiceTranscriptionResult.Success("ggml-medium-q5_0.bin"),
-            recognizer.transcribe(medium, wav, "en"),
-        )
-        recognizer.release()
-        assertEquals(listOf("ggml-small-q5_1.bin", "ggml-medium-q5_0.bin"), closed)
-    }
-
-    @Test
-    fun missingMediumNeverUsesLoadedSmallEngine() = runBlocking {
-        val smallStore = store()
-        smallStore.install(ByteReadChannel(model)) { _, _ -> }
-        var closes = 0
-        val recognizer = DesktopLocalSpeechRecognizer(
-            stores = mapOf(small to smallStore, medium to store("ggml-medium-q5_0.bin")),
-            supported = true,
-            createEngine = {
-                object : LocalWhisperEngine {
-                    override fun transcribe(samples: FloatArray, language: String) = "small result"
-                    override fun close() { closes++ }
-                }
-            },
-        )
-        assertTrue(recognizer.prepare(small))
-
-        assertFalse(recognizer.prepare(medium))
-
-        assertEquals(1, closes)
-        assertEquals(LocalSpeechModelStatus.Downloaded, recognizer.status(small).value)
-        assertEquals(LocalSpeechModelStatus.Missing, recognizer.status(medium).value)
-        assertEquals(
-            VoiceTranscriptionFailureReason.LOCAL_MODEL_NOT_READY,
-            assertIs<VoiceTranscriptionResult.Failure>(recognizer.transcribe(medium, wav, "en")).reason,
-        )
-    }
-
-    @Test
-    fun preparationNeverDownloadsAndExplicitRetryReusesVerifiedModel() = runBlocking {
-        val store = store()
-        var downloads = 0
+    fun preparationLoadsEngineAndTranscribes() = runBlocking {
+        val cache = store()
+        cache.install(ByteReadChannel(modelBytes)) { _, _ -> }
+        cache.installAuxiliary(ByteReadChannel(tokens)) { _, _ -> }
         var loads = 0
         var closes = 0
-        val recognizer = DesktopLocalSpeechRecognizer(store, supported = true,
-            download = { cache, progress ->
-                downloads++
-                if (downloads == 1) error("Simulated connection failure")
-                cache.install(ByteReadChannel(model), progress)
-            },
-            createEngine = {
-                loads++
-                object : LocalWhisperEngine {
-                    override fun transcribe(samples: FloatArray, language: String) = "$language: local speech"
-                    override fun close() { closes++ }
+        val recognizer = JvmLocalSpeechRecognizer(cache, supported = true, createEngine = { _, _ ->
+            loads++
+            object : LocalSpeechEngine {
+                override fun transcribe(samples: FloatArray, language: String) = "$language: local speech"
+                override fun close() {
+                    closes++
                 }
-            })
-        assertFalse(recognizer.prepare(small))
-        assertEquals(LocalSpeechModelStatus.Missing, recognizer.status(small).value)
-        assertEquals(0, downloads)
-        assertFalse(recognizer.downloadModel(small))
-        assertIs<LocalSpeechModelStatus.Failed>(recognizer.status(small).value)
-        assertTrue(recognizer.downloadModel(small))
-        assertEquals(LocalSpeechModelStatus.Downloaded, recognizer.status(small).value)
-        assertEquals(0, loads)
-        assertTrue(recognizer.prepare(small))
-        assertEquals(LocalSpeechModelStatus.Ready, recognizer.status(small).value)
-        assertTrue(recognizer.prepare(small))
-        assertEquals(1, loads)
+            }
+        })
+
+        assertTrue(recognizer.prepare(model))
+        assertEquals(LocalSpeechModelStatus.Ready, recognizer.status(model).value)
         assertEquals(
-            VoiceTranscriptionResult.Success("ja: local speech"),
-            recognizer.transcribe(small, wav, "ja"),
+            VoiceTranscriptionResult.Success("zh: local speech"),
+            recognizer.transcribe(model, wav, "zh"),
         )
         recognizer.release()
-        assertEquals(LocalSpeechModelStatus.Downloaded, recognizer.status(small).value)
+        assertEquals(LocalSpeechModelStatus.Downloaded, recognizer.status(model).value)
+        assertEquals(1, loads)
         assertEquals(1, closes)
-        assertEquals(VoiceTranscriptionFailureReason.LOCAL_MODEL_NOT_READY,
-            assertIs<VoiceTranscriptionResult.Failure>(recognizer.transcribe(small, wav, "ja")).reason)
-        assertTrue(recognizer.prepare(small))
-        assertEquals(2, downloads)
-        assertEquals(2, loads)
-        recognizer.release()
-        assertEquals(2, closes)
+        assertEquals(
+            VoiceTranscriptionFailureReason.LOCAL_MODEL_NOT_READY,
+            assertIs<VoiceTranscriptionResult.Failure>(recognizer.transcribe(model, wav, "zh")).reason,
+        )
     }
 
     @Test
-    fun cancelledDownloadLeavesMissingStatusAndRequiresManualRetry() = runBlocking {
-        val started = CompletableDeferred<Unit>()
-        var attempt = 0
-        val recognizer = DesktopLocalSpeechRecognizer(store(), supported = true,
-            download = { cache, progress ->
-                if (++attempt == 1) {
-                    started.complete(Unit)
-                    kotlinx.coroutines.awaitCancellation()
+    fun switchingModelsClosesThePreviousEngine() = runBlocking {
+        val sense = LocalSpeechModel.SENSE_VOICE_SMALL_INT8
+        val funAsr = LocalSpeechModel.FUN_ASR_NANO_2512_INT8
+        fun modelStore(name: String) = LocalSpeechModelStore(
+            path = directory.root.toPath().resolve(name).resolve("model.int8.onnx"),
+            expectedSize = modelBytes.size.toLong(),
+            expectedHash = sha256(modelBytes),
+            auxiliaryPath = directory.root.toPath().resolve(name).resolve("tokens.txt"),
+            expectedAuxiliarySize = tokens.size.toLong(),
+            expectedAuxiliaryHash = sha256(tokens),
+        )
+        val senseStore = modelStore("sense")
+        val funStore = modelStore("fun")
+        for (store in listOf(senseStore, funStore)) {
+            store.install(ByteReadChannel(modelBytes)) { _, _ -> }
+            store.installAuxiliary(ByteReadChannel(tokens)) { _, _ -> }
+        }
+        val closed = mutableListOf<LocalSpeechModel>()
+        val recognizer = JvmLocalSpeechRecognizer(
+            stores = mapOf(sense to senseStore, funAsr to funStore),
+            supported = true,
+            createEngine = { selected, _ ->
+                object : LocalSpeechEngine {
+                    override fun transcribe(samples: FloatArray, language: String) = selected.serializedName
+                    override fun close() {
+                        closed += selected
+                    }
                 }
-                cache.install(ByteReadChannel(model), progress)
-            }, createEngine = { fakeEngine() })
-        val preparation = launch { recognizer.downloadModel(small) }
-        withTimeout(5_000) { started.await() }
-        preparation.cancelAndJoin()
-        assertEquals(LocalSpeechModelStatus.Missing, recognizer.status(small).value)
-        assertFalse(recognizer.prepare(small))
-        assertEquals(1, attempt)
-        assertTrue(recognizer.downloadModel(small))
-        assertTrue(recognizer.prepare(small))
+            },
+        )
+
+        assertTrue(recognizer.prepare(sense))
+        assertEquals(
+            VoiceTranscriptionResult.Success(sense.serializedName),
+            recognizer.transcribe(sense, wav, "zh"),
+        )
+        assertTrue(recognizer.prepare(funAsr))
+        assertEquals(listOf(sense), closed)
+        assertEquals(
+            VoiceTranscriptionResult.Success(funAsr.serializedName),
+            recognizer.transcribe(funAsr, wav, "zh"),
+        )
         recognizer.release()
+        assertEquals(listOf(sense, funAsr), closed)
     }
 
     @Test
-    fun unsupportedPlatformDoesNotDownloadOrLoadNativeCode() = runBlocking {
-        val recognizer = DesktopLocalSpeechRecognizer(store(), supported = false,
-            download = { _, _ -> error("Must not download") }, createEngine = { error("Must not load JNI") })
-        assertFalse(recognizer.prepare(small))
-        assertFalse(recognizer.downloadModel(small))
-        assertEquals(VoiceTranscriptionFailureReason.LOCAL_UNSUPPORTED,
-            assertIs<VoiceTranscriptionResult.Failure>(recognizer.transcribe(small, wav, "auto")).reason)
+    fun preparationNeverDownloadsAndExplicitRetryReusesVerifiedFiles() = runBlocking {
+        val cache = store()
+        var downloads = 0
+        val recognizer = JvmLocalSpeechRecognizer(
+            cache,
+            supported = true,
+            download = { target, progress ->
+                downloads++
+                if (downloads == 1) error("Simulated connection failure")
+                target.install(ByteReadChannel(modelBytes), progress)
+                target.installAuxiliary(ByteReadChannel(tokens)) { _, _ -> }
+            },
+            createEngine = { _, _ -> fakeEngine() },
+        )
+        assertFalse(recognizer.prepare(model))
+        assertEquals(LocalSpeechModelStatus.Missing, recognizer.status(model).value)
+        assertEquals(0, downloads)
+        assertFalse(recognizer.downloadModel(model))
+        assertIs<LocalSpeechModelStatus.Failed>(recognizer.status(model).value)
+        assertTrue(recognizer.downloadModel(model))
+        assertEquals(LocalSpeechModelStatus.Downloaded, recognizer.status(model).value)
+        assertTrue(recognizer.prepare(model))
+        assertEquals(LocalSpeechModelStatus.Ready, recognizer.status(model).value)
     }
 
     @Test
-    fun applicationDownloadSurvivesServiceChangesUntilExplicitCancellation() = runBlocking {
+    fun unsupportedPlatformDoesNotLoadOrDownload() = runBlocking {
+        val recognizer = JvmLocalSpeechRecognizer(
+            store(),
+            supported = false,
+            download = { _, _ -> error("Must not download") },
+            createEngine = { _, _ -> error("Must not load ONNX Runtime") },
+        )
+        assertFalse(recognizer.prepare(model))
+        assertFalse(recognizer.downloadModel(model))
+        assertEquals(
+            VoiceTranscriptionFailureReason.LOCAL_UNSUPPORTED,
+            assertIs<VoiceTranscriptionResult.Failure>(
+                recognizer.transcribe(model, wav, "auto"),
+            ).reason,
+        )
+    }
+
+    @Test
+    fun applicationDownloadSurvivesServiceChangesUntilExplicitCancellation(): Unit = runBlocking {
         val cache = store()
         val started = CompletableDeferred<Unit>()
         val stream = ByteChannel()
         val preparations = Channel<Unit>(Channel.UNLIMITED)
         val releases = Channel<Unit>(Channel.UNLIMITED)
         var downloads = 0
-        var loads = 0
-        val recognizer = DesktopLocalSpeechRecognizer(cache, supported = true,
-            download = { store, progress ->
+        val recognizer = JvmLocalSpeechRecognizer(
+            cache,
+            supported = true,
+            download = { target, progress ->
                 if (++downloads == 1) {
-                    store.install(stream) { received, total ->
+                    target.install(stream) { received, total ->
                         progress(received, total)
                         started.complete(Unit)
                     }
-                } else store.install(ByteReadChannel(model), progress)
-            }, createEngine = { loads++; fakeEngine() })
+                } else {
+                    target.install(ByteReadChannel(modelBytes), progress)
+                    target.installAuxiliary(ByteReadChannel(tokens)) { _, _ -> }
+                }
+            },
+            createEngine = { _, _ -> fakeEngine() },
+        )
         val observed = object : LocalSpeechRecognizer by recognizer {
-            override suspend fun prepare(model: LocalWhisperModel) =
+            override suspend fun prepare(model: LocalSpeechModel) =
                 recognizer.prepare(model).also { preparations.send(Unit) }
-            override suspend fun release() { recognizer.release(); releases.send(Unit) }
+
+            override suspend fun release() {
+                recognizer.release()
+                releases.send(Unit)
+            }
         }
         val lifetime = Job()
         val controller = LocalSpeechModelController(CoroutineScope(coroutineContext + lifetime), observed)
-        val local = VoiceInputConfig(enabled = true, provider = VoiceInputProvider.LOCAL_WHISPER)
+        val local = VoiceInputConfig(enabled = true, provider = VoiceInputProvider.LOCAL_MODEL)
         try {
-            withTimeout(5_000) {
+            withTimeout(10_000) {
                 controller.updateConfig(local)
                 preparations.receive()
-                assertEquals(0, downloads)
-                assertEquals(LocalSpeechModelStatus.Missing, recognizer.status(small).value)
-                controller.downloadModel(small)
-                controller.downloadModel(small)
+                controller.downloadModel(model)
+                controller.downloadModel(model)
                 started.await()
-                assertEquals(1, downloads)
-
                 controller.updateConfig(local.copy(provider = VoiceInputProvider.QWEN))
                 releases.receive()
-                assertIs<LocalSpeechModelStatus.Downloading>(recognizer.status(small).value)
                 controller.updateConfig(local)
                 preparations.receive()
-                assertIs<LocalSpeechModelStatus.Downloading>(recognizer.status(small).value)
-                controller.updateConfig(local.copy(enabled = false))
-                releases.receive()
-                assertIs<LocalSpeechModelStatus.Downloading>(recognizer.status(small).value)
+                controller.cancelDownload(model)
+                recognizer.status(model).first { it == LocalSpeechModelStatus.Missing }
+                assertFalse(Files.exists(cache.path))
 
-                controller.cancelDownload(small)
-                recognizer.status(small).first { it == LocalSpeechModelStatus.Missing }
-                Files.list(directory.root.toPath()).use { assertEquals(0, it.count()) }
-                // Cleanup has finished before the UI exposes another Download model button.
-                controller.downloadModel(small)
-                recognizer.status(small).first { it == LocalSpeechModelStatus.Downloaded }
-                assertEquals(2, downloads)
-                assertTrue(cache.isValid())
-                assertEquals(0, loads)
+                controller.downloadModel(model)
+                recognizer.status(model).first { it == LocalSpeechModelStatus.Downloaded }
+                assertTrue(cache.isComplete())
                 controller.updateConfig(local)
-                recognizer.status(small).first { it == LocalSpeechModelStatus.Ready }
-                assertEquals(1, loads)
-                controller.updateConfig(local.copy(provider = VoiceInputProvider.QWEN))
-                releases.receive()
-                assertEquals(LocalSpeechModelStatus.Downloaded, recognizer.status(small).value)
-                assertEquals(2, downloads)
+                recognizer.status(model).first { it == LocalSpeechModelStatus.Ready }
             }
         } finally {
             lifetime.cancelAndJoin()
@@ -332,73 +277,58 @@ class LocalSpeechRecognitionTest {
     }
 
     @Test
-    fun manualDownloadAutomaticallyLoadsWhenLocalServiceIsStillEnabled() = runBlocking {
-        val cache = store()
-        val started = CompletableDeferred<Unit>()
-        val finish = CompletableDeferred<Unit>()
-        var loads = 0
-        val recognizer = DesktopLocalSpeechRecognizer(cache, supported = true,
-            download = { store, progress ->
-                started.complete(Unit)
-                finish.await()
-                store.install(ByteReadChannel(model), progress)
-            }, createEngine = { loads++; fakeEngine() })
-        val lifetime = Job()
-        val controller = LocalSpeechModelController(CoroutineScope(coroutineContext + lifetime), recognizer)
-        try {
-            withTimeout(5_000) {
-                controller.updateConfig(VoiceInputConfig(enabled = true, provider = VoiceInputProvider.LOCAL_WHISPER))
-                controller.downloadModel(small)
-                started.await()
-                assertEquals(0, loads)
-                finish.complete(Unit)
-                recognizer.status(small).first { it == LocalSpeechModelStatus.Ready }
-                assertEquals(1, loads)
-                assertEquals(
-                    VoiceTranscriptionResult.Success("local speech"),
-                    recognizer.transcribe(small, wav, "zh"),
-                )
-            }
-        } finally {
-            lifetime.cancelAndJoin()
-        }
-        assertEquals(LocalSpeechModelStatus.Downloaded, recognizer.status(small).value)
-    }
-
-    @Test
     fun localServiceAcceptsNoCloudCredentialsAndCloudSelectionKeepsValidation() = runBlocking {
-        val store = store()
-        store.install(ByteReadChannel(model)) { _, _ -> }
-        val recognizer = DesktopLocalSpeechRecognizer(store, supported = true, createEngine = { fakeEngine() })
-        assertTrue(recognizer.prepare(small))
-        val config = VoiceInputConfig(provider = VoiceInputProvider.LOCAL_WHISPER, apiKey = "", baseUrl = "", model = "")
-        assertEquals(VoiceTranscriptionResult.Success("local speech"), transcribeVoiceAudio(config, wav, localRecognizer = recognizer))
-        assertEquals(VoiceTranscriptionFailureReason.API_KEY_REQUIRED,
-            assertIs<VoiceTranscriptionResult.Failure>(transcribeVoiceAudio(config.copy(provider = VoiceInputProvider.QWEN), wav, localRecognizer = recognizer)).reason)
+        val cache = store()
+        cache.install(ByteReadChannel(modelBytes)) { _, _ -> }
+        cache.installAuxiliary(ByteReadChannel(tokens)) { _, _ -> }
+        val recognizer = JvmLocalSpeechRecognizer(
+            cache,
+            supported = true,
+            createEngine = { _, _ -> fakeEngine() },
+        )
+        assertTrue(recognizer.prepare(model))
+        val config = VoiceInputConfig(provider = VoiceInputProvider.LOCAL_MODEL)
+        assertEquals(
+            VoiceTranscriptionResult.Success("local speech"),
+            transcribeVoiceAudio(config, wav, localRecognizer = recognizer),
+        )
+        assertEquals(
+            VoiceTranscriptionFailureReason.API_KEY_REQUIRED,
+            assertIs<VoiceTranscriptionResult.Failure>(
+                transcribeVoiceAudio(config.copy(provider = VoiceInputProvider.QWEN), wav, localRecognizer = recognizer),
+            ).reason,
+        )
         recognizer.release()
     }
 
     @Test
     fun cancellationDiscardsNativeResultAndDisposalWaitsForInference() = runBlocking {
-        val store = store()
-        store.install(ByteReadChannel(model)) { _, _ -> }
+        val cache = store()
+        cache.install(ByteReadChannel(modelBytes)) { _, _ -> }
+        cache.installAuxiliary(ByteReadChannel(tokens)) { _, _ -> }
         val started = CompletableDeferred<Unit>()
         val finish = CountDownLatch(1)
         var closed = false
-        val recognizer = DesktopLocalSpeechRecognizer(store, supported = true, createEngine = {
-            object : LocalWhisperEngine {
+        val recognizer = JvmLocalSpeechRecognizer(cache, supported = true, createEngine = { _, _ ->
+            object : LocalSpeechEngine {
                 override fun transcribe(samples: FloatArray, language: String): String {
                     started.complete(Unit)
                     check(finish.await(5, TimeUnit.SECONDS))
                     assertFalse(closed)
                     return "stale text"
                 }
-                override fun close() { closed = true }
+
+                override fun close() {
+                    closed = true
+                }
             }
         })
-        assertTrue(recognizer.prepare(small))
+        assertTrue(recognizer.prepare(model))
         var published = false
-        val inference = launch { recognizer.transcribe(small, wav, "en"); published = true }
+        val inference = launch {
+            recognizer.transcribe(model, wav, "zh")
+            published = true
+        }
         withTimeout(5_000) { started.await() }
         inference.cancel()
         val release = async(Dispatchers.IO) { recognizer.release() }
@@ -410,18 +340,21 @@ class LocalSpeechRecognitionTest {
     }
 
     @Test
-    fun convertsDifferentRecordingSampleRatesToWhisperPcm() {
+    fun convertsDifferentRecordingSampleRatesToModelPcm() {
         for (rate in listOf(8_000, 16_000, 44_100, 48_000)) {
             val audio = pcm16ToWav(ByteArray(rate * 2) { if (it % 2 == 0) 0 else 32 }, rate)
-            val samples = whisperPcmSamples(audio)
+            val samples = speechPcmSamples(audio)
             assertTrue(samples.size in 15_950..16_050, "rate=$rate samples=${samples.size}")
             assertEquals(0.25f, samples[samples.size / 2], 0.001f)
         }
-        assertTrue(runCatching { whisperPcmSamples(ByteArray(45)) }.isFailure)
+        assertTrue(runCatching { speechPcmSamples(ByteArray(45)) }.isFailure)
     }
 
-    private fun fakeEngine() = object : LocalWhisperEngine {
+    private fun fakeEngine() = object : LocalSpeechEngine {
         override fun transcribe(samples: FloatArray, language: String) = "local speech"
         override fun close() = Unit
     }
+
+    private fun sha256(bytes: ByteArray): String =
+        MessageDigest.getInstance("SHA-256").digest(bytes).toHexString()
 }

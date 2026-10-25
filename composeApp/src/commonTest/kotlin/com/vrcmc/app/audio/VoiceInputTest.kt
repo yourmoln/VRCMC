@@ -9,13 +9,18 @@ import kotlin.math.sin
 
 class VoiceInputTest {
     @Test
-    fun localProviderRoundTripsAndOldSettingsKeepQwen() {
-        val config = VoiceInputConfig(enabled = true, provider = VoiceInputProvider.LOCAL_WHISPER,
-            localWhisperModel = LocalWhisperModel.MEDIUM_Q5_0,
-            apiKey = "retained-secret", model = "my-qwen-model", region = "custom")
+    fun localProviderRoundTripsAndMigratesLegacyWhisperSettings() {
+        val config = VoiceInputConfig(
+            enabled = true,
+            provider = VoiceInputProvider.LOCAL_MODEL,
+            localSpeechModel = LocalSpeechModel.SENSE_VOICE_SMALL_INT8,
+            apiKey = "retained-secret",
+            model = "my-qwen-model",
+            region = "custom",
+        )
         val json = StoredTranslationSettings(voiceInput = config).toJson()
         assertFalse(json.contains("retained-secret"))
-        assertTrue(json.contains("medium-q5_0"))
+        assertTrue(json.contains("sense-voice-small-int8"))
         assertEquals(config.copy(apiKey = ""), storedTranslationSettingsFromJson(json).voiceInput)
         assertEquals(VoiceInputProvider.QWEN, storedTranslationSettingsFromJson("""{"voiceInput":{"enabled":true}}""").voiceInput.provider)
         assertEquals(VoiceInputProvider.QWEN, storedTranslationSettingsFromJson("""{"voiceInput":{"provider":"unknown"}}""").voiceInput.provider)
@@ -25,15 +30,21 @@ class VoiceInputTest {
             storedTranslationSettingsFromJson("""{"voiceInput":{"enabled":true}}""").voiceInput.vadMinRms,
         )
         assertEquals(
-            LocalWhisperModel.SMALL_Q5_1,
+            LocalSpeechModel.SENSE_VOICE_SMALL_INT8,
             storedTranslationSettingsFromJson("""{"voiceInput":{"provider":"LOCAL_WHISPER"}}""")
-                .voiceInput.localWhisperModel,
+                .voiceInput.localSpeechModel,
         )
         assertEquals(
-            LocalWhisperModel.SMALL_Q5_1,
+            VoiceInputProvider.LOCAL_MODEL,
+            storedTranslationSettingsFromJson(
+                """{"voiceInput":{"provider":"LOCAL_WHISPER","localWhisperModel":"medium-q5_0"}}""",
+            ).voiceInput.provider,
+        )
+        assertEquals(
+            LocalSpeechModel.SENSE_VOICE_SMALL_INT8,
             storedTranslationSettingsFromJson(
                 """{"voiceInput":{"provider":"LOCAL_WHISPER","localWhisperModel":"unknown"}}""",
-            ).voiceInput.localWhisperModel,
+            ).voiceInput.localSpeechModel,
         )
     }
 

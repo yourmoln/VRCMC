@@ -38,11 +38,11 @@ class VoiceInputServiceSectionTest {
             }
         }
         compose.onNodeWithText(strings.voiceInputProvider).performClick()
-        compose.onNodeWithText(strings.localWhisper).performClick()
+        compose.onNodeWithText(strings.localModel).performClick()
         compose.onNodeWithText(strings.qwenApiKey).assertDoesNotExist()
         compose.onNodeWithText("Base URL").assertDoesNotExist()
-        compose.onNodeWithText(LocalWhisperModel.SMALL_Q5_1.displayLabel).assertIsDisplayed()
-        compose.runOnIdle { assertEquals(original.copy(provider = VoiceInputProvider.LOCAL_WHISPER), config) }
+        compose.onNodeWithText(LocalSpeechModel.SENSE_VOICE_SMALL_INT8.displayLabel).assertIsDisplayed()
+        compose.runOnIdle { assertEquals(original.copy(provider = VoiceInputProvider.LOCAL_MODEL), config) }
         compose.onNodeWithText(strings.voiceInputProvider).performClick()
         compose.onNodeWithText("Fun-ASR").performClick()
         compose.onNodeWithText(strings.qwenApiKey).assertIsDisplayed()
@@ -50,12 +50,12 @@ class VoiceInputServiceSectionTest {
     }
 
     @Test
-    fun selectingMediumUpdatesConfigShowsSizeAndDownloadsMedium() {
+    fun senseVoiceModelIsShownAndDownloadsInt8Model() {
         val recognizer = DownloadTestRecognizer()
         var config by mutableStateOf(
-            VoiceInputConfig(enabled = true, provider = VoiceInputProvider.LOCAL_WHISPER),
+            VoiceInputConfig(enabled = true, provider = VoiceInputProvider.LOCAL_MODEL),
         )
-        var requestedModel: LocalWhisperModel? = null
+        var requestedModel: LocalSpeechModel? = null
         compose.setContent {
             MaterialTheme {
                 Column(Modifier.width(480.dp).verticalScroll(rememberScrollState())) {
@@ -70,16 +70,43 @@ class VoiceInputServiceSectionTest {
             }
         }
 
-        compose.onNodeWithText(LocalWhisperModel.SMALL_Q5_1.displayLabel).performClick()
-        compose.onNodeWithText(LocalWhisperModel.MEDIUM_Q5_0.displayLabel).performClick()
-
-        compose.onNodeWithText("Whisper Medium Q5_0 · 539 MB").assertIsDisplayed()
-        compose.runOnIdle {
-            assertEquals(LocalWhisperModel.MEDIUM_Q5_0, config.localWhisperModel)
-        }
+        compose.onNodeWithText("SenseVoice Small INT8 · 240 MB").assertIsDisplayed()
         compose.onNodeWithText(strings.localModelDownload).performClick()
         compose.runOnIdle {
-            assertEquals(LocalWhisperModel.MEDIUM_Q5_0, requestedModel)
+            assertEquals(LocalSpeechModel.SENSE_VOICE_SMALL_INT8, config.localSpeechModel)
+            assertEquals(LocalSpeechModel.SENSE_VOICE_SMALL_INT8, requestedModel)
+        }
+    }
+
+    @Test
+    fun selectingFunAsrNanoUpdatesConfigAndDownloadsModel() {
+        val recognizer = DownloadTestRecognizer()
+        var config by mutableStateOf(
+            VoiceInputConfig(enabled = true, provider = VoiceInputProvider.LOCAL_MODEL),
+        )
+        var requestedModel: LocalSpeechModel? = null
+        compose.setContent {
+            MaterialTheme {
+                Column(Modifier.width(480.dp).verticalScroll(rememberScrollState())) {
+                    VoiceInputServiceSection(
+                        config = config,
+                        strings = strings,
+                        onUpdate = { config = it(config) },
+                        onDownloadLocalModel = { requestedModel = it },
+                        localRecognizer = recognizer,
+                    )
+                }
+            }
+        }
+
+        compose.onNodeWithText(LocalSpeechModel.SENSE_VOICE_SMALL_INT8.displayLabel).performClick()
+        compose.onNodeWithText(LocalSpeechModel.FUN_ASR_NANO_2512_INT8.displayLabel).performClick()
+        compose.onNodeWithText("Fun-ASR-Nano 2512 INT8 · 265 MB").assertIsDisplayed()
+        compose.onNodeWithText(strings.funAsrNanoHint).assertIsDisplayed()
+        compose.onNodeWithText(strings.localModelDownload).performClick()
+        compose.runOnIdle {
+            assertEquals(LocalSpeechModel.FUN_ASR_NANO_2512_INT8, config.localSpeechModel)
+            assertEquals(LocalSpeechModel.FUN_ASR_NANO_2512_INT8, requestedModel)
         }
     }
 
@@ -93,7 +120,7 @@ class VoiceInputServiceSectionTest {
                 Surface {
                     Column(Modifier.width(480.dp).padding(16.dp)) {
                         LocalSpeechModelSettings(
-                            model = LocalWhisperModel.SMALL_Q5_1,
+                            model = LocalSpeechModel.SENSE_VOICE_SMALL_INT8,
                             status = status,
                             supported = true,
                             strings = strings,
@@ -109,10 +136,10 @@ class VoiceInputServiceSectionTest {
         compose.onNodeWithText(strings.localModelDownload).performClick()
         compose.runOnIdle {
             assertEquals(1, downloads)
-            status = LocalSpeechModelStatus.Downloading(95_000_000, 190_000_000)
+            status = LocalSpeechModelStatus.Downloading(120_000_000, 240_000_000)
         }
-        compose.onNodeWithText("正在下载模型 50% · 95 / 190 MB").assertIsDisplayed()
-        compose.onNodeWithText(LocalWhisperModel.SMALL_Q5_1.displayLabel).assertIsNotEnabled()
+        compose.onNodeWithText("正在下载模型 50% · 120 / 240 MB").assertIsDisplayed()
+        compose.onNodeWithText(LocalSpeechModel.SENSE_VOICE_SMALL_INT8.displayLabel).assertIsNotEnabled()
         compose.onNodeWithText(strings.localModelCancelDownload).performClick()
         compose.runOnIdle { assertEquals(1, cancellations) }
         val output = File("build/test-screenshots/local-speech-model.png")
@@ -137,7 +164,7 @@ class VoiceInputServiceSectionTest {
     @Test
     fun downloadAndCancelRemainAvailableAcrossServiceSwitchDisableAndPageNavigation() {
         val recognizer = DownloadTestRecognizer()
-        var config by mutableStateOf(VoiceInputConfig(enabled = true, provider = VoiceInputProvider.LOCAL_WHISPER))
+        var config by mutableStateOf(VoiceInputConfig(enabled = true, provider = VoiceInputProvider.LOCAL_MODEL))
         var pageVisible by mutableStateOf(true)
         compose.setContent {
             val scope = rememberCoroutineScope()
@@ -175,13 +202,13 @@ class VoiceInputServiceSectionTest {
 
     private class DownloadTestRecognizer : LocalSpeechRecognizer by UnsupportedLocalSpeechRecognizer {
         override val supported = true
-        private val statuses = LocalWhisperModel.entries.associateWith {
+        private val statuses = LocalSpeechModel.entries.associateWith {
             MutableStateFlow<LocalSpeechModelStatus>(LocalSpeechModelStatus.Missing)
         }
         var downloads = 0
         var cancellations = 0
-        override fun status(model: LocalWhisperModel) = statuses.getValue(model)
-        override suspend fun downloadModel(model: LocalWhisperModel): Boolean {
+        override fun status(model: LocalSpeechModel) = statuses.getValue(model)
+        override suspend fun downloadModel(model: LocalSpeechModel): Boolean {
             downloads++
             val status = statuses.getValue(model)
             status.value = LocalSpeechModelStatus.Downloading(95_000_000, model.downloadSizeMb * 1_000_000L)

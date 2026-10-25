@@ -123,12 +123,12 @@ fun ChatPage(
     val voiceTypingHold = remember { VoiceTypingHold() }
     val streamingMerger = remember { StreamingTextMerger() }
     val audioRecorder = remember { audioRecorderFactory() }
-    val localSpeechStatusFlow = remember(state.voiceInputConfig.localWhisperModel) {
-        localSpeechRecognizer.status(state.voiceInputConfig.localWhisperModel)
+    val localSpeechStatusFlow = remember(state.voiceInputConfig.localSpeechModel) {
+        localSpeechRecognizer.status(state.voiceInputConfig.localSpeechModel)
     }
     val localSpeechStatus by localSpeechStatusFlow.collectAsState()
     val voiceServiceReady = state.voiceInputConfig.enabled && state.voiceInputConfig.hasServiceConfiguration() &&
-        (state.voiceInputConfig.provider != VoiceInputProvider.LOCAL_WHISPER || localSpeechStatus == LocalSpeechModelStatus.Ready)
+        (state.voiceInputConfig.provider != VoiceInputProvider.LOCAL_MODEL || localSpeechStatus == LocalSpeechModelStatus.Ready)
     val scope = rememberCoroutineScope()
     val blockedSnackbar = remember { SnackbarHostState() }
     var blockedNotificationJob by remember { mutableStateOf<Job?>(null) }
@@ -285,7 +285,7 @@ fun ChatPage(
                 },
                 onPartial = { wav ->
                     scope.launch {
-                        if (generation == voiceGeneration && config.provider != VoiceInputProvider.LOCAL_WHISPER) {
+                        if (generation == voiceGeneration && config.provider != VoiceInputProvider.LOCAL_MODEL) {
                             submitPartialRecognition(wav)
                         }
                     }

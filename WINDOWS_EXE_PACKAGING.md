@@ -42,27 +42,32 @@ composeApp\build\compose\binaries\main-release\app\VRCMC\
 
 ### 语音运行库体积优化
 
-在 Windows x64 上构建时，Gradle 会自动先裁剪 ONNX Runtime 和 Whisper JNI，再交给 ProGuard 和应用打包任务：
+在 Windows x64 上构建时，Gradle 会自动先裁剪 ONNX Runtime，再交给 ProGuard 和应用打包任务：
 
 - ONNX Runtime：移除 Linux、macOS 本地库及 Windows `.pdb` 调试符号，保留 Windows x64 DLL。
-- Whisper JNI：移除 Debian、macOS 本地库，保留 Windows x64 DLL。
-- 两者的 Java 类、JNI 加载路径和许可证声明均保留，开发运行、桌面测试及 release 打包使用同一份裁剪后的依赖。其他操作系统或 CPU 架构仍使用原始依赖。
+- Java 类、JNI 加载路径和许可证声明均保留，开发运行、桌面测试及 release 打包使用同一份裁剪后的依赖。其他操作系统或 CPU 架构仍使用原始依赖。
 
-中间产物位于 `composeApp\build\generated\windows-native\`，无需手动修改 Gradle 缓存或打包后的 JAR。Whisper 识别模型仍由用户在应用中下载，不包含在安装包中。
+中间产物位于 `composeApp\build\generated\windows-native\`，无需手动修改 Gradle 缓存或打包后的 JAR。本地识别模型仍由用户在应用中下载，不包含在安装包中。
 
 修改运行库版本或裁剪规则后，除检查最终 EXE 大小外，还应验证实际的 VAD 推理和离线转写：
 
 ```powershell
 .\gradlew.bat :composeApp:desktopTest --tests '*SileroSpeechDetectorTest'
-$env:VRCMC_LOCAL_ASR_INTEGRATION_TEST = '1'
+$env:VRCMC_SENSE_VOICE_INTEGRATION_TEST = '1'
 try {
-    .\gradlew.bat :composeApp:desktopTest --tests '*LocalWhisperIntegrationTest'
+    .\gradlew.bat :composeApp:desktopTest --tests '*SenseVoiceRecognitionTest'
 } finally {
-    Remove-Item Env:\VRCMC_LOCAL_ASR_INTEGRATION_TEST
+    Remove-Item Env:\VRCMC_SENSE_VOICE_INTEGRATION_TEST
+}
+$env:VRCMC_FUN_ASR_INTEGRATION_TEST = '1'
+try {
+    .\gradlew.bat :composeApp:desktopTest --tests '*FunAsrNanoRecognitionTest'
+} finally {
+    Remove-Item Env:\VRCMC_FUN_ASR_INTEGRATION_TEST
 }
 ```
 
-离线转写测试需要支持 AVX2 的 Windows x64 CPU；首次执行会下载并校验约 190 MB 的模型，缓存于 `composeApp\build\local-asr-test\`，不会进入安装包。
+离线转写测试需要 Windows x64 CPU，并会校验约 240 MB 的 INT8 模型及词表，这些文件不会进入安装包。
 
 ## 3. 使用仓库内 Inno Setup 打包
 
