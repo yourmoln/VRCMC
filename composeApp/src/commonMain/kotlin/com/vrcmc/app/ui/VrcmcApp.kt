@@ -17,12 +17,6 @@ import androidx.compose.ui.unit.dp
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.launch
 
-internal enum class ThemeMode {
-    SYSTEM,
-    DARK,
-    LIGHT,
-}
-
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalComposeUiApi::class)
 @Composable
 fun VrcmcApp(
@@ -32,8 +26,10 @@ fun VrcmcApp(
 ) {
     val state = remember { AppState() }
     var screen by remember { mutableStateOf(AppScreen.CHAT) }
-    var theme by remember { mutableStateOf(ThemeMode.SYSTEM) }
-    var language by remember { mutableStateOf(AppLanguage.ZH_HANS) }
+    var theme by remember { mutableStateOf(ThemeMode.fromStorage(loadStoredThemeMode())) }
+    var themeColor by remember { mutableStateOf(ThemeColor.fromStorage(loadStoredThemeColor())) }
+    var language by
+        remember { mutableStateOf(appLanguageFromStorage(loadStoredAppLanguage())) }
     var showAddDevice by remember { mutableStateOf(false) }
     var showClearHistory by remember { mutableStateOf(false) }
     var availableUpdate by remember { mutableStateOf<AppRelease?>(null) }
@@ -103,11 +99,17 @@ fun VrcmcApp(
         if (state.showJapaneseRomaji) ensureJapaneseDictionaryAvailable()
     }
 
+    LaunchedEffect(theme, themeColor, language) {
+        saveStoredThemeMode(theme.storageKey)
+        saveStoredThemeColor(themeColor.storageKey)
+        saveStoredAppLanguage(language.name)
+    }
+
     LaunchedEffect(dark) { onDarkThemeChanged(dark) }
 
     BackHandler(enabled = screen != AppScreen.CHAT) { screen = AppScreen.CHAT }
 
-    MaterialTheme(if (dark) darkColorScheme() else lightColorScheme()) {
+    MaterialTheme(colorScheme = vrcmcColorScheme(themeColor, dark)) {
         val systemAudio = rememberSystemAudioListener(state, strings, dark)
         Surface(
             modifier = Modifier.fillMaxSize(),
@@ -228,9 +230,11 @@ fun VrcmcApp(
                                             AppScreen.PREFERENCES ->
                                                 PreferencesPage(
                                                     theme = theme,
+                                                    themeColor = themeColor,
                                                     language = language,
                                                     strings = strings,
                                                     setTheme = { theme = it },
+                                                    setThemeColor = { themeColor = it },
                                                     setLanguage = { language = it },
                                                     showJapaneseRomaji =
                                                         state.showJapaneseRomaji,

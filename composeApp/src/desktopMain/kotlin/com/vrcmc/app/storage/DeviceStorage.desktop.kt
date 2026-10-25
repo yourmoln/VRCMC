@@ -90,6 +90,24 @@ actual fun saveStoredTranslationSecrets(value: String) {
     writeBytesAtomically(translationSecretsFile, encrypted)
 }
 
+actual fun loadStoredAppLanguage(): String = prefs.get("appLanguage", "")
+
+actual fun saveStoredAppLanguage(value: String) {
+    prefs.put("appLanguage", value)
+}
+
+actual fun loadStoredThemeMode(): String = prefs.get("themeMode", "")
+
+actual fun saveStoredThemeMode(value: String) {
+    prefs.put("themeMode", value)
+}
+
+actual fun loadStoredThemeColor(): String = prefs.get("themeColor", "")
+
+actual fun saveStoredThemeColor(value: String) {
+    prefs.put("themeColor", value)
+}
+
 actual fun loadStoredChatHistory(): String =
     readText(chatHistoryFile).ifBlank { prefs.get("chatHistory", "") }
 

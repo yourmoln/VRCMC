@@ -156,6 +156,24 @@ actual fun saveStoredTranslationSecrets(value: String) {
     }
 }
 
+actual fun loadStoredAppLanguage(): String = defaults.stringForKey("appLanguage") ?: ""
+
+actual fun saveStoredAppLanguage(value: String) {
+    defaults.setObject(value, forKey = "appLanguage")
+}
+
+actual fun loadStoredThemeMode(): String = defaults.stringForKey("themeMode") ?: ""
+
+actual fun saveStoredThemeMode(value: String) {
+    defaults.setObject(value, forKey = "themeMode")
+}
+
+actual fun loadStoredThemeColor(): String = defaults.stringForKey("themeColor") ?: ""
+
+actual fun saveStoredThemeColor(value: String) {
+    defaults.setObject(value, forKey = "themeColor")
+}
+
 actual fun loadStoredChatHistory(): String = defaults.stringForKey("chatHistory") ?: ""
 
 actual fun saveStoredChatHistory(value: String) {

@@ -6,3 +6,6 @@ enum class AppLanguage(val label: String) {
     ZH_HANT("繁體中文"),
     JA("日本語"),
 }
+
+fun appLanguageFromStorage(value: String): AppLanguage =
+    AppLanguage.entries.firstOrNull { it.name == value } ?: AppLanguage.ZH_HANS

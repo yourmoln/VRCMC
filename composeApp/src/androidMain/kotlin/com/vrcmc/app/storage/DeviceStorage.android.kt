@@ -90,6 +90,24 @@ actual fun saveStoredTranslationSecrets(value: String) {
     }
 }
 
+actual fun loadStoredAppLanguage(): String = prefs()?.getString("appLanguage", "") ?: ""
+
+actual fun saveStoredAppLanguage(value: String) {
+    prefs()?.edit { putString("appLanguage", value) }
+}
+
+actual fun loadStoredThemeMode(): String = prefs()?.getString("themeMode", "") ?: ""
+
+actual fun saveStoredThemeMode(value: String) {
+    prefs()?.edit { putString("themeMode", value) }
+}
+
+actual fun loadStoredThemeColor(): String = prefs()?.getString("themeColor", "") ?: ""
+
+actual fun saveStoredThemeColor(value: String) {
+    prefs()?.edit { putString("themeColor", value) }
+}
+
 actual fun loadStoredChatHistory(): String = prefs()?.getString("chatHistory", "") ?: ""
 
 actual fun saveStoredChatHistory(value: String) {

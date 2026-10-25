@@ -156,6 +156,14 @@ interface LocaleStrings {
     val systemTheme: String
     val lightTheme: String
     val darkTheme: String
+    val themeMode: String
+    val themeColor: String
+    val colorBlue: String
+    val colorPurple: String
+    val colorPink: String
+    val colorOrange: String
+    val colorGreen: String
+    val colorCyan: String
     val configureVrc: String
     val configureVrcIntro: String
     val steamStep1: String

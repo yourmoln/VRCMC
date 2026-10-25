@@ -18,6 +18,18 @@ expect fun loadStoredTranslationSecrets(): String
 
 expect fun saveStoredTranslationSecrets(value: String)
 
+expect fun loadStoredAppLanguage(): String
+
+expect fun saveStoredAppLanguage(value: String)
+
+expect fun loadStoredThemeMode(): String
+
+expect fun saveStoredThemeMode(value: String)
+
+expect fun loadStoredThemeColor(): String
+
+expect fun saveStoredThemeColor(value: String)
+
 expect fun loadStoredChatHistory(): String
 
 expect fun saveStoredChatHistory(value: String)
