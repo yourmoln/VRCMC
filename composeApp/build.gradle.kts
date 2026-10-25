@@ -59,10 +59,6 @@ val desktopOnnxRuntime = desktopNativeRuntime(
     "ai/onnxruntime/native/osx-*/**",
     "ai/onnxruntime/native/**/*.pdb",
 )
-val desktopWhisperRuntime = desktopNativeRuntime(
-    "stripWhisperNatives", libs.whisper.jni,
-    "debian-*/**", "macos-*/**",
-)
 
 kotlin { jvm("desktop"); androidTarget(); iosX64(); iosArm64(); iosSimulatorArm64(); sourceSets {
     commonMain.dependencies {
@@ -76,7 +72,8 @@ kotlin { jvm("desktop"); androidTarget(); iosX64(); iosArm64(); iosSimulatorArm6
     commonTest.dependencies { implementation(kotlin("test")) }
     named("desktopMain") {
         kotlin.srcDir("src/jvmMain/kotlin")
-        dependencies { implementation(libs.jlayer); implementation(desktopOnnxRuntime); implementation(desktopWhisperRuntime) }
+        kotlin.srcDir("src/jvmLocalMain/kotlin")
+        dependencies { implementation(libs.jlayer); implementation(desktopOnnxRuntime) }
         dependencies {
             implementation(libs.lwjgl.core)
             implementation(libs.lwjgl.openvr)

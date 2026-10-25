@@ -2,22 +2,34 @@ package com.vrcmc.app
 
 import kotlinx.coroutines.flow.StateFlow
 
-enum class VoiceInputProvider { QWEN, LOCAL_WHISPER }
+enum class VoiceInputProvider {
+    QWEN,
+    LOCAL_MODEL,
+    ;
 
-enum class LocalWhisperModel(
+    companion object {
+        fun fromStoredName(value: String?): VoiceInputProvider = when (value) {
+            LOCAL_MODEL.name, "LOCAL_WHISPER" -> LOCAL_MODEL
+            QWEN.name -> QWEN
+            else -> QWEN
+        }
+    }
+}
+
+enum class LocalSpeechModel(
     val serializedName: String,
     val displayName: String,
     val downloadSizeMb: Int,
 ) {
-    SMALL_Q5_1("small-q5_1", "Whisper Small Q5_1", 190),
-    MEDIUM_Q5_0("medium-q5_0", "Whisper Medium Q5_0", 539),
+    SENSE_VOICE_SMALL_INT8("sense-voice-small-int8", "SenseVoice Small INT8", 240),
+    FUN_ASR_NANO_2512_INT8("fun-asr-nano-2512-int8", "Fun-ASR-Nano 2512 INT8", 265),
     ;
 
     val displayLabel: String get() = "$displayName · $downloadSizeMb MB"
 
     companion object {
-        fun fromSerializedName(value: String?): LocalWhisperModel =
-            entries.firstOrNull { it.serializedName == value } ?: SMALL_Q5_1
+        fun fromSerializedName(value: String?): LocalSpeechModel =
+            entries.firstOrNull { it.serializedName == value } ?: SENSE_VOICE_SMALL_INT8
     }
 }
 
@@ -32,12 +44,12 @@ internal sealed interface LocalSpeechModelStatus {
 
 internal interface LocalSpeechRecognizer {
     val supported: Boolean
-    fun status(model: LocalWhisperModel): StateFlow<LocalSpeechModelStatus>
+    fun status(model: LocalSpeechModel): StateFlow<LocalSpeechModelStatus>
     // Only an explicit user action may call this; prepare() only reads the local cache.
-    suspend fun downloadModel(model: LocalWhisperModel): Boolean
-    suspend fun prepare(model: LocalWhisperModel): Boolean
+    suspend fun downloadModel(model: LocalSpeechModel): Boolean
+    suspend fun prepare(model: LocalSpeechModel): Boolean
     suspend fun transcribe(
-        model: LocalWhisperModel,
+        model: LocalSpeechModel,
         wav: ByteArray,
         language: String,
     ): VoiceTranscriptionResult
@@ -48,15 +60,15 @@ internal expect val localSpeechRecognizer: LocalSpeechRecognizer
 
 internal fun VoiceInputConfig.hasServiceConfiguration(): Boolean = when (provider) {
     VoiceInputProvider.QWEN -> apiKey.isNotBlank() && baseUrl.isNotBlank() && model.isNotBlank()
-    VoiceInputProvider.LOCAL_WHISPER -> localSpeechRecognizer.supported
+    VoiceInputProvider.LOCAL_MODEL -> localSpeechRecognizer.supported
 }
 
 internal fun voiceInputReadinessFailure(config: VoiceInputConfig): VoiceTranscriptionResult.Failure? =
     when {
-        config.provider == VoiceInputProvider.LOCAL_WHISPER && !localSpeechRecognizer.supported ->
+        config.provider == VoiceInputProvider.LOCAL_MODEL && !localSpeechRecognizer.supported ->
             VoiceTranscriptionResult.Failure(reason = VoiceTranscriptionFailureReason.LOCAL_UNSUPPORTED)
-        config.provider == VoiceInputProvider.LOCAL_WHISPER &&
-            localSpeechRecognizer.status(config.localWhisperModel).value != LocalSpeechModelStatus.Ready ->
+        config.provider == VoiceInputProvider.LOCAL_MODEL &&
+            localSpeechRecognizer.status(config.localSpeechModel).value != LocalSpeechModelStatus.Ready ->
             VoiceTranscriptionResult.Failure(reason = VoiceTranscriptionFailureReason.LOCAL_MODEL_NOT_READY)
         config.provider == VoiceInputProvider.QWEN && config.apiKey.isBlank() ->
             VoiceTranscriptionResult.Failure(reason = VoiceTranscriptionFailureReason.API_KEY_REQUIRED)
@@ -76,6 +88,6 @@ internal suspend fun transcribeVoiceAudio(
     localRecognizer: LocalSpeechRecognizer = localSpeechRecognizer,
 ): VoiceTranscriptionResult = when (config.provider) {
     VoiceInputProvider.QWEN -> transcribeQwenAudio(config, wav, onApiFailure)
-    VoiceInputProvider.LOCAL_WHISPER ->
-        localRecognizer.transcribe(config.localWhisperModel, wav, config.language)
+    VoiceInputProvider.LOCAL_MODEL ->
+        localRecognizer.transcribe(config.localSpeechModel, wav, config.language)
 }

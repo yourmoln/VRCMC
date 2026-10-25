@@ -17,9 +17,9 @@ internal class LocalSpeechModelController(
     private val scope: CoroutineScope,
     private val recognizer: LocalSpeechRecognizer = localSpeechRecognizer,
 ) {
-    private val activeModel = MutableStateFlow<LocalWhisperModel?>(null)
-    private val modelRevisions = MutableStateFlow<Map<LocalWhisperModel, Int>>(emptyMap())
-    private val downloadJobs = mutableMapOf<LocalWhisperModel, Job>()
+    private val activeModel = MutableStateFlow<LocalSpeechModel?>(null)
+    private val modelRevisions = MutableStateFlow<Map<LocalSpeechModel, Int>>(emptyMap())
+    private val downloadJobs = mutableMapOf<LocalSpeechModel, Job>()
 
     init {
         scope.launch {
@@ -41,12 +41,12 @@ internal class LocalSpeechModelController(
     }
 
     fun updateConfig(config: VoiceInputConfig) {
-        activeModel.value = config.localWhisperModel.takeIf {
-            config.enabled && config.provider == VoiceInputProvider.LOCAL_WHISPER
+        activeModel.value = config.localSpeechModel.takeIf {
+            config.enabled && config.provider == VoiceInputProvider.LOCAL_MODEL
         }
     }
 
-    fun downloadModel(model: LocalWhisperModel) {
+    fun downloadModel(model: LocalSpeechModel) {
         val previous = downloadJobs[model]
         if (previous != null && !previous.isCompleted && !previous.isCancelled) return
         downloadJobs[model] = scope.launch {
@@ -59,7 +59,7 @@ internal class LocalSpeechModelController(
         }
     }
 
-    fun cancelDownload(model: LocalWhisperModel) {
+    fun cancelDownload(model: LocalSpeechModel) {
         downloadJobs[model]?.cancel()
     }
 }

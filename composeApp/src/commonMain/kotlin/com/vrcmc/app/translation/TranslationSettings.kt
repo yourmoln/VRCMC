@@ -28,7 +28,7 @@ data class StoredTranslationSettings(
 data class VoiceInputConfig(
     val enabled: Boolean = false,
     val provider: VoiceInputProvider = VoiceInputProvider.QWEN,
-    val localWhisperModel: LocalWhisperModel = LocalWhisperModel.SMALL_Q5_1,
+    val localSpeechModel: LocalSpeechModel = LocalSpeechModel.SENSE_VOICE_SMALL_INT8,
     val apiKey: String = "",
     val region: String = "singapore",
     val baseUrl: String = "https://dashscope-intl.aliyuncs.com/api/v1",
@@ -80,7 +80,7 @@ fun StoredTranslationSettings.toJson(): String =
             putJsonObject("voiceInput") {
                 put("enabled", voiceInput.enabled)
                 put("provider", voiceInput.provider.name)
-                put("localWhisperModel", voiceInput.localWhisperModel.serializedName)
+                put("localSpeechModel", voiceInput.localSpeechModel.serializedName)
                 put("region", voiceInput.region)
                 put("baseUrl", voiceInput.baseUrl)
                 put("model", voiceInput.model)
@@ -237,11 +237,12 @@ fun storedTranslationSettingsFromJson(value: String): StoredTranslationSettings 
                     root["voiceInput"]?.jsonObject?.let { obj ->
                         VoiceInputConfig(
                             enabled = obj["enabled"]?.jsonPrimitive?.booleanOrNull ?: false,
-                            provider = VoiceInputProvider.entries.firstOrNull {
-                                it.name == (obj["provider"] as? JsonPrimitive)?.contentOrNull
-                            } ?: VoiceInputProvider.QWEN,
-                            localWhisperModel = LocalWhisperModel.fromSerializedName(
-                                (obj["localWhisperModel"] as? JsonPrimitive)?.contentOrNull,
+                            provider = VoiceInputProvider.fromStoredName(
+                                (obj["provider"] as? JsonPrimitive)?.contentOrNull,
+                            ),
+                            localSpeechModel = LocalSpeechModel.fromSerializedName(
+                                ((obj["localSpeechModel"] ?: obj["localWhisperModel"]) as? JsonPrimitive)
+                                    ?.contentOrNull,
                             ),
                             region = obj["region"]?.jsonPrimitive?.contentOrNull ?: "singapore",
                             baseUrl = obj["baseUrl"]?.jsonPrimitive?.contentOrNull
