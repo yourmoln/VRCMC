@@ -99,6 +99,39 @@ internal class JvmLocalSpeechRecognizer(
         }
     }
 
+    override suspend fun deleteModel(model: LocalSpeechModel): Boolean = withContext(Dispatchers.IO) {
+        if (!supported) return@withContext false
+        val store = stores[model] ?: return@withContext false
+        mutex.withLock {
+            if (statuses.getValue(model).value is LocalSpeechModelStatus.Downloading) {
+                return@withLock false
+            }
+            if (engine != null && loadedModel == model) closeEngine()
+            val status = statuses.getValue(model)
+            status.value = LocalSpeechModelStatus.Deleting
+            try {
+                store.delete()
+                status.value = LocalSpeechModelStatus.Missing
+                true
+            } catch (error: CancellationException) {
+                withContext(NonCancellable) {
+                    status.value = if (store.isComplete()) {
+                        LocalSpeechModelStatus.Downloaded
+                    } else {
+                        LocalSpeechModelStatus.Missing
+                    }
+                }
+                throw error
+            } catch (error: Exception) {
+                status.value = LocalSpeechModelStatus.Failed(error.message?.take(300).orEmpty())
+                false
+            } catch (error: LinkageError) {
+                status.value = LocalSpeechModelStatus.Failed(error.message?.take(300).orEmpty())
+                false
+            }
+        }
+    }
+
     override suspend fun prepare(model: LocalSpeechModel): Boolean = withContext(Dispatchers.IO) {
         mutex.withLock {
             if (!supported) return@withLock false
@@ -218,4 +251,5 @@ private fun createLocalSpeechEngine(model: LocalSpeechModel, path: Path): LocalS
     when (model) {
         LocalSpeechModel.SENSE_VOICE_SMALL_INT8 -> SenseVoiceEngine(path)
         LocalSpeechModel.FUN_ASR_NANO_2512_INT8 -> FunAsrNanoEngine(path)
+        LocalSpeechModel.QWEN3_ASR_0_6B_INT8 -> Qwen3AsrEngine(path)
     }

@@ -73,7 +73,12 @@ kotlin { jvm("desktop"); androidTarget(); iosX64(); iosArm64(); iosSimulatorArm6
     named("desktopMain") {
         kotlin.srcDir("src/jvmMain/kotlin")
         kotlin.srcDir("src/jvmLocalMain/kotlin")
-        dependencies { implementation(libs.jlayer); implementation(desktopOnnxRuntime) }
+        dependencies {
+            implementation(libs.jlayer)
+            implementation(desktopOnnxRuntime)
+            implementation(files("libs/sherpa-onnx-jvm-2.0.0.jar"))
+            implementation(files("libs/sherpa-onnx-native-lib-win-x64-2.0.0.jar"))
+        }
         dependencies {
             implementation(libs.lwjgl.core)
             implementation(libs.lwjgl.openvr)

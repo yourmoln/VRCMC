@@ -111,6 +111,38 @@ class VoiceInputServiceSectionTest {
     }
 
     @Test
+    fun selectingQwen3AsrUpdatesConfigAndDownloadsModel() {
+        val recognizer = DownloadTestRecognizer()
+        var config by mutableStateOf(
+            VoiceInputConfig(enabled = true, provider = VoiceInputProvider.LOCAL_MODEL),
+        )
+        var requestedModel: LocalSpeechModel? = null
+        compose.setContent {
+            MaterialTheme {
+                Column(Modifier.width(480.dp).verticalScroll(rememberScrollState())) {
+                    VoiceInputServiceSection(
+                        config = config,
+                        strings = strings,
+                        onUpdate = { config = it(config) },
+                        onDownloadLocalModel = { requestedModel = it },
+                        localRecognizer = recognizer,
+                    )
+                }
+            }
+        }
+
+        compose.onNodeWithText(LocalSpeechModel.SENSE_VOICE_SMALL_INT8.displayLabel).performClick()
+        compose.onNodeWithText(LocalSpeechModel.QWEN3_ASR_0_6B_INT8.displayLabel).performClick()
+        compose.onNodeWithText("Qwen3-ASR 0.6B INT8 · 987 MB").assertIsDisplayed()
+        compose.onNodeWithText(strings.qwen3AsrHint).assertIsDisplayed()
+        compose.onNodeWithText(strings.localModelDownload).performClick()
+        compose.runOnIdle {
+            assertEquals(LocalSpeechModel.QWEN3_ASR_0_6B_INT8, config.localSpeechModel)
+            assertEquals(LocalSpeechModel.QWEN3_ASR_0_6B_INT8, requestedModel)
+        }
+    }
+
+    @Test
     fun manualDownloadProgressCancelFailureRetryAndCachedStatesAreVisible() {
         var status by mutableStateOf<LocalSpeechModelStatus>(LocalSpeechModelStatus.Missing)
         var downloads = 0
@@ -127,6 +159,7 @@ class VoiceInputServiceSectionTest {
                             onModelChange = {},
                             onDownload = { downloads++ },
                             onCancel = { cancellations++ },
+                            onDelete = {},
                         )
                     }
                 }
@@ -162,6 +195,45 @@ class VoiceInputServiceSectionTest {
     }
 
     @Test
+    fun downloadedModelCanBeDeletedWithConfirmation() {
+        var status by mutableStateOf<LocalSpeechModelStatus>(LocalSpeechModelStatus.Downloaded)
+        var deletions = 0
+        compose.setContent {
+            MaterialTheme {
+                Surface {
+                    Column(Modifier.width(480.dp).padding(16.dp)) {
+                        LocalSpeechModelSettings(
+                            model = LocalSpeechModel.QWEN3_ASR_0_6B_INT8,
+                            status = status,
+                            supported = true,
+                            strings = strings,
+                            onModelChange = {},
+                            onDownload = {},
+                            onCancel = {},
+                            onDelete = { deletions++ },
+                        )
+                    }
+                }
+            }
+        }
+
+        compose.onNodeWithText(strings.localModelDelete).performClick()
+        compose.onNodeWithText(strings.localModelDeleteConfirmTitle).assertIsDisplayed()
+        compose.onNodeWithText(strings.localModelDeleteConfirmMessage).assertIsDisplayed()
+        val output = File("build/test-screenshots/local-speech-model-delete.png")
+        output.parentFile.mkdirs()
+        ImageIO.write(compose.onAllNodes(isRoot())[1].captureToImage().toAwtImage(), "png", output)
+        compose.onNodeWithText(strings.delete).performClick()
+        compose.runOnIdle { assertEquals(1, deletions) }
+
+        compose.runOnIdle { status = LocalSpeechModelStatus.Deleting }
+        compose.onNodeWithText(strings.localModelDeleting).assertIsDisplayed()
+        compose.onNodeWithText(strings.localModelDelete).assertDoesNotExist()
+        compose.runOnIdle { status = LocalSpeechModelStatus.Missing }
+        compose.onNodeWithText(strings.localModelDownload).assertIsDisplayed()
+    }
+
+    @Test
     fun downloadAndCancelRemainAvailableAcrossServiceSwitchDisableAndPageNavigation() {
         val recognizer = DownloadTestRecognizer()
         var config by mutableStateOf(VoiceInputConfig(enabled = true, provider = VoiceInputProvider.LOCAL_MODEL))
@@ -173,8 +245,15 @@ class VoiceInputServiceSectionTest {
             MaterialTheme {
                 if (pageVisible) {
                     Column(Modifier.width(480.dp).verticalScroll(rememberScrollState())) {
-                        VoiceInputServiceSection(config, strings, { config = it(config) },
-                            controller::downloadModel, controller::cancelDownload, recognizer)
+                        VoiceInputServiceSection(
+                            config = config,
+                            strings = strings,
+                            onUpdate = { config = it(config) },
+                            onDownloadLocalModel = controller::downloadModel,
+                            onCancelLocalModel = controller::cancelDownload,
+                            onDeleteLocalModel = controller::deleteModel,
+                            localRecognizer = recognizer,
+                        )
                     }
                 }
             }

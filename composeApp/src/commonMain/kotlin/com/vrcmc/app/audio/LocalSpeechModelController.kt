@@ -20,6 +20,7 @@ internal class LocalSpeechModelController(
     private val activeModel = MutableStateFlow<LocalSpeechModel?>(null)
     private val modelRevisions = MutableStateFlow<Map<LocalSpeechModel, Int>>(emptyMap())
     private val downloadJobs = mutableMapOf<LocalSpeechModel, Job>()
+    private val deleteJobs = mutableMapOf<LocalSpeechModel, Job>()
 
     init {
         scope.launch {
@@ -49,9 +50,12 @@ internal class LocalSpeechModelController(
     fun downloadModel(model: LocalSpeechModel) {
         val previous = downloadJobs[model]
         if (previous != null && !previous.isCompleted && !previous.isCancelled) return
+        val pendingDelete = deleteJobs[model]
+        if (pendingDelete != null && !pendingDelete.isCompleted && !pendingDelete.isCancelled) return
         downloadJobs[model] = scope.launch {
             // A retry may arrive while a cancelled job is finishing its file cleanup.
             previous?.join()
+            pendingDelete?.join()
             if (recognizer.downloadModel(model)) {
                 val revision = (modelRevisions.value[model] ?: 0) + 1
                 modelRevisions.value = modelRevisions.value + (model to revision)
@@ -61,5 +65,16 @@ internal class LocalSpeechModelController(
 
     fun cancelDownload(model: LocalSpeechModel) {
         downloadJobs[model]?.cancel()
+    }
+
+    fun deleteModel(model: LocalSpeechModel) {
+        val previous = deleteJobs[model]
+        if (previous != null && !previous.isCompleted && !previous.isCancelled) return
+        downloadJobs[model]?.cancel()
+        val pendingDownload = downloadJobs[model]
+        deleteJobs[model] = scope.launch {
+            pendingDownload?.join()
+            recognizer.deleteModel(model)
+        }
     }
 }

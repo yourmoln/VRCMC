@@ -16,6 +16,7 @@ private fun desktopLocalSpeechModelPath(model: LocalSpeechModel): Path {
     val property = when (model) {
         LocalSpeechModel.SENSE_VOICE_SMALL_INT8 -> "vrcmc.senseVoiceModel.path"
         LocalSpeechModel.FUN_ASR_NANO_2512_INT8 -> "vrcmc.funAsrNanoModel.path"
+        LocalSpeechModel.QWEN3_ASR_0_6B_INT8 -> "vrcmc.qwen3AsrModel.path"
     }
     System.getProperty(property)?.takeIf(String::isNotBlank)?.let { return Path.of(it) }
     val root = System.getenv("LOCALAPPDATA")?.takeIf(String::isNotBlank)?.let { Path.of(it, "VRCMC") }
@@ -23,6 +24,7 @@ private fun desktopLocalSpeechModelPath(model: LocalSpeechModel): Path {
     val directory = when (model) {
         LocalSpeechModel.SENSE_VOICE_SMALL_INT8 -> "sense-voice-small"
         LocalSpeechModel.FUN_ASR_NANO_2512_INT8 -> "fun-asr-nano-2512"
+        LocalSpeechModel.QWEN3_ASR_0_6B_INT8 -> "qwen3-asr-0.6b"
     }
     return root.resolve("models").resolve(directory).resolve(model.modelFileName())
 }

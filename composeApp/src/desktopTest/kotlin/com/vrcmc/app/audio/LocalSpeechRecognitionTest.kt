@@ -56,6 +56,14 @@ class LocalSpeechRecognitionTest {
             "9dc6e72aa8bc6f5966cf2857a0ce3a425b1d72e91500e147d66329f407c017a1",
             funAsr.modelSha256(),
         )
+        val qwen = LocalSpeechModel.QWEN3_ASR_0_6B_INT8
+        assertEquals("encoder.int8.onnx", qwen.modelFileName())
+        assertEquals(182_491_662L, qwen.modelSize())
+        assertEquals(
+            "60748d3e6744a57c9c91e1b17424a6c2990567e8adceb0783940c03ed98fa9d9",
+            qwen.modelSha256(),
+        )
+        assertEquals(987, qwen.downloadSizeMb)
     }
 
     @Test
@@ -90,6 +98,29 @@ class LocalSpeechRecognitionTest {
     }
 
     @Test
+    fun multiFileModelDeletesEveryDownloadedArtifact() = runBlocking {
+        val modelDirectory = directory.root.toPath().resolve("qwen")
+        val main = ByteArray(2048) { (it * 5).toByte() }
+        val tokenizer = ByteArray(512) { (it * 7).toByte() }
+        val mainFile = LocalSpeechStoreFile(modelDirectory.resolve("encoder.int8.onnx"), main.size.toLong(), sha256(main))
+        val tokenizerFile =
+            LocalSpeechStoreFile(modelDirectory.resolve("tokenizer/vocab.json"), tokenizer.size.toLong(), sha256(tokenizer))
+        val cache = LocalSpeechModelStore(mainFile.path, listOf(mainFile, tokenizerFile))
+
+        cache.install(mainFile, ByteReadChannel(main)) { _, _ -> }
+        cache.install(tokenizerFile, ByteReadChannel(tokenizer)) { _, _ -> }
+        assertTrue(cache.isComplete())
+        assertTrue(Files.exists(mainFile.path))
+        assertTrue(Files.exists(tokenizerFile.path))
+
+        cache.delete()
+
+        assertFalse(Files.exists(mainFile.path))
+        assertFalse(Files.exists(tokenizerFile.path))
+        assertFalse(Files.exists(modelDirectory))
+    }
+
+    @Test
     fun preparationLoadsEngineAndTranscribes() = runBlocking {
         val cache = store()
         cache.install(ByteReadChannel(modelBytes)) { _, _ -> }
@@ -120,6 +151,31 @@ class LocalSpeechRecognitionTest {
             VoiceTranscriptionFailureReason.LOCAL_MODEL_NOT_READY,
             assertIs<VoiceTranscriptionResult.Failure>(recognizer.transcribe(model, wav, "zh")).reason,
         )
+    }
+
+    @Test
+    fun deletingLoadedModelClosesEngineAndRemovesFiles() = runBlocking {
+        val cache = store()
+        cache.install(ByteReadChannel(modelBytes)) { _, _ -> }
+        cache.installAuxiliary(ByteReadChannel(tokens)) { _, _ -> }
+        var closes = 0
+        val recognizer = JvmLocalSpeechRecognizer(cache, supported = true, createEngine = { _, _ ->
+            object : LocalSpeechEngine {
+                override fun transcribe(samples: FloatArray, language: String) = "local speech"
+                override fun close() {
+                    closes++
+                }
+            }
+        })
+
+        assertTrue(recognizer.prepare(model))
+        assertEquals(LocalSpeechModelStatus.Ready, recognizer.status(model).value)
+        assertTrue(recognizer.deleteModel(model))
+        assertEquals(LocalSpeechModelStatus.Missing, recognizer.status(model).value)
+        assertEquals(1, closes)
+        assertFalse(Files.exists(cache.path))
+        assertFalse(Files.exists(checkNotNull(cache.auxiliaryPath)))
+        assertFalse(recognizer.prepare(model))
     }
 
     @Test
@@ -205,6 +261,7 @@ class LocalSpeechRecognitionTest {
         )
         assertFalse(recognizer.prepare(model))
         assertFalse(recognizer.downloadModel(model))
+        assertFalse(recognizer.deleteModel(model))
         assertEquals(
             VoiceTranscriptionFailureReason.LOCAL_UNSUPPORTED,
             assertIs<VoiceTranscriptionResult.Failure>(
