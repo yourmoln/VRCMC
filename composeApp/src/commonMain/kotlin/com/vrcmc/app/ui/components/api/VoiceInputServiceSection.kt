@@ -31,6 +31,7 @@ internal fun VoiceInputServiceSection(
     onUpdate: ((VoiceInputConfig) -> VoiceInputConfig) -> Unit,
     onDownloadLocalModel: (LocalSpeechModel) -> Unit = {},
     onCancelLocalModel: (LocalSpeechModel) -> Unit = {},
+    onDeleteLocalModel: (LocalSpeechModel) -> Unit = {},
     localRecognizer: LocalSpeechRecognizer = localSpeechRecognizer,
 ) {
     var providerMenu by remember { mutableStateOf(false) }
@@ -41,7 +42,9 @@ internal fun VoiceInputServiceSection(
     val availableProviders = if (localRecognizer.supported) VoiceInputProvider.entries else listOf(VoiceInputProvider.QWEN)
     val showLocalModel = localRecognizer.supported && (
         config.provider == VoiceInputProvider.LOCAL_MODEL ||
-            localModelStatus is LocalSpeechModelStatus.Downloading || localModelStatus is LocalSpeechModelStatus.Failed
+            localModelStatus is LocalSpeechModelStatus.Downloading ||
+            localModelStatus is LocalSpeechModelStatus.Failed ||
+            localModelStatus == LocalSpeechModelStatus.Deleting
         )
     var showKey by remember { mutableStateOf(false) }
     var regionMenu by remember { mutableStateOf(false) }
@@ -50,6 +53,20 @@ internal fun VoiceInputServiceSection(
     var microphoneMenu by remember { mutableStateOf(false) }
     var advanced by remember { mutableStateOf(false) }
     val microphones = remember { availableAudioInputDevices() }
+    val supportedLocalModels =
+        remember(localRecognizer) {
+            LocalSpeechModel.entries.filter { it in localRecognizer.supportedModels }
+        }
+    LaunchedEffect(config.provider, config.localSpeechModel, supportedLocalModels) {
+        if (
+            config.provider == VoiceInputProvider.LOCAL_MODEL &&
+            supportedLocalModels.isNotEmpty() &&
+            config.localSpeechModel !in supportedLocalModels
+        ) {
+            val fallback = supportedLocalModels.first()
+            onUpdate { it.copy(localSpeechModel = fallback) }
+        }
+    }
 
     SettingsCard(strings.voiceInputService, Icons.Default.RecordVoiceOver) {
         Row(verticalAlignment = Alignment.CenterVertically) {
@@ -71,12 +88,14 @@ internal fun VoiceInputServiceSection(
                 HorizontalDivider()
                 LocalSpeechModelSettings(
                     model = config.localSpeechModel,
+                    models = supportedLocalModels,
                     status = localModelStatus,
                     supported = localRecognizer.supported,
                     strings = strings,
                     onModelChange = { model -> onUpdate { it.copy(localSpeechModel = model) } },
                     onDownload = { onDownloadLocalModel(config.localSpeechModel) },
                     onCancel = { onCancelLocalModel(config.localSpeechModel) },
+                    onDelete = { onDeleteLocalModel(config.localSpeechModel) },
                 )
             }
             return@SettingsCard
@@ -104,8 +123,19 @@ internal fun VoiceInputServiceSection(
                             leadingIcon = { if (provider == config.provider) Icon(Icons.Default.Check, null) },
                             onClick = {
                                 onUpdate {
+                                    val fallbackModel =
+                                        supportedLocalModels.firstOrNull() ?: it.localSpeechModel
                                     it.copy(
                                         provider = provider,
+                                        localSpeechModel =
+                                            if (
+                                                provider == VoiceInputProvider.LOCAL_MODEL &&
+                                                it.localSpeechModel !in supportedLocalModels
+                                            ) {
+                                                fallbackModel
+                                            } else {
+                                                it.localSpeechModel
+                                            },
                                         language = if (
                                             provider == VoiceInputProvider.LOCAL_MODEL &&
                                             it.language !in localSpeechLanguages
@@ -122,12 +152,14 @@ internal fun VoiceInputServiceSection(
         if (showLocalModel) {
             LocalSpeechModelSettings(
                 model = config.localSpeechModel,
+                models = supportedLocalModels,
                 status = localModelStatus,
                 supported = localRecognizer.supported,
                 strings = strings,
                 onModelChange = { model -> onUpdate { it.copy(localSpeechModel = model) } },
                 onDownload = { onDownloadLocalModel(config.localSpeechModel) },
                 onCancel = { onCancelLocalModel(config.localSpeechModel) },
+                onDelete = { onDeleteLocalModel(config.localSpeechModel) },
             )
         }
         if (config.provider == VoiceInputProvider.QWEN) {
@@ -349,19 +381,25 @@ internal fun VoiceInputServiceSection(
 @Composable
 internal fun LocalSpeechModelSettings(
     model: LocalSpeechModel,
+    models: List<LocalSpeechModel> = LocalSpeechModel.entries,
     status: LocalSpeechModelStatus,
     supported: Boolean,
     strings: LocaleStrings,
     onModelChange: (LocalSpeechModel) -> Unit,
     onDownload: () -> Unit,
     onCancel: () -> Unit,
+    onDelete: () -> Unit,
 ) {
     var modelMenu by remember { mutableStateOf(false) }
+    var confirmDelete by remember(model) { mutableStateOf(false) }
     Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
         Box {
             OutlinedButton(
                 onClick = { modelMenu = true },
-                enabled = supported && status !is LocalSpeechModelStatus.Downloading,
+                enabled =
+                    supported &&
+                        status !is LocalSpeechModelStatus.Downloading &&
+                        status != LocalSpeechModelStatus.Deleting,
                 modifier = Modifier.fillMaxWidth().heightIn(min = 52.dp),
                 shape = MaterialTheme.shapes.large,
             ) {
@@ -369,7 +407,7 @@ internal fun LocalSpeechModelSettings(
                 Icon(Icons.Default.ArrowDropDown, null)
             }
             DropdownMenu(modelMenu, { modelMenu = false }) {
-                LocalSpeechModel.entries.forEach { option ->
+                models.forEach { option ->
                     DropdownMenuItem(
                         text = { Text(option.displayLabel) },
                         leadingIcon = { if (option == model) Icon(Icons.Default.Check, null) },
@@ -385,6 +423,12 @@ internal fun LocalSpeechModelSettings(
         if (model == LocalSpeechModel.FUN_ASR_NANO_2512_INT8) {
             Text(
                 strings.funAsrNanoHint,
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.tertiary,
+            )
+        } else if (model == LocalSpeechModel.QWEN3_ASR_0_6B_INT8) {
+            Text(
+                strings.qwen3AsrHint,
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.tertiary,
             )
@@ -405,6 +449,10 @@ internal fun LocalSpeechModelSettings(
                 LinearProgressIndicator(Modifier.fillMaxWidth())
                 Text(strings.localModelPreparing, style = MaterialTheme.typography.bodySmall)
             }
+            LocalSpeechModelStatus.Deleting -> {
+                LinearProgressIndicator(Modifier.fillMaxWidth())
+                Text(strings.localModelDeleting, style = MaterialTheme.typography.bodySmall)
+            }
             is LocalSpeechModelStatus.Downloading -> {
                 val progress = (status.received.toFloat() / status.total.coerceAtLeast(1)).coerceIn(0f, 1f)
                 LinearProgressIndicator(progress = { progress }, modifier = Modifier.fillMaxWidth())
@@ -423,5 +471,39 @@ internal fun LocalSpeechModelSettings(
                 }
             }
         }
+        if (
+            status == LocalSpeechModelStatus.Downloaded ||
+            status == LocalSpeechModelStatus.Ready ||
+            status is LocalSpeechModelStatus.Failed
+        ) {
+            OutlinedButton(onClick = { confirmDelete = true }) {
+                Icon(Icons.Default.DeleteForever, null)
+                Spacer(Modifier.width(8.dp))
+                Text(strings.localModelDelete)
+            }
+        }
+    }
+    if (confirmDelete) {
+        AlertDialog(
+            onDismissRequest = { confirmDelete = false },
+            icon = { Icon(Icons.Default.DeleteForever, null) },
+            title = { Text(strings.localModelDeleteConfirmTitle) },
+            text = { Text(strings.localModelDeleteConfirmMessage) },
+            confirmButton = {
+                TextButton(
+                    onClick = {
+                        confirmDelete = false
+                        onDelete()
+                    },
+                ) {
+                    Text(strings.delete, color = MaterialTheme.colorScheme.error)
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { confirmDelete = false }) {
+                    Text(strings.cancel)
+                }
+            },
+        )
     }
 }

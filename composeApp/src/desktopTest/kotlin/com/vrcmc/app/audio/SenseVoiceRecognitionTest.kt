@@ -60,7 +60,11 @@ class SenseVoiceRecognitionTest {
             "Missing cached SenseVoice model or tokens: model=${path.toAbsolutePath()} ($modelValid), " +
                 "tokens=${store.auxiliaryPath?.toAbsolutePath()} ($tokensValid)",
         )
-        val recognizer = JvmLocalSpeechRecognizer(mapOf(model to store), supported = true)
+        val recognizer = JvmLocalSpeechRecognizer(
+            mapOf(model to store),
+            supported = true,
+            createEngine = ::createDesktopLocalSpeechEngine,
+        )
         try {
             assertTrue(recognizer.prepare(model), recognizer.status(model).value.toString())
             val wav = checkNotNull(javaClass.getResourceAsStream("/audio/speech-zh.wav")).use {

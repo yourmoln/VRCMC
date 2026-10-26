@@ -11,3 +11,5 @@ The service smoke test is explicitly enabled with `VRCMC_LISTENING_API_SMOKE=1`;
 `VRCMC_SENSE_VOICE_INTEGRATION_TEST=1` enables the cached SenseVoice INT8 integration test. It verifies the Chinese fixture and does not read API credentials or upload audio.
 
 `VRCMC_FUN_ASR_INTEGRATION_TEST=1` enables the cached Fun-ASR-Nano INT8 integration test against its official Chinese sample.
+
+`VRCMC_QWEN3_ASR_INTEGRATION_TEST=1` enables the cached Qwen3-ASR 0.6B INT8 integration tests. They run the official Chinese sample, verify switching between Qwen3-ASR and SenseVoice in one process, and never read API credentials or upload audio.
