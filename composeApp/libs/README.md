@@ -9,7 +9,17 @@ The Qwen3-ASR local recognizer uses these prebuilt artifacts from the Apache-2.0
 - `sherpa-onnx-native-lib-win-x64-2.0.0.jar`
   - Source: https://github.com/k2-fsa/sherpa-onnx/releases/download/v2.0.0/sherpa-onnx-native-lib-win-x64-2.0.0.jar
   - SHA-256: `2c5c1ce813b86a3cb9c3d0ce6a40c86efda00de7d4ee286b59e2fc3892186946`
+- `sherpa-onnx-android-arm64-2.0.0.aar`
+  - Source AAR: https://github.com/k2-fsa/sherpa-onnx/releases/download/v2.0.0/sherpa-onnx-static-link-onnxruntime-2.0.0.aar
+  - Source SHA-256: `59366e37cf2760b419e895d2872aa1664027fd721f6e4c827cdb0e805088fcbe`
+  - Custom Qwen-only SHA-256: `aed584f709f873875a2693e856ab99a4ba2aee8a595a4b7186dbc04e415e924e`
+  - The custom AAR is 7,526,474 bytes and contains only the Java classes plus
+    a stripped `arm64-v8a` `libsherpa-onnx-jni.so` that supports Qwen3-ASR.
 
 The native artifact contains `sherpa-onnx-jni.dll` and its matching
 `onnxruntime.dll` for Windows x64. Local recognition support remains limited to
-Windows x64, matching the platform check in the application.
+Windows x64 and Android ARM64, matching the platform checks in the application.
+The Android AAR uses the statically linked ONNX Runtime build, removes all other
+ABIs, and keeps only offline-recognition JNI bindings. See
+[BUILD_ANDROID_ARM64.md](BUILD_ANDROID_ARM64.md) and the
+[Qwen-only dispatcher](android-runtime/offline-recognizer-impl-qwen-only.cc).

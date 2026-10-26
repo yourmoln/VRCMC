@@ -321,7 +321,7 @@ interface LocaleStrings {
     val localModelReady: String get() = "模型已就绪，可离线识别"
     val localModelFailed: String get() = "本地模型准备失败，请检查网络或磁盘空间后重试。"
     val localModelRetry: String get() = "重试"
-    val localModelUnsupported: String get() = "本地识别仅在 Windows x64 上可用"
+    val localModelUnsupported: String get() = "本地识别仅在 Windows x64 或 Android ARM64 设备上可用"
     val localModelNotReady: String get() = "请在 API → 语音输入服务中选择本地模型，点击“下载模型”，完成后启用语音输入。"
     val localRecognitionFailed: String get() = "本地语音识别失败"
     val qwenApiKey: String get() = "DashScope API Key"

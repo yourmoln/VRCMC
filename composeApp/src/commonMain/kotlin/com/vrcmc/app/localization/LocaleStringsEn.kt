@@ -275,7 +275,7 @@ object LocaleStringsEn : LocaleStrings {
     override val localModelReady = "Model ready for offline recognition"
     override val localModelFailed = "Could not prepare the local model. Check your network or disk space and retry."
     override val localModelRetry = "Retry"
-    override val localModelUnsupported = "Local recognition is available only on Windows x64"
+    override val localModelUnsupported = "Local recognition is available only on Windows x64 or Android ARM64"
     override val localModelNotReady = "Select the local model under API → Voice input service, click Download model, then enable voice input once it finishes."
     override val localRecognitionFailed = "Local speech recognition failed"
     override val qwenApiKey = "DashScope API Key"

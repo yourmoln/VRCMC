@@ -53,6 +53,20 @@ internal fun VoiceInputServiceSection(
     var microphoneMenu by remember { mutableStateOf(false) }
     var advanced by remember { mutableStateOf(false) }
     val microphones = remember { availableAudioInputDevices() }
+    val supportedLocalModels =
+        remember(localRecognizer) {
+            LocalSpeechModel.entries.filter { it in localRecognizer.supportedModels }
+        }
+    LaunchedEffect(config.provider, config.localSpeechModel, supportedLocalModels) {
+        if (
+            config.provider == VoiceInputProvider.LOCAL_MODEL &&
+            supportedLocalModels.isNotEmpty() &&
+            config.localSpeechModel !in supportedLocalModels
+        ) {
+            val fallback = supportedLocalModels.first()
+            onUpdate { it.copy(localSpeechModel = fallback) }
+        }
+    }
 
     SettingsCard(strings.voiceInputService, Icons.Default.RecordVoiceOver) {
         Row(verticalAlignment = Alignment.CenterVertically) {
@@ -74,6 +88,7 @@ internal fun VoiceInputServiceSection(
                 HorizontalDivider()
                 LocalSpeechModelSettings(
                     model = config.localSpeechModel,
+                    models = supportedLocalModels,
                     status = localModelStatus,
                     supported = localRecognizer.supported,
                     strings = strings,
@@ -108,8 +123,19 @@ internal fun VoiceInputServiceSection(
                             leadingIcon = { if (provider == config.provider) Icon(Icons.Default.Check, null) },
                             onClick = {
                                 onUpdate {
+                                    val fallbackModel =
+                                        supportedLocalModels.firstOrNull() ?: it.localSpeechModel
                                     it.copy(
                                         provider = provider,
+                                        localSpeechModel =
+                                            if (
+                                                provider == VoiceInputProvider.LOCAL_MODEL &&
+                                                it.localSpeechModel !in supportedLocalModels
+                                            ) {
+                                                fallbackModel
+                                            } else {
+                                                it.localSpeechModel
+                                            },
                                         language = if (
                                             provider == VoiceInputProvider.LOCAL_MODEL &&
                                             it.language !in localSpeechLanguages
@@ -126,6 +152,7 @@ internal fun VoiceInputServiceSection(
         if (showLocalModel) {
             LocalSpeechModelSettings(
                 model = config.localSpeechModel,
+                models = supportedLocalModels,
                 status = localModelStatus,
                 supported = localRecognizer.supported,
                 strings = strings,
@@ -354,6 +381,7 @@ internal fun VoiceInputServiceSection(
 @Composable
 internal fun LocalSpeechModelSettings(
     model: LocalSpeechModel,
+    models: List<LocalSpeechModel> = LocalSpeechModel.entries,
     status: LocalSpeechModelStatus,
     supported: Boolean,
     strings: LocaleStrings,
@@ -379,7 +407,7 @@ internal fun LocalSpeechModelSettings(
                 Icon(Icons.Default.ArrowDropDown, null)
             }
             DropdownMenu(modelMenu, { modelMenu = false }) {
-                LocalSpeechModel.entries.forEach { option ->
+                models.forEach { option ->
                     DropdownMenuItem(
                         text = { Text(option.displayLabel) },
                         leadingIcon = { if (option == model) Icon(Icons.Default.Check, null) },

@@ -16,7 +16,11 @@ class Qwen3AsrRecognitionTest {
         val root = Path.of("..", "build", "qwen3-asr-test")
         val store = model.createStore(root.resolve(model.modelFileName()))
         assertTrue(store.isComplete())
-        val recognizer = JvmLocalSpeechRecognizer(mapOf(model to store), supported = true)
+        val recognizer = JvmLocalSpeechRecognizer(
+            mapOf(model to store),
+            supported = true,
+            createEngine = ::createDesktopLocalSpeechEngine,
+        )
         try {
             assertTrue(recognizer.prepare(model), recognizer.status(model).value.toString())
             val wav = Files.readAllBytes(root.resolve("test_wavs/raokouling.wav"))
@@ -46,7 +50,11 @@ class Qwen3AsrRecognitionTest {
                 funAsr to funAsr.createStore(funAsrRoot.resolve(funAsr.modelFileName())),
             )
             assumeTrue(stores.values.all { it.isComplete() })
-            val recognizer = JvmLocalSpeechRecognizer(stores, supported = true)
+            val recognizer = JvmLocalSpeechRecognizer(
+                stores,
+                supported = true,
+                createEngine = ::createDesktopLocalSpeechEngine,
+            )
             val qwenWav = Files.readAllBytes(qwenRoot.resolve("test_wavs/raokouling.wav"))
             val senseWav = checkNotNull(javaClass.getResourceAsStream("/audio/speech-zh.wav")).use {
                 it.readBytes()
@@ -83,7 +91,11 @@ class Qwen3AsrRecognitionTest {
                 funAsr to funAsr.createStore(funAsrRoot.resolve(funAsr.modelFileName())),
             )
             assumeTrue(stores.values.all { it.isComplete() })
-            val recognizer = JvmLocalSpeechRecognizer(stores, supported = true)
+            val recognizer = JvmLocalSpeechRecognizer(
+                stores,
+                supported = true,
+                createEngine = ::createDesktopLocalSpeechEngine,
+            )
             val qwenWav = Files.readAllBytes(qwenRoot.resolve("test_wavs/raokouling.wav"))
             val senseWav = checkNotNull(javaClass.getResourceAsStream("/audio/speech-zh.wav")).use {
                 it.readBytes()

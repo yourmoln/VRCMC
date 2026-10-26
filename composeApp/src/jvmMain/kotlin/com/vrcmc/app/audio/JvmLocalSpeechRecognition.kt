@@ -24,7 +24,7 @@ internal class JvmLocalSpeechRecognizer(
         LocalSpeechModelStore,
         (Long, Long) -> Unit,
     ) -> Unit = ::downloadSpeechModel,
-    private val createEngine: (LocalSpeechModel, Path) -> LocalSpeechEngine = ::createLocalSpeechEngine,
+    private val createEngine: (LocalSpeechModel, Path) -> LocalSpeechEngine,
 ) : LocalSpeechRecognizer {
     internal constructor(
         store: LocalSpeechModelStore,
@@ -32,7 +32,7 @@ internal class JvmLocalSpeechRecognizer(
         download: suspend (LocalSpeechModelStore, (Long, Long) -> Unit) -> Unit = { cache, progress ->
             downloadSpeechModel(LocalSpeechModel.SENSE_VOICE_SMALL_INT8, cache, progress)
         },
-        createEngine: (LocalSpeechModel, Path) -> LocalSpeechEngine = ::createLocalSpeechEngine,
+        createEngine: (LocalSpeechModel, Path) -> LocalSpeechEngine,
     ) : this(
         stores = mapOf(LocalSpeechModel.SENSE_VOICE_SMALL_INT8 to store),
         supported = supported,
@@ -48,6 +48,9 @@ internal class JvmLocalSpeechRecognizer(
     }
     private var engine: LocalSpeechEngine? = null
     private var loadedModel: LocalSpeechModel? = null
+
+    override val supportedModels: Set<LocalSpeechModel>
+        get() = if (supported) stores.keys else emptySet()
 
     override fun status(model: LocalSpeechModel) = statuses.getValue(model).asStateFlow()
 
@@ -246,10 +249,3 @@ internal class JvmLocalSpeechRecognizer(
         previous?.close()
     }
 }
-
-private fun createLocalSpeechEngine(model: LocalSpeechModel, path: Path): LocalSpeechEngine =
-    when (model) {
-        LocalSpeechModel.SENSE_VOICE_SMALL_INT8 -> SenseVoiceEngine(path)
-        LocalSpeechModel.FUN_ASR_NANO_2512_INT8 -> FunAsrNanoEngine(path)
-        LocalSpeechModel.QWEN3_ASR_0_6B_INT8 -> Qwen3AsrEngine(path)
-    }

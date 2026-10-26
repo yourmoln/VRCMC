@@ -9,8 +9,16 @@ internal actual val localSpeechRecognizer: LocalSpeechRecognizer by lazy {
             model.createStore(desktopLocalSpeechModelPath(model))
         },
         supported = localSpeechSupported(),
+        createEngine = ::createDesktopLocalSpeechEngine,
     )
 }
+
+internal fun createDesktopLocalSpeechEngine(model: LocalSpeechModel, path: Path): LocalSpeechEngine =
+    when (model) {
+        LocalSpeechModel.SENSE_VOICE_SMALL_INT8 -> SenseVoiceEngine(path)
+        LocalSpeechModel.FUN_ASR_NANO_2512_INT8 -> FunAsrNanoEngine(path)
+        LocalSpeechModel.QWEN3_ASR_0_6B_INT8 -> Qwen3AsrEngine(path)
+    }
 
 private fun desktopLocalSpeechModelPath(model: LocalSpeechModel): Path {
     val property = when (model) {

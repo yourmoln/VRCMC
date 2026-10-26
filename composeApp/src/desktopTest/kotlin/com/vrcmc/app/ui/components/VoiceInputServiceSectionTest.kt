@@ -50,6 +50,39 @@ class VoiceInputServiceSectionTest {
     }
 
     @Test
+    fun localProviderSelectsTheFirstSupportedModel() {
+        val recognizer = DownloadTestRecognizer(setOf(LocalSpeechModel.QWEN3_ASR_0_6B_INT8))
+        var config by mutableStateOf(
+            VoiceInputConfig(
+                enabled = true,
+                provider = VoiceInputProvider.QWEN,
+                localSpeechModel = LocalSpeechModel.SENSE_VOICE_SMALL_INT8,
+            ),
+        )
+        compose.setContent {
+            MaterialTheme {
+                Column(Modifier.width(480.dp).verticalScroll(rememberScrollState())) {
+                    VoiceInputServiceSection(
+                        config = config,
+                        strings = strings,
+                        onUpdate = { config = it(config) },
+                        localRecognizer = recognizer,
+                    )
+                }
+            }
+        }
+
+        compose.onNodeWithText(strings.voiceInputProvider).performClick()
+        compose.onNodeWithText(strings.localModel).performClick()
+        compose.runOnIdle {
+            assertEquals(LocalSpeechModel.QWEN3_ASR_0_6B_INT8, config.localSpeechModel)
+        }
+        compose.onNodeWithText(LocalSpeechModel.QWEN3_ASR_0_6B_INT8.displayLabel).performClick()
+        compose.onNodeWithText(LocalSpeechModel.SENSE_VOICE_SMALL_INT8.displayLabel).assertDoesNotExist()
+        compose.onNodeWithText(LocalSpeechModel.FUN_ASR_NANO_2512_INT8.displayLabel).assertDoesNotExist()
+    }
+
+    @Test
     fun senseVoiceModelIsShownAndDownloadsInt8Model() {
         val recognizer = DownloadTestRecognizer()
         var config by mutableStateOf(
@@ -279,7 +312,9 @@ class VoiceInputServiceSectionTest {
         compose.runOnIdle { assertEquals(1, recognizer.downloads) }
     }
 
-    private class DownloadTestRecognizer : LocalSpeechRecognizer by UnsupportedLocalSpeechRecognizer {
+    private class DownloadTestRecognizer(
+        override val supportedModels: Set<LocalSpeechModel> = LocalSpeechModel.entries.toSet(),
+    ) : LocalSpeechRecognizer by UnsupportedLocalSpeechRecognizer {
         override val supported = true
         private val statuses = LocalSpeechModel.entries.associateWith {
             MutableStateFlow<LocalSpeechModelStatus>(LocalSpeechModelStatus.Missing)

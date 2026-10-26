@@ -97,7 +97,15 @@ kotlin { jvm("desktop"); androidTarget(); iosX64(); iosArm64(); iosSimulatorArm6
     }
     androidMain {
         kotlin.srcDir("src/jvmMain/kotlin")
-        dependencies { implementation(libs.activity.compose); implementation(libs.ktor.client.cio); implementation(libs.ktor.client.okhttp); implementation(libs.kuromoji.core); implementation(kuromojiIpadicRuntime); implementation(libs.wanakana.core) }
+        dependencies {
+            implementation(libs.activity.compose)
+            implementation(libs.ktor.client.cio)
+            implementation(libs.ktor.client.okhttp)
+            implementation(libs.kuromoji.core)
+            implementation(kuromojiIpadicRuntime)
+            implementation(libs.wanakana.core)
+            implementation(files("libs/sherpa-onnx-android-arm64-2.0.0.aar"))
+        }
     }
     iosMain.dependencies { implementation(libs.ktor.client.darwin) }
 } }
@@ -110,6 +118,9 @@ android {
                     "META-INF/LICENSE.md",
                     "META-INF/NOTICE.md",
                 )
+        }
+        jniLibs {
+            useLegacyPackaging = true
         }
     }
 
@@ -129,6 +140,9 @@ android {
         targetSdk = 36
         versionCode = libs.versions.app.code.get().toInt()
         versionName = libs.versions.app.version.get()
+        ndk {
+            abiFilters += "arm64-v8a"
+        }
     }
 
     val signingProperties = Properties()
@@ -156,7 +170,10 @@ android {
         getByName("release") {
             isMinifyEnabled = true
             isShrinkResources = true
-            proguardFiles(getDefaultProguardFile("proguard-android-optimize.txt"))
+            proguardFiles(
+                getDefaultProguardFile("proguard-android-optimize.txt"),
+                "proguard-rules.pro",
+            )
             if (releaseStoreFile != null) {
                 signingConfig = signingConfigs.getByName("release")
             }

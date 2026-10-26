@@ -46,6 +46,7 @@ internal sealed interface LocalSpeechModelStatus {
 
 internal interface LocalSpeechRecognizer {
     val supported: Boolean
+    val supportedModels: Set<LocalSpeechModel>
     fun status(model: LocalSpeechModel): StateFlow<LocalSpeechModelStatus>
     // Only an explicit user action may call this; prepare() only reads the local cache.
     suspend fun downloadModel(model: LocalSpeechModel): Boolean

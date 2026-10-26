@@ -140,7 +140,7 @@ object LocaleStringsZhHans : LocaleStrings {
     override val localModelReady = "模型已就绪，可离线识别"
     override val localModelFailed = "本地模型准备失败，请检查网络或磁盘空间后重试。"
     override val localModelRetry = "重试"
-    override val localModelUnsupported = "本地识别仅在 Windows x64 上可用"
+    override val localModelUnsupported = "本地识别仅在 Windows x64 或 Android ARM64 设备上可用"
     override val localModelNotReady = "请在 API → 语音输入服务中选择本地模型，点击“下载模型”，完成后启用语音输入。"
     override val localRecognitionFailed = "本地语音识别失败"
     override val qwenApiKey = "DashScope API Key"

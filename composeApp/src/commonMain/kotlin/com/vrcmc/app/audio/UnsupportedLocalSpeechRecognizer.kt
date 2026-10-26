@@ -5,6 +5,7 @@ import kotlinx.coroutines.flow.asStateFlow
 
 internal object UnsupportedLocalSpeechRecognizer : LocalSpeechRecognizer {
     override val supported = false
+    override val supportedModels: Set<LocalSpeechModel> = emptySet()
     private val missing = MutableStateFlow<LocalSpeechModelStatus>(LocalSpeechModelStatus.Missing).asStateFlow()
     override fun status(model: LocalSpeechModel) = missing
     override suspend fun downloadModel(model: LocalSpeechModel) = false

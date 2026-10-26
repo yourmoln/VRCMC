@@ -330,7 +330,7 @@ object LocaleStringsJa : LocaleStrings {
     override val localModelReady = "モデルの準備完了・オフライン認識が可能です"
     override val localModelFailed = "モデルの準備に失敗しました。ネットワークやディスク容量を確認して再試行してください。"
     override val localModelRetry = "再試行"
-    override val localModelUnsupported = "ローカル認識は Windows x64 でのみ利用できます"
+    override val localModelUnsupported = "ローカル認識は Windows x64 または Android ARM64 デバイスでのみ利用できます"
     override val localModelNotReady = "API → 音声入力サービスでローカルモデルを選び、「モデルをダウンロード」を押してください。完了後に音声入力を有効にしてください。"
     override val localRecognitionFailed = "ローカル音声認識に失敗しました"
     override val qwenApiKey = "DashScope API Key"

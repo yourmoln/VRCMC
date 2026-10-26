@@ -1,6 +1,6 @@
 # Local speech recognition
 
-Local models are downloaded only after the user clicks Download model; they are not bundled in the application. Downloads continue across page and provider changes and when voice input is disabled. Only Cancel download explicitly cancels the task. Downloaded model files can be removed from the same settings section. Local inference is available on Windows x64.
+Local models are downloaded only after the user clicks Download model; they are not bundled in the application. Downloads continue across page and provider changes and when voice input is disabled. Only Cancel download explicitly cancels the task. Downloaded model files can be removed from the same settings section. Windows x64 supports SenseVoice, Fun-ASR Nano, and Qwen3-ASR. Android ARM64 supports Qwen3-ASR.
 
 - Model: SenseVoice Small INT8, Chinese, Cantonese, English, Japanese, and Korean, subject to the [FunASR model license](https://github.com/modelscope/FunASR#license).
 - Model source: https://huggingface.co/csukuangfj/sherpa-onnx-sense-voice-zh-en-ja-ko-yue-2024-07-17/tree/2365baeacb507f821a0c8120fcee3d484dba7a07
@@ -21,5 +21,7 @@ Local models are downloaded only after the user clicks Download model; they are 
 - Runtime: `com.microsoft.onnxruntime:onnxruntime:1.28.0` runs SenseVoice/Fun-ASR feature extraction, LFR, normalization, and CTC decoding. Qwen3-ASR uses the bundled Apache-2.0 `sherpa-onnx` 2.0.0 JVM API and Windows x64 JNI runtime with ONNX Runtime 1.28.2. Both runtimes use the same ONNX Runtime API level so the models can be switched in either order without loading incompatible native libraries.
 - Bundled JVM runtime: `sherpa-onnx-jvm-2.0.0.jar`, SHA-256 `ae9dea81af11253c874bed3a7a35e610b583f0350e8380786a1900eff8a831f0`.
 - Bundled Windows x64 native runtime: `sherpa-onnx-native-lib-win-x64-2.0.0.jar`, SHA-256 `2c5c1ce813b86a3cb9c3d0ce6a40c86efda00de7d4ee286b59e2fc3892186946`.
+- Android runtime: `sherpa-onnx-android-arm64-2.0.0.aar`, SHA-256 `aed584f709f873875a2693e856ab99a4ba2aee8a595a4b7186dbc04e415e924e`. This custom Apache-2.0 runtime contains only the `arm64-v8a` JNI library and Qwen3-ASR offline-recognition bindings.
+- Android packaging enables compressed legacy JNI packaging and restricts the app to `arm64-v8a`. The custom AAR is 7,526,474 bytes.
 
-The application checks every file size and SHA-256 digest before loading the model, including files received from the HF Mirror fallback. Deleting a model closes the active engine before removing all of its files. No cloud recognition fallback is used.
+The application checks every file size and SHA-256 digest before loading the model, including files received from the HF Mirror fallback. Deleting a model closes the active engine before removing all of its files. No cloud recognition fallback is used. Android does not support local inference on `armeabi-v7a` or x86 devices.
