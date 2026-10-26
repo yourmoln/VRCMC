@@ -1,5 +1,5 @@
 // Minimal offline recognizer dispatcher used by VRCMC's Android ARM64 build.
-// Only Qwen3-ASR is retained to avoid linking unrelated ASR runtimes.
+// Only SenseVoice is retained to avoid linking unrelated ASR runtimes.
 
 #include "sherpa-onnx/csrc/offline-recognizer-impl.h"
 
@@ -12,7 +12,7 @@
 #endif
 
 #include "sherpa-onnx/csrc/macros.h"
-#include "sherpa-onnx/csrc/offline-recognizer-qwen3-asr-impl.h"
+#include "sherpa-onnx/csrc/offline-recognizer-sense-voice-impl.h"
 #include "sherpa-onnx/csrc/text-utils.h"
 
 namespace sherpa_onnx {
@@ -28,10 +28,10 @@ OfflineRecognizerImpl::OfflineRecognizerImpl(
 
 std::unique_ptr<OfflineRecognizerImpl> OfflineRecognizerImpl::Create(
     const OfflineRecognizerConfig &config) {
-  if (!config.model_config.qwen3_asr.conv_frontend.empty()) {
-    return std::make_unique<OfflineRecognizerQwen3ASRImpl>(config);
+  if (!config.model_config.sense_voice.model.empty()) {
+    return std::make_unique<OfflineRecognizerSenseVoiceImpl>(config);
   }
-  SHERPA_ONNX_LOGE("This narrowed runtime supports only Qwen3-ASR");
+  SHERPA_ONNX_LOGE("This narrowed runtime supports only SenseVoice");
   SHERPA_ONNX_EXIT(-1);
   return nullptr;
 }
@@ -39,10 +39,10 @@ std::unique_ptr<OfflineRecognizerImpl> OfflineRecognizerImpl::Create(
 template <typename Manager>
 std::unique_ptr<OfflineRecognizerImpl> OfflineRecognizerImpl::Create(
     Manager *mgr, const OfflineRecognizerConfig &config) {
-  if (!config.model_config.qwen3_asr.conv_frontend.empty()) {
-    return std::make_unique<OfflineRecognizerQwen3ASRImpl>(mgr, config);
+  if (!config.model_config.sense_voice.model.empty()) {
+    return std::make_unique<OfflineRecognizerSenseVoiceImpl>(mgr, config);
   }
-  SHERPA_ONNX_LOGE("This narrowed runtime supports only Qwen3-ASR");
+  SHERPA_ONNX_LOGE("This narrowed runtime supports only SenseVoice");
   SHERPA_ONNX_EXIT(-1);
   return nullptr;
 }

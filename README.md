@@ -31,7 +31,7 @@ VRCMC 是一款基于 Kotlin Multiplatform 与 Compose Multiplatform 开发的 V
 - **VRChat Chatbox**：通过 OSC 向同一台电脑或局域网中的 VRChat 发送消息。可保存多个设备并切换，桌面版和 Android 还可扫描局域网设备；只填 IP 时使用 `9000:IP:9001`，也可指定收发端口。输入框会根据 Chatbox 的 144 字符、9 行限制和输出语言数量计算字符上限，可在偏好设置中关闭动态字符限制。
 - **翻译服务**：API 页面可选择 Qwen、Microsoft Edge Web（Bing）、DeepSeek、OpenAI/GPT 或自定义兼容端点。可按服务支持情况设置 API Key、Base URL、模型、超时、重试、备用模型、自定义请求头和流式响应。
 - **翻译输出**：最多选择两种目标语言，设置是否显示原文、换行方式和原文/译文顺序，也可以先发送原文再发送译文。
-- **语音输入**：可使用 Qwen Fun-ASR 云端识别。Windows x64 支持 SenseVoice Small INT8、Fun-ASR-Nano INT8 和 Qwen3-ASR 0.6B INT8 本地识别；Android ARM64 支持 Qwen3-ASR 0.6B INT8 本地识别。已下载模型可删除，桌面版可选择麦克风，移动端需要麦克风权限。
+- **语音输入**：可使用 Qwen Fun-ASR 云端识别。Windows x64 支持 SenseVoice Small INT8、Fun-ASR-Nano INT8 和 Qwen3-ASR 0.6B INT8 本地识别；Android ARM64 支持 SenseVoice Small INT8 本地识别。已下载模型可删除，桌面版可选择麦克风，移动端需要麦克风权限。
 - **同声传译**：可配合系统语音输入或应用内识别。开启后会根据 VRChat 麦克风状态采集语音，闭麦后翻译并发送；“始终传译”会在输入暂停后自动发送，并可合并快速连续消息。
 - **听别人说话（Windows）**：点击聊天页右上角的耳朵按钮，监听 Windows 默认播放设备并在本地检测人声，在置顶字幕窗口中按句显示原文和一种译文。窗口可调整大小、最小化和不透明度，设置中可选择听的语言和目标语言。
 - **SteamVR 叠加界面**：可在字幕设置中开启，位置支持左手、右手或屏幕中间；手部面板跟随控制器，屏幕中间面板跟随头显。大小可选 50%–200%，字幕字号可独立选择 75%–200%，与桌面字幕共用 30%–100% 的不透明度，需要 SteamVR 和已连接的头显。

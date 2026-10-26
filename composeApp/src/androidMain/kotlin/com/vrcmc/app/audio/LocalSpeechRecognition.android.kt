@@ -8,13 +8,13 @@ internal actual val localSpeechRecognizer: LocalSpeechRecognizer by lazy {
     if (context == null || !androidLocalSpeechSupported()) {
         UnsupportedLocalSpeechRecognizer
     } else {
-        val model = LocalSpeechModel.QWEN3_ASR_0_6B_INT8
+        val model = LocalSpeechModel.SENSE_VOICE_SMALL_INT8
         JvmLocalSpeechRecognizer(
             stores = mapOf(
                 model to model.createStore(
                     context.filesDir
                         .resolve("models")
-                        .resolve("qwen3-asr-0.6b")
+                        .resolve("sense-voice-small")
                         .resolve(model.modelFileName())
                         .toPath(),
                 ),
@@ -30,8 +30,8 @@ private fun createAndroidLocalSpeechEngine(
     path: Path,
 ): LocalSpeechEngine =
     when (model) {
-        LocalSpeechModel.QWEN3_ASR_0_6B_INT8 -> Qwen3AsrEngine(path)
-        LocalSpeechModel.SENSE_VOICE_SMALL_INT8,
+        LocalSpeechModel.SENSE_VOICE_SMALL_INT8 -> SenseVoiceAndroidEngine(path)
+        LocalSpeechModel.QWEN3_ASR_0_6B_INT8,
         LocalSpeechModel.FUN_ASR_NANO_2512_INT8,
         -> error("Unsupported Android local speech model: ${model.serializedName}")
     }

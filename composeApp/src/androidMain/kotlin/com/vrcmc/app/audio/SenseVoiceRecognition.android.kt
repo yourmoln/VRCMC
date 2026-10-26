@@ -1,26 +1,26 @@
 package com.vrcmc.app
 
 import com.k2fsa.sherpa.onnx.OfflineModelConfig
-import com.k2fsa.sherpa.onnx.OfflineQwen3AsrModelConfig
 import com.k2fsa.sherpa.onnx.OfflineRecognizer
 import com.k2fsa.sherpa.onnx.OfflineRecognizerConfig
+import com.k2fsa.sherpa.onnx.OfflineSenseVoiceModelConfig
 import java.nio.file.Path
 
-private const val qwen3AsrSampleRate = 16_000
+private const val senseVoiceSampleRate = 16_000
 
-internal class Qwen3AsrEngine(model: Path) : LocalSpeechEngine {
+internal class SenseVoiceAndroidEngine(model: Path) : LocalSpeechEngine {
     private val recognizer = OfflineRecognizer(
         config =
             OfflineRecognizerConfig(
                 modelConfig =
                     OfflineModelConfig(
-                        qwen3Asr =
-                            OfflineQwen3AsrModelConfig(
-                                convFrontend = model.resolveSibling("conv_frontend.onnx").toString(),
-                                encoder = model.toString(),
-                                decoder = model.resolveSibling("decoder.int8.onnx").toString(),
-                                tokenizer = model.resolveSibling("tokenizer").toString(),
+                        senseVoice =
+                            OfflineSenseVoiceModelConfig(
+                                model = model.toString(),
+                                language = "auto",
+                                useInverseTextNormalization = true,
                             ),
+                        tokens = model.resolveSibling("tokens.txt").toString(),
                         numThreads =
                             Runtime.getRuntime().availableProcessors().let {
                                 (it / 2).coerceIn(1, 6)
@@ -35,11 +35,11 @@ internal class Qwen3AsrEngine(model: Path) : LocalSpeechEngine {
     override fun transcribe(samples: FloatArray, language: String): String {
         val stream = recognizer.createStream()
         return try {
-            stream.acceptWaveform(samples, qwen3AsrSampleRate)
+            stream.acceptWaveform(samples, senseVoiceSampleRate)
             recognizer.decode(stream)
             recognizer.getResult(stream).text.trim()
         } catch (error: Exception) {
-            throw IllegalStateException("Qwen3-ASR inference failed", error)
+            throw IllegalStateException("SenseVoice inference failed", error)
         } finally {
             stream.release()
         }

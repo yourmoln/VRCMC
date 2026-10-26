@@ -1,4 +1,4 @@
-# Android ARM64 Qwen3-ASR native runtime
+# Android ARM64 SenseVoice native runtime
 
 The Android runtime is built from
 [sherpa-onnx v2.0.0](https://github.com/k2-fsa/sherpa-onnx/tree/v2.0.0)
@@ -16,7 +16,7 @@ The Android runtime is built from
 - `SHERPA_ONNX_ENABLE_BINARY=OFF`
 
 Replace `offline-recognizer-impl.cc` with
-[offline-recognizer-impl-qwen-only.cc](android-runtime/offline-recognizer-impl-qwen-only.cc),
+[offline-recognizer-impl-sense-voice-only.cc](android-runtime/offline-recognizer-impl-sense-voice-only.cc),
 and change its source entry in `sherpa-onnx/csrc/CMakeLists.txt` accordingly.
 In `sherpa-onnx/jni/CMakeLists.txt`, keep only:
 
@@ -30,7 +30,7 @@ wave-reader.cc
 ```
 
 This removes every JNI binding unrelated to offline recognition and narrows
-the C++ recognizer dispatcher to Qwen3-ASR.
+the C++ recognizer dispatcher to SenseVoice.
 
 Build `sherpa-onnx-jni`, strip it with the NDK's `llvm-strip
 --strip-unneeded`, then place it at:
@@ -40,9 +40,9 @@ jni/arm64-v8a/libsherpa-onnx-jni.so
 ```
 
 Use the `AndroidManifest.xml`, `classes.jar`, `R.txt`, and AAR metadata from
-the official statically linked AAR. The resulting trimmed AAR is 7,526,474
+the official statically linked AAR. The resulting trimmed AAR is 7,484,372
 bytes with SHA-256
-`aed584f709f873875a2693e856ab99a4ba2aee8a595a4b7186dbc04e415e924e`.
+`b281330fdd3f4e69b9bb03b837b6e6c6c432266c2fdb0e346902844734921bfb`.
 
 Build the application with:
 
@@ -50,5 +50,5 @@ Build the application with:
 .\gradlew.bat :composeApp:assembleRelease
 ```
 
-The verified release APK for this revision is 9,735,727 bytes. JNI libraries
+The verified release APK for this revision is 9,694,107 bytes. JNI libraries
 are packaged compressed and the app contains only `arm64-v8a`.
