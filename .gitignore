@@ -1,0 +1,12 @@
+# Local application sources and build state from the main branch.
+/.gradle/
+/.kotlin/
+/build/
+/composeApp/
+/local.properties
+/vrcmc-release.jks
+
+# Editor and operating-system files.
+.DS_Store
+Thumbs.db
+*.log

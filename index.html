@@ -1,0 +1,543 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#07101f">
+  <title>VRCMC — 把翻译后的消息，轻松送进 VRChat</title>
+  <meta name="description" content="VRCMC 是支持 Windows 和 Android 的开源 VRChat Chatbox 助手，集成本地网络 OSC、多语言翻译、语音输入与 SteamVR 字幕。">
+  <meta name="color-scheme" content="dark">
+  <meta property="og:type" content="website">
+  <meta property="og:title" content="VRCMC — 跨越语言，自在地聊天">
+  <meta property="og:description" content="翻译、语音输入和字幕，在 VRChat 里自然连在一起。">
+  <meta property="og:url" content="https://yourmoln.github.io/VRCMC/">
+  <meta property="og:image" content="https://yourmoln.github.io/VRCMC/assets/Screenshot.png">
+  <meta name="twitter:card" content="summary_large_image">
+  <link rel="canonical" href="https://yourmoln.github.io/VRCMC/">
+  <link rel="icon" type="image/png" href="assets/Logo.png">
+  <link rel="stylesheet" href="style.css">
+  <script>document.documentElement.classList.add('js');</script>
+  <script type="application/ld+json">
+    {
+      "@context": "https://schema.org",
+      "@type": "SoftwareApplication",
+      "name": "VRCMC",
+      "applicationCategory": "UtilitiesApplication",
+      "operatingSystem": "Windows, Android",
+      "description": "An open-source VRChat Chatbox companion with OSC, translation, voice input, subtitles, and SteamVR overlay support.",
+      "url": "https://yourmoln.github.io/VRCMC/",
+      "codeRepository": "https://github.com/yourmoln/VRCMC",
+      "license": "https://github.com/yourmoln/VRCMC/blob/main/LICENSE",
+      "offers": {
+        "@type": "Offer",
+        "price": "0",
+        "priceCurrency": "USD"
+      }
+    }
+  </script>
+</head>
+<body>
+  <a class="skip-link" href="#main" data-i18n="accessibility.skip">跳到主要内容</a>
+
+  <header class="site-header">
+    <div class="container header-inner">
+      <a class="brand" href="#top" aria-label="VRCMC">
+        <span class="brand-mark">
+          <img src="assets/Logo.png" width="44" height="44" alt="">
+        </span>
+        <span class="brand-word">VRCMC</span>
+        <span class="brand-tag" data-i18n="nav.badge">VRChat Chatbox</span>
+      </a>
+
+      <button class="nav-toggle" type="button" aria-expanded="false" aria-controls="primary-navigation">
+        <span class="sr-only" data-i18n="nav.menu">打开导航</span>
+        <span></span>
+        <span></span>
+      </button>
+
+      <nav class="primary-nav" id="primary-navigation" aria-label="主导航" data-i18n-aria-label="nav.primaryLabel">
+        <a href="#features" data-i18n="nav.features">功能</a>
+        <a href="#how-it-works" data-i18n="nav.how">快速上手</a>
+        <a href="#interface" data-i18n="nav.interface">界面</a>
+        <a href="#open-source" data-i18n="nav.open">开源项目</a>
+      </nav>
+
+      <div class="header-actions">
+        <label class="sr-only" for="language-select" data-i18n="language.label">选择语言</label>
+        <div class="language-picker">
+          <svg aria-hidden="true" viewBox="0 0 24 24" width="17" height="17">
+            <path d="M12 2a10 10 0 1 0 0 20 10 10 0 0 0 0-20Zm6.93 6h-3.1a15.7 15.7 0 0 0-1.38-3.56A8.03 8.03 0 0 1 18.93 8ZM12 4.04c.82 1.2 1.5 2.53 1.98 3.96h-3.96c.48-1.43 1.16-2.76 1.98-3.96ZM4.26 14A7.9 7.9 0 0 1 4 12c0-.69.1-1.36.26-2h3.38a16.7 16.7 0 0 0 0 4H4.26Zm.81 2h3.1c.34 1.27.8 2.46 1.38 3.56A8.03 8.03 0 0 1 5.07 16Zm3.1-8h-3.1a8.03 8.03 0 0 1 4.48-3.56A15.7 15.7 0 0 0 8.17 8ZM12 19.96A13.9 13.9 0 0 1 10.02 16h3.96A13.9 13.9 0 0 1 12 19.96ZM14.34 14H9.66a14.8 14.8 0 0 1 0-4h4.68a14.8 14.8 0 0 1 0 4Zm.6 5.56c.58-1.1 1.04-2.29 1.38-3.56h3.1a8.03 8.03 0 0 1-4.48 3.56ZM16.55 14a16.7 16.7 0 0 0 0-4h3.38c.16.64.26 1.31.26 2 0 .69-.1 1.36-.26 2h-3.38Z"/>
+          </svg>
+          <select id="language-select" data-language-select>
+            <option value="zh-CN">简体中文</option>
+            <option value="zh-TW">繁體中文</option>
+            <option value="en">English</option>
+            <option value="ja">日本語</option>
+          </select>
+        </div>
+        <a class="button button-small button-ghost header-download" href="https://github.com/yourmoln/VRCMC/releases/latest" data-i18n="nav.github">
+          GitHub
+        </a>
+      </div>
+    </div>
+  </header>
+
+  <main id="main">
+    <section class="hero" id="top">
+      <div class="hero-glow hero-glow-one" aria-hidden="true"></div>
+      <div class="hero-glow hero-glow-two" aria-hidden="true"></div>
+      <div class="hero-grid" aria-hidden="true"></div>
+
+      <div class="container hero-layout">
+        <div class="hero-copy">
+          <p class="eyebrow hero-eyebrow">
+            <span class="eyebrow-dot" aria-hidden="true"></span>
+            <span data-i18n="hero.eyebrow">OSC · 翻译 · 语音 · VR</span>
+          </p>
+          <h1>
+            <span data-i18n="hero.title1">跨越语言，</span>
+            <span class="gradient-text" data-i18n="hero.title2">自在地聊天。</span>
+          </h1>
+          <p class="hero-lede" data-i18n="hero.subtitle">
+            把翻译、语音输入与实时字幕带进 VRChat。VRCMC 通过局域网 OSC 连接你的虚拟世界，让每一句话都自然抵达。
+          </p>
+
+          <div class="hero-actions">
+            <a class="button button-primary" href="https://github.com/yourmoln/VRCMC/releases/latest">
+              <svg aria-hidden="true" viewBox="0 0 24 24" width="19" height="19">
+                <path d="M12 3v12m0 0 5-5m-5 5-5-5M5 20h14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+              </svg>
+              <span data-i18n="hero.primary">下载最新版</span>
+            </a>
+            <a class="button button-secondary" href="#how-it-works">
+              <span data-i18n="hero.secondary">看看如何使用</span>
+              <svg aria-hidden="true" viewBox="0 0 24 24" width="18" height="18">
+                <path d="m9 5 7 7-7 7" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+              </svg>
+            </a>
+          </div>
+
+          <div class="platform-row" aria-label="支持平台" data-i18n-aria-label="hero.platform">
+            <span class="platform-label" data-i18n="hero.platform">支持平台</span>
+            <span class="platform-chip">
+              <svg aria-hidden="true" viewBox="0 0 24 24" width="16" height="16"><path d="M4 4h16v12H4V4Zm5 15h6M12 16v3" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+              Windows
+            </span>
+            <span class="platform-chip">
+              <svg aria-hidden="true" viewBox="0 0 24 24" width="16" height="16"><rect x="7" y="3" width="10" height="18" rx="2" fill="none" stroke="currentColor" stroke-width="2"/><path d="M11 18h2" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+              Android
+            </span>
+          </div>
+
+          <div class="trust-row">
+            <span>
+              <svg aria-hidden="true" viewBox="0 0 20 20" width="16" height="16"><path d="M5 9V6a5 5 0 0 1 10 0v3m-9-2h8a1 1 0 0 1 1 1v7H5v-7a1 1 0 0 1 1-1Z" fill="none" stroke="currentColor" stroke-width="1.6"/></svg>
+              <span data-i18n="hero.trust1">本机优先</span>
+            </span>
+            <span>
+              <svg aria-hidden="true" viewBox="0 0 20 20" width="16" height="16"><path d="m10 2 6 2.5v4.6c0 4-2.5 6.9-6 8.9-3.5-2-6-4.9-6-8.9V4.5L10 2Zm-2.5 8 1.8 1.8 3.5-3.7" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>
+              <span data-i18n="hero.trust2">开源可审计</span>
+            </span>
+            <span>
+              <svg aria-hidden="true" viewBox="0 0 20 20" width="16" height="16"><path d="M4 4h12v12H4V4Zm2.5 4 2 2-2 2m4.5 0h3" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>
+              <span>MIT License</span>
+            </span>
+          </div>
+        </div>
+
+        <div class="hero-visual" aria-label="VRCMC 翻译聊天界面" data-i18n-aria-label="hero.visualLabel">
+          <div class="orbit orbit-one" aria-hidden="true"></div>
+          <div class="orbit orbit-two" aria-hidden="true"></div>
+
+          <div class="app-window">
+            <div class="window-bar">
+              <span class="window-dots" aria-hidden="true"><i></i><i></i><i></i></span>
+              <span class="window-title">VRCMC</span>
+              <span class="live-pill"><i aria-hidden="true"></i><span data-i18n="hero.live">OSC 已连接</span></span>
+            </div>
+            <div class="app-body">
+              <aside class="app-sidebar" aria-hidden="true">
+                <div class="app-brand">
+                  <img src="assets/Logo.png" width="34" height="34" alt="">
+                  <strong>VRCMC</strong>
+                </div>
+                <div class="side-item active"><span class="side-icon"></span><span data-i18n="hero.chatNav">聊天</span></div>
+                <div class="side-item"><span class="side-icon short"></span><span data-i18n="hero.devicesNav">设备管理</span></div>
+                <div class="side-item"><span class="side-icon"></span><span data-i18n="hero.apiNav">API 配置</span></div>
+                <div class="side-item"><span class="side-icon short"></span><span data-i18n="hero.languageNav">翻译语言</span></div>
+                <div class="side-divider"></div>
+                <div class="side-item"><span class="side-icon"></span><span data-i18n="hero.settingsNav">偏好设置</span></div>
+              </aside>
+
+              <div class="chat-panel">
+                <div class="chat-top">
+                  <span class="device-dot"></span>
+                  <span class="device-address">127.0.0.1</span>
+                  <span class="device-ports">9000 / 9001</span>
+                  <span class="chat-spacer"></span>
+                  <span class="mini-action" aria-hidden="true">
+                    <svg viewBox="0 0 24 24" width="18" height="18"><path d="M7 9c1.2-2.3 3.2-3.5 6-3.5 2.2 0 3.8.8 5 2.3.7.9 1.2 1.9 1.5 3.1-1.2 1.5-2.2 2.9-3.1 4.2-.7 1-1.3 1.6-1.9 1.9-.9.5-1.8.3-2.6-.5-.7-.7-1.1-1.6-1.3-2.6-.2-1.4-.9-2.4-2.1-3.1L7 11.3V9Z" fill="none" stroke="currentColor" stroke-width="1.7"/></svg>
+                  </span>
+                </div>
+                <div class="chat-messages">
+                  <div class="message-row outgoing">
+                    <div class="chat-bubble outgoing-bubble" data-i18n="hero.message1">欢迎使用 VRCMC</div>
+                  </div>
+                  <div class="message-row">
+                    <div class="translated-card">
+                      <div class="translated-meta">
+                        <span class="sparkle" aria-hidden="true">✦</span>
+                        <span data-i18n="hero.translatedLabel">日本語</span>
+                      </div>
+                      <div class="romaji">konnichiwa, yoroshiku onegai shimasu.</div>
+                      <div class="translated-text" data-i18n="hero.message2">こんにちは、よろしくお願いします。</div>
+                    </div>
+                  </div>
+                  <div class="message-row outgoing">
+                    <div class="chat-bubble outgoing-bubble smaller" data-i18n="hero.message3">初次见面，请多关照</div>
+                  </div>
+                  <div class="message-row">
+                    <div class="translated-card">
+                      <div class="translated-meta">
+                        <span class="sparkle" aria-hidden="true">✦</span>
+                        <span data-i18n="hero.translatedLabel">日本語</span>
+                      </div>
+                      <div class="romaji">hajimemashite, yoroshiku onegai shimasu.</div>
+                      <div class="translated-text" data-i18n="hero.message4">初めまして、よろしくお願いします。</div>
+                    </div>
+                  </div>
+                </div>
+                <div class="chat-composer">
+                  <span class="mic-button">
+                    <svg aria-hidden="true" viewBox="0 0 24 24" width="18" height="18"><rect x="9" y="3" width="6" height="11" rx="3" fill="none" stroke="currentColor" stroke-width="1.8"/><path d="M5.5 11.5a6.5 6.5 0 0 0 13 0M12 18v3" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>
+                  </span>
+                  <span class="composer-placeholder" data-i18n="hero.inputPlaceholder">输入消息...</span>
+                  <span class="send-button" aria-hidden="true">
+                    <svg viewBox="0 0 24 24" width="18" height="18"><path d="m5 5 14 7-14 7 3-7-3-7Zm3 7h11" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                  </span>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div class="floating-card floating-translation">
+            <span class="float-icon">
+              <svg aria-hidden="true" viewBox="0 0 24 24" width="18" height="18"><path d="m5 8 7-4 7 4-7 4-7-4Zm0 4 7 4 7-4M5 16l7 4 7-4" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/></svg>
+            </span>
+            <span>
+              <strong data-i18n="hero.floatTitle">翻译完成</strong>
+              <small>ZH → JA</small>
+            </span>
+            <span class="checkmark" aria-hidden="true">✓</span>
+          </div>
+
+          <div class="floating-card floating-audio">
+            <span class="voice-bars" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i></span>
+            <span>
+              <strong data-i18n="hero.floatVoice">语音识别中</strong>
+              <small data-i18n="hero.floatVoiceDetail">Fun-ASR</small>
+            </span>
+          </div>
+        </div>
+      </div>
+
+      <div class="container">
+        <div class="stats-bar reveal">
+          <div class="stat-item">
+            <strong>4</strong>
+            <span data-i18n="stats.languages">界面语言</span>
+          </div>
+          <div class="stat-item">
+            <strong>2</strong>
+            <span data-i18n="stats.targets">翻译目标语言</span>
+          </div>
+          <div class="stat-item">
+            <strong>2</strong>
+            <span data-i18n="stats.platforms">支持平台</span>
+          </div>
+          <div class="stat-item stat-note">
+            <span class="stat-note-icon" aria-hidden="true">⌁</span>
+            <span data-i18n="stats.note">低延迟局域网 OSC 连接</span>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section class="section features-section" id="features">
+      <div class="container">
+        <div class="section-heading reveal">
+          <p class="eyebrow" data-i18n="features.eyebrow">为自然交流而设计</p>
+          <h2><span data-i18n="features.title1">不只是翻译，</span><span class="muted-heading" data-i18n="features.title2">更懂聊天节奏。</span></h2>
+          <p data-i18n="features.subtitle">从输入到发送，从麦克风到字幕，把跨语言交流需要的一切放进一个流畅的工具里。</p>
+        </div>
+
+        <div class="feature-grid">
+          <article class="feature-card feature-wide feature-translation reveal">
+            <div class="feature-copy">
+              <span class="feature-icon icon-blue">
+                <svg aria-hidden="true" viewBox="0 0 24 24" width="24" height="24"><path d="M4 5h9v9H7l-3 3V5Zm7 14h9v-9h-5m2-6 4 4m0-4-4 4" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/></svg>
+              </span>
+              <h3 data-i18n="feature.translation.title">先翻译，再发送</h3>
+              <p data-i18n="feature.translation.body">最多选择两种目标语言，自由安排原文、译文和发送顺序。消息在进入 Chatbox 前就已准备好。</p>
+              <div class="chip-row">
+                <span class="soft-chip">Qwen</span>
+                <span class="soft-chip">DeepSeek</span>
+                <span class="soft-chip">Edge Web</span>
+                <span class="soft-chip">OpenAI</span>
+              </div>
+            </div>
+            <div class="feature-visual translation-visual" aria-hidden="true">
+              <div class="language-pulse">
+                <span>ZH</span>
+                <i></i>
+                <span>JA</span>
+                <i></i>
+                <span>EN</span>
+              </div>
+              <div class="output-stack">
+                <div><span class="tiny-label" data-i18n="feature.translation.original">原文</span><strong data-i18n="feature.translation.sampleOriginal">今晚一起去看烟花吗？</strong></div>
+                <div><span class="tiny-label accent">日本語</span><strong data-i18n="feature.translation.sampleTranslated">今夜、一緒に花火を見に行かない？</strong></div>
+              </div>
+              <span class="sent-badge" data-i18n="feature.translation.sent">已发送 · 2/2</span>
+            </div>
+          </article>
+
+          <article class="feature-card feature-voice reveal">
+            <span class="feature-icon icon-coral">
+              <svg aria-hidden="true" viewBox="0 0 24 24" width="24" height="24"><rect x="9" y="3" width="6" height="11" rx="3" fill="none" stroke="currentColor" stroke-width="1.8"/><path d="M5.5 11.5a6.5 6.5 0 0 0 13 0M12 18v3" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>
+            </span>
+            <h3 data-i18n="feature.voice.title">说出来，比打字更快</h3>
+            <p data-i18n="feature.voice.body">接入云端或本地 ASR，在说话结束后自动识别、翻译并发送。</p>
+            <div class="voice-visual" aria-hidden="true">
+              <span class="voice-status"><i></i><span data-i18n="feature.voice.listening">正在聆听</span></span>
+              <div class="waveform">
+                <i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i>
+              </div>
+              <span class="voice-caption" data-i18n="feature.voice.sample">“今天的风景真漂亮”</span>
+            </div>
+          </article>
+
+          <article class="feature-card feature-listen reveal">
+            <span class="feature-icon icon-orange">
+              <svg aria-hidden="true" viewBox="0 0 24 24" width="24" height="24"><path d="M6 9c1.2-2.8 3.5-4.2 6.7-4.2 2.3 0 4.2.9 5.5 2.7.8 1 1.4 2.2 1.8 3.7-1.4 1.8-2.6 3.4-3.6 5-.8 1.1-1.5 1.9-2.2 2.3-1 .5-2 .3-2.8-.5-.8-.8-1.2-1.8-1.4-2.9-.2-1.7-1-2.9-2.4-3.7L6 13.1V9Z" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round"/></svg>
+            </span>
+            <h3 data-i18n="feature.listen.title">听懂身边的每一句</h3>
+            <p data-i18n="feature.listen.body">Windows 版可监听默认播放设备，在置顶字幕窗口中按句显示原文与译文。</p>
+            <div class="subtitle-visual" aria-hidden="true">
+              <div class="subtitle-top"><span></span><span></span><span></span></div>
+              <div class="subtitle-content">
+                <small>日本語</small>
+                <strong>この世界は、本当に綺麗だね。</strong>
+                <span data-i18n="feature.listen.sample">这个世界，真的很美。</span>
+              </div>
+              <div class="subtitle-footer"><span data-i18n="feature.listen.caption">始终置顶</span><span class="opacity-track"><i></i></span></div>
+            </div>
+          </article>
+
+          <article class="feature-card feature-wide feature-vr reveal">
+            <div class="feature-copy">
+              <span class="feature-icon icon-violet">
+                <svg aria-hidden="true" viewBox="0 0 24 24" width="24" height="24"><path d="M3 7h18v10H3V7Zm4 3h2.5c.8 0 1.5.7 1.5 1.5S10.3 13 9.5 13H7.8V8Zm8.2 0h2.5c.8 0 1.5.7 1.5 1.5S18.5 13 17.7 13H16V8Z" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round"/><path d="M9 17l-2 3m10-3 2 3" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/></svg>
+              </span>
+              <h3 data-i18n="feature.vr.title">字幕，就在视野里</h3>
+              <p data-i18n="feature.vr.body">将字幕投到左手、右手或视野中央，随控制器和头显自然移动。大小、字级与不透明度都可调。</p>
+              <span class="text-link" aria-hidden="true"><span data-i18n="feature.vr.detail">SteamVR Overlay</span> <span>↗</span></span>
+            </div>
+            <div class="vr-visual" aria-hidden="true">
+              <div class="vr-headset">
+                <span class="vr-lens lens-left"></span>
+                <span class="vr-lens lens-right"></span>
+                <span class="vr-bridge"></span>
+              </div>
+              <div class="vr-overlay">
+                <div class="overlay-pill"><i></i><span data-i18n="feature.vr.live">实时字幕</span></div>
+                <strong>Let's explore this world together.</strong>
+                <span data-i18n="feature.vr.sample">一起探索这个世界吧。</span>
+              </div>
+              <div class="vr-controller controller-left"></div>
+              <div class="vr-controller controller-right"></div>
+              <span class="vr-spark spark-one"></span>
+              <span class="vr-spark spark-two"></span>
+            </div>
+          </article>
+
+          <article class="feature-card feature-security reveal">
+            <span class="feature-icon icon-green">
+              <svg aria-hidden="true" viewBox="0 0 24 24" width="24" height="24"><path d="m12 3 7 3v5.5c0 4.6-2.9 8-7 9.5-4.1-1.5-7-4.9-7-9.5V6l7-3Zm-3 9 2 2 4-4" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/></svg>
+            </span>
+            <h3 data-i18n="feature.security.title">你的设置，留在你的设备</h3>
+            <p data-i18n="feature.security.body">聊天记录、热词和设置默认保存在本机；敏感凭据使用系统安全存储。只有你主动选择的服务才会接收待翻译文本。</p>
+            <ul class="security-list">
+              <li><span>01</span><span data-i18n="feature.security.local">聊天记录本地保存</span></li>
+              <li><span>02</span><span data-i18n="feature.security.keystore">Keystore / DPAPI / Keychain</span></li>
+              <li><span>03</span><span data-i18n="feature.security.choice">服务选择由你决定</span></li>
+            </ul>
+          </article>
+
+          <article class="feature-card feature-tools reveal">
+            <span class="feature-icon icon-cyan">
+              <svg aria-hidden="true" viewBox="0 0 24 24" width="24" height="24"><path d="M4 5h11v14H4V5Zm11 4h5v10h-5M7 9h5m-5 3h5m-5 3h3" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/></svg>
+            </span>
+            <h3 data-i18n="feature.tools.title">小工具，也认真做</h3>
+            <p data-i18n="feature.tools.body">热词替换、整句屏蔽、日文罗马字、消息朗读与应用内更新，都在需要时安静地出现。</p>
+            <div class="tool-tags" aria-hidden="true">
+              <span>TTS</span>
+              <span>ROM AJI</span>
+              <span>HOTWORDS</span>
+              <span>JSON</span>
+            </div>
+          </article>
+        </div>
+      </div>
+    </section>
+
+    <section class="section interface-section" id="interface">
+      <div class="container interface-layout">
+        <div class="interface-copy reveal">
+          <p class="eyebrow" data-i18n="interface.eyebrow">一看就会</p>
+          <h2 data-i18n="interface.title">熟悉的聊天界面，刚刚好的工具。</h2>
+          <p data-i18n="interface.body">桌面和手机共享同一套清晰的操作逻辑。设备、翻译和语音设置各就各位，不影响你真正想做的事：和眼前的人聊天。</p>
+          <ul class="check-list">
+            <li><span>✓</span><span data-i18n="interface.point1">浅色、深色与跟随系统主题</span></li>
+            <li><span>✓</span><span data-i18n="interface.point2">简中、繁中、英文与日文界面</span></li>
+            <li><span>✓</span><span data-i18n="interface.point3">桌面端局域网设备自动发现</span></li>
+          </ul>
+        </div>
+
+        <div class="screenshot-stage reveal">
+          <div class="stage-glow" aria-hidden="true"></div>
+          <div class="desktop-frame">
+            <div class="frame-toolbar">
+              <span class="frame-brand"><img src="assets/Logo.png" width="20" height="20" alt=""> <span>VRCMC</span></span>
+              <span class="frame-address" data-i18n="interface.windowLabel">聊天界面</span>
+              <span class="frame-controls" aria-hidden="true">− □ ×</span>
+            </div>
+            <img src="assets/Screenshot.png" width="1086" height="753" alt="VRCMC 桌面端聊天界面截图" data-i18n-alt="interface.screenshotAlt">
+          </div>
+          <div class="mobile-frame">
+            <div class="phone-speaker"></div>
+            <div class="phone-screen">
+              <div class="phone-appbar">
+                <img src="assets/Logo.png" width="26" height="26" alt="">
+                <strong>VRCMC</strong>
+                <span>JA</span>
+              </div>
+              <div class="phone-chat">
+                <div class="phone-bubble self" data-i18n="interface.phoneOriginal">欢迎来到新世界</div>
+                <div class="phone-translation">
+                  <span data-i18n="interface.phoneLanguage">日本語</span>
+                  <strong data-i18n="interface.phoneTranslated">新しい世界へようこそ</strong>
+                </div>
+                <div class="phone-bubble" data-i18n="interface.phoneReply">一緒に遊ぼう！</div>
+              </div>
+              <div class="phone-composer">
+                <span class="phone-mic">●</span>
+                <span data-i18n="interface.phoneInput">输入消息...</span>
+                <span class="phone-send">➤</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section class="section how-section" id="how-it-works">
+      <div class="container">
+        <div class="section-heading centered reveal">
+          <p class="eyebrow" data-i18n="how.eyebrow">三步开始</p>
+          <h2 data-i18n="how.title">从安装到开口，几分钟就好。</h2>
+          <p data-i18n="how.subtitle">不需要复杂配置。选择习惯的平台，让 VRCMC 与 VRChat 通过本机或局域网 OSC 建立连接。</p>
+        </div>
+
+        <div class="steps-grid">
+          <article class="step-card reveal">
+            <span class="step-number">01</span>
+            <span class="step-icon">
+              <svg aria-hidden="true" viewBox="0 0 24 24" width="24" height="24"><path d="M12 3v11m0 0 4-4m-4 4-4-4M5 17v3h14v-3" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
+            </span>
+            <h3 data-i18n="how.step1.title">安装并打开 VRCMC</h3>
+            <p data-i18n="how.step1.body">从 GitHub Releases 下载 Windows 安装包或 Android APK，安装后即可开始使用。</p>
+          </article>
+          <article class="step-card reveal">
+            <span class="step-number">02</span>
+            <span class="step-icon">
+              <svg aria-hidden="true" viewBox="0 0 24 24" width="24" height="24"><path d="M5 7h14v10H5V7Zm3 3h2m4 0h2m-8 4h2m4 0h2" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>
+            </span>
+            <h3 data-i18n="how.step2.title">连接 VRChat</h3>
+            <p data-i18n="how.step2.body">在 Steam 的 VRChat 启动选项中加入 OSC 参数，然后重启 VRChat。同一台电脑运行时使用 127.0.0.1。</p>
+          </article>
+          <article class="step-card reveal">
+            <span class="step-number">03</span>
+            <span class="step-icon">
+              <svg aria-hidden="true" viewBox="0 0 24 24" width="24" height="24"><path d="M4 5h9v9H7l-3 3V5Zm7 14h9v-9h-5" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/><path d="m13 12 2 2 3-3" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
+            </span>
+            <h3 data-i18n="how.step3.title">选择翻译，开始聊天</h3>
+            <p data-i18n="how.step3.body">打开“快速上手”，选择 Edge Web 或配置自己的翻译服务，再按需开启语音输入与字幕。</p>
+          </article>
+        </div>
+
+        <div class="command-card reveal">
+          <div>
+            <span class="command-label" data-i18n="how.commandLabel">VRChat 启动参数</span>
+            <code id="osc-command">--osc=9000:&lt;你的局域网 IP&gt;:9001</code>
+          </div>
+          <button class="copy-button" type="button" data-copy-target="osc-command">
+            <svg aria-hidden="true" viewBox="0 0 24 24" width="17" height="17"><rect x="8" y="8" width="11" height="11" rx="2" fill="none" stroke="currentColor" stroke-width="1.8"/><path d="M16 8V6a2 2 0 0 0-2-2H6a2 2 0 0 0-2 2v8a2 2 0 0 0 2 2h2" fill="none" stroke="currentColor" stroke-width="1.8"/></svg>
+            <span data-i18n="how.copy">复制</span>
+          </button>
+        </div>
+      </div>
+    </section>
+
+    <section class="section open-source-section" id="open-source">
+      <div class="container">
+        <div class="cta-panel reveal">
+          <div class="cta-glow" aria-hidden="true"></div>
+          <div class="cta-logo" aria-hidden="true">
+            <img src="assets/Logo.png" width="84" height="84" alt="">
+          </div>
+          <p class="eyebrow" data-i18n="cta.eyebrow">开源，透明，与你一起成长</p>
+          <h2 data-i18n="cta.title">下一次相遇，不再被语言挡住。</h2>
+          <p data-i18n="cta.body">VRCMC 基于 Kotlin Multiplatform 与 Compose Multiplatform 构建。下载它，阅读源码，或者用 Issue 和 Pull Request 帮助它变得更好。</p>
+          <div class="cta-actions">
+            <a class="button button-primary" href="https://github.com/yourmoln/VRCMC/releases/latest">
+              <span data-i18n="cta.download">下载 VRCMC</span>
+              <svg aria-hidden="true" viewBox="0 0 24 24" width="18" height="18"><path d="M12 4v11m0 0 4-4m-4 4-4-4M5 19h14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+            </a>
+            <a class="button button-secondary" href="https://github.com/yourmoln/VRCMC">
+              <svg aria-hidden="true" viewBox="0 0 24 24" width="19" height="19"><path d="M12 2a10 10 0 0 0-3.16 19.49c.5.09.68-.22.68-.48v-1.7c-2.78.6-3.37-1.34-3.37-1.34-.45-1.16-1.11-1.47-1.11-1.47-.91-.62.07-.61.07-.61 1 .07 1.53 1.03 1.53 1.03.9 1.53 2.36 1.09 2.93.84.09-.65.35-1.09.63-1.34-2.22-.25-4.55-1.11-4.55-4.94 0-1.09.39-1.98 1.03-2.68-.1-.25-.45-1.27.1-2.64 0 0 .84-.27 2.75 1.02A9.5 9.5 0 0 1 12 6.8c.85 0 1.7.11 2.5.34 1.91-1.29 2.75-1.02 2.75-1.02.55 1.37.2 2.39.1 2.64.64.7 1.03 1.59 1.03 2.68 0 3.84-2.34 4.69-4.56 4.94.36.31.68.92.68 1.86v2.87c0 .27.18.58.69.48A10 10 0 0 0 12 2Z" fill="currentColor"/></svg>
+              <span data-i18n="cta.source">查看 GitHub</span>
+            </a>
+          </div>
+          <p class="cta-note" data-i18n="cta.note">免费 · 开源 · 与 VRChat Inc. 无关联</p>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <footer class="site-footer">
+    <div class="container footer-main">
+      <div class="footer-brand">
+        <a class="brand" href="#top" aria-label="VRCMC">
+          <span class="brand-mark"><img src="assets/Logo.png" width="38" height="38" alt=""></span>
+          <span class="brand-word">VRCMC</span>
+        </a>
+        <p data-i18n="footer.tagline">让每一次跨语言相遇，都更像一次普通的聊天。</p>
+      </div>
+      <div class="footer-links">
+        <a href="#features" data-i18n="nav.features">功能</a>
+        <a href="#how-it-works" data-i18n="nav.how">快速上手</a>
+        <a href="https://github.com/yourmoln/VRCMC/releases/latest" data-i18n="footer.releases">版本下载</a>
+        <a href="https://github.com/yourmoln/VRCMC" data-i18n="footer.source">源代码</a>
+      </div>
+    </div>
+    <div class="container footer-bottom">
+      <span>© <span data-current-year>2026</span> VRCMC · MIT License</span>
+      <span data-i18n="footer.disclaimer">VRChat 是其各自所有者的商标。本项目与 VRChat Inc. 没有关联。</span>
+    </div>
+  </footer>
+
+  <div class="toast" role="status" aria-live="polite" aria-atomic="true" data-toast></div>
+  <script src="script.js"></script>
+</body>
+</html>
