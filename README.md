@@ -19,6 +19,10 @@
 
 VRCMC 是一款基于 Kotlin Multiplatform 与 Compose Multiplatform 开发的 VRChat Chatbox 助手。它通过 OSC 在局域网内连接 VRChat，并可在发送消息前调用翻译服务，适合跨语言聊天、语音输入与实时交流。
 
+<p align="center">
+  <img src="image/Screenshot.png" width="100%" alt="VRCMC 聊天界面截图">
+</p>
+
 > [!NOTE]
 > VRCMC 是独立的开源项目，与 VRChat Inc. 没有关联。VRChat 是其各自所有者的商标。
 

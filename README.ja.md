@@ -19,6 +19,10 @@
 
 VRCMC は、Kotlin Multiplatform と Compose Multiplatform で開発された VRChat Chatbox 支援アプリです。ローカルネットワーク上で OSC を使用して VRChat に接続し、メッセージを送信する前に翻訳できます。多言語での会話、音声入力、リアルタイムコミュニケーションに適しています。
 
+<p align="center">
+  <img src="image/Screenshot.png" width="100%" alt="VRCMC のチャット画面のスクリーンショット">
+</p>
+
 > [!NOTE]
 > VRCMC は独立したオープンソースプロジェクトであり、VRChat Inc. とは関係ありません。VRChat は各権利所有者の商標です。
 
