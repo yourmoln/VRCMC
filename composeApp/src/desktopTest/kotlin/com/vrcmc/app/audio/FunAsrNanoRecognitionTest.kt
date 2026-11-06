@@ -15,7 +15,11 @@ class FunAsrNanoRecognitionTest {
         val root = Path.of("..", "build", "funasr-test")
         val store = model.createStore(root.resolve(model.modelFileName()))
         assertTrue(store.isComplete())
-        val recognizer = JvmLocalSpeechRecognizer(mapOf(model to store), supported = true)
+        val recognizer = JvmLocalSpeechRecognizer(
+            mapOf(model to store),
+            supported = true,
+            createEngine = ::createDesktopLocalSpeechEngine,
+        )
         try {
             assertTrue(recognizer.prepare(model), recognizer.status(model).value.toString())
             val wav = Files.readAllBytes(root.resolve("zh.wav"))

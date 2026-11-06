@@ -21,6 +21,7 @@ fun ApiPage(
     strings: LocaleStrings,
     onDownloadLocalModel: (LocalSpeechModel) -> Unit,
     onCancelLocalModel: (LocalSpeechModel) -> Unit,
+    onDeleteLocalModel: (LocalSpeechModel) -> Unit,
 ) {
     val provider = state.provider
     val config = state.providerConfig
@@ -133,6 +134,7 @@ fun ApiPage(
                 onUpdate = state::updateVoiceInputConfig,
                 onDownloadLocalModel = onDownloadLocalModel,
                 onCancelLocalModel = onCancelLocalModel,
+                onDeleteLocalModel = onDeleteLocalModel,
             )
         }
     }

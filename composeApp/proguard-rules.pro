@@ -23,6 +23,10 @@
 # MethodHandle.invokeExact has JVM signature-polymorphic overloads that ProGuard cannot resolve.
 -dontwarn ai.onnxruntime.platform.Fp16Conversions
 
+# sherpa-onnx binds its Java API to the bundled Windows x64 JNI library.
+-keep class com.k2fsa.sherpa.onnx.** { *; }
+-dontwarn com.k2fsa.sherpa.onnx.**
+
 # Persisted enum names are restored with valueOf at runtime.
 -keepclassmembers enum * {
     public static **[] values();

@@ -23,6 +23,7 @@ enum class LocalSpeechModel(
 ) {
     SENSE_VOICE_SMALL_INT8("sense-voice-small-int8", "SenseVoice Small INT8", 240),
     FUN_ASR_NANO_2512_INT8("fun-asr-nano-2512-int8", "Fun-ASR-Nano 2512 INT8", 265),
+    QWEN3_ASR_0_6B_INT8("qwen3-asr-0.6b-int8", "Qwen3-ASR 0.6B INT8", 987),
     ;
 
     val displayLabel: String get() = "$displayName · $downloadSizeMb MB"
@@ -37,6 +38,7 @@ internal sealed interface LocalSpeechModelStatus {
     data object Missing : LocalSpeechModelStatus
     data object Downloaded : LocalSpeechModelStatus
     data object Preparing : LocalSpeechModelStatus
+    data object Deleting : LocalSpeechModelStatus
     data class Downloading(val received: Long, val total: Long) : LocalSpeechModelStatus
     data object Ready : LocalSpeechModelStatus
     data class Failed(val detail: String) : LocalSpeechModelStatus
@@ -44,9 +46,11 @@ internal sealed interface LocalSpeechModelStatus {
 
 internal interface LocalSpeechRecognizer {
     val supported: Boolean
+    val supportedModels: Set<LocalSpeechModel>
     fun status(model: LocalSpeechModel): StateFlow<LocalSpeechModelStatus>
     // Only an explicit user action may call this; prepare() only reads the local cache.
     suspend fun downloadModel(model: LocalSpeechModel): Boolean
+    suspend fun deleteModel(model: LocalSpeechModel): Boolean
     suspend fun prepare(model: LocalSpeechModel): Boolean
     suspend fun transcribe(
         model: LocalSpeechModel,

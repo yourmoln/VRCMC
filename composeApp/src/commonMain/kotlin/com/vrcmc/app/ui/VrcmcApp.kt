@@ -221,7 +221,14 @@ fun VrcmcApp(
                                         when (screen) {
                                             AppScreen.CHAT -> Unit
                                             AppScreen.DEVICES -> DeviceManagementPage(state, strings) { showAddDevice = true }
-                                            AppScreen.API -> ApiPage(state, strings, localModel::downloadModel, localModel::cancelDownload)
+                                            AppScreen.API ->
+                                                ApiPage(
+                                                    state,
+                                                    strings,
+                                                    localModel::downloadModel,
+                                                    localModel::cancelDownload,
+                                                    localModel::deleteModel,
+                                                )
                                             AppScreen.TRANSLATION_LANGUAGE -> TranslationLanguagePage(state, strings)
                                             AppScreen.SIMULTANEOUS_INTERPRETATION -> SimultaneousInterpretationPage(state, strings)
                                             AppScreen.HOTWORD_DICTIONARY -> HotwordDictionaryPage(state, strings)
