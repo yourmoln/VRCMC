@@ -17,7 +17,7 @@ import kotlinx.serialization.json.*
 // Protocol reference: https://github.com/yourmoln/vrctts/blob/main/src-tauri/src/tts.rs
 internal const val edgeTtsToken = "6A5AA1D4EAFF4E9FB37E23D68491D6F4"
 private const val edgeTtsBase = "speech.platform.bing.com/consumer/speech/synthesize/readaloud"
-private const val edgeTtsVersion = "1-143.0.3650.75"
+private const val edgeTtsVersion = "2-143.0.3650.75"
 private const val edgeTtsUserAgent = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/143.0.0.0 Safari/537.36 Edg/143.0.0.0"
 
 internal const val edgeTtsMaxFrameBytes = 4 * 1024 * 1024
@@ -28,12 +28,6 @@ internal class EdgeTtsHttpException(val statusCode: Int, val serverDate: String?
 internal data class EdgeTtsVoice(val shortName: String, val locale: String, val gender: String)
 
 internal expect fun speechSha256(data: ByteArray): ByteArray
-
-internal fun edgeTtsGec(unixMillis: Long): String {
-    val ticks = (unixMillis / 1_000 + 11_644_473_600L) * 10_000_000
-    val rounded = ticks - ticks % 3_000_000_000L
-    return hex(speechSha256("$rounded$edgeTtsToken".encodeToByteArray())).uppercase()
-}
 
 internal fun escapeSpeechXml(text: String): String = buildString {
     text.forEach { char ->
